@@ -1,0 +1,175 @@
+TARGET = pcsx4all.exe
+PORT   = sdl
+
+# Using 'gpulib' adapted from PCSX Rearmed is default, specify
+#  USE_GPULIB=0 as param to 'make' when building to disable it.
+USE_GPULIB ?= 1
+
+#GPU   = gpu_dfxvideo
+#GPU   = gpu_drhell
+#GPU   = gpu_null
+GPU   = gpu_unai
+
+SPU   = spu_pcsxrearmed
+
+RM     = rm -f
+MD     = mkdir
+CC     = gcc
+CXX    = g++
+LD     = g++
+
+SDL_CFLAGS  := `sdl-config --cflags`
+ifdef CONSOLE
+SDL_LIBS    := -lSDL
+else
+SDL_LIBS    := `sdl-config --libs`
+endif
+
+CFLAGS = -ggdb3 -O2 -march=native -DGCW_ZERO \
+	-Wall -Wunused -Wpointer-arith \
+	-Wno-sign-compare -Wno-cast-align \
+	-Wno-format -Wno-format-extra-args \
+	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
+	-Isrc/port/$(PORT) \
+	-Isrc/plugin_lib \
+	-DXA_HACK \
+	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
+	$(SDL_CFLAGS)
+
+ifdef CONSOLE
+CFLAGS += -DUNDEF_MAIN
+endif
+
+# Convert plugin names to uppercase and make them CFLAG defines
+CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
+CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
+
+LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lz
+
+OBJDIRS = \
+	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
+	obj/port obj/port/$(PORT) \
+	obj/plugin_lib
+
+all: maketree $(TARGET)
+
+OBJS = \
+	obj/r3000a.o obj/misc.o obj/plugins.o obj/psxmem.o obj/psxhw.o \
+	obj/psxcounters.o obj/psxdma.o obj/psxbios.o obj/psxhle.o obj/psxevents.o \
+	obj/psxcommon.o \
+	obj/plugin_lib/plugin_lib.o obj/plugin_lib/pl_sshot.o \
+	obj/psxinterpreter.o \
+	obj/mdec.o obj/decode_xa.o \
+	obj/cdriso.o obj/cdrom.o obj/ppf.o \
+	obj/sio.o obj/pad.o
+
+######################################################################
+#  GPULIB from PCSX Rearmed:
+#  Fixes many game incompatibilities and centralizes/improves many
+#  things that once were the responsibility of individual GPU plugins.
+#  NOTE: For now, only GPU Unai has been adapted.
+ifeq ($(USE_GPULIB),1)
+CFLAGS += -DUSE_GPULIB
+OBJDIRS += obj/gpu/gpulib
+OBJS += obj/gpu/$(GPU)/gpulib_if.o
+OBJS += obj/gpu/gpulib/gpu.o obj/gpu/gpulib/vout_port.o
+else
+OBJS += obj/gpu/$(GPU)/gpu.o
+endif
+######################################################################
+
+OBJS += obj/gte.o
+OBJS += obj/spu/$(SPU)/spu.o
+
+OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/$(PORT)/frontend.o
+
+OBJS += obj/plugin_lib/perfmon.o
+
+#******************************************
+# spu_pcsxrearmed section BEGIN
+#******************************************
+ifeq ($(SPU),spu_pcsxrearmed)
+# Specify which audio backend to use:
+SOUND_DRIVERS=sdl
+#SOUND_DRIVERS=alsa
+#SOUND_DRIVERS=oss
+#SOUND_DRIVERS=pulseaudio
+
+# spu
+# Note: obj/spu/spu_pcsxrearmed/spu.o will already have been added to OBJS
+#		list previously in Makefile
+OBJS += obj/spu/spu_pcsxrearmed/dma.o obj/spu/spu_pcsxrearmed/freeze.o \
+	obj/spu/spu_pcsxrearmed/out.o obj/spu/spu_pcsxrearmed/nullsnd.o \
+	obj/spu/spu_pcsxrearmed/registers.o
+ifeq "$(ARCH)" "arm"
+OBJS += obj/spu/spu_pcsxrearmed/arm_utils.o
+endif
+ifeq "$(HAVE_C64_TOOLS)" "1"
+obj/spu/spu_pcsxrearmed/spu.o: CFLAGS += -DC64X_DSP
+obj/spu/spu_pcsxrearmed/spu.o: obj/spu/spu_pcsxrearmed/spu_c64x.c
+frontend/menu.o: CFLAGS += -DC64X_DSP
+endif
+ifneq ($(findstring oss,$(SOUND_DRIVERS)),)
+obj/spu/spu_pcsxrearmed/out.o: CFLAGS += -DHAVE_OSS
+OBJS += obj/spu/spu_pcsxrearmed/oss.o
+endif
+ifneq ($(findstring alsa,$(SOUND_DRIVERS)),)
+obj/spu/spu_pcsxrearmed/out.o: CFLAGS += -DHAVE_ALSA
+OBJS += obj/spu/spu_pcsxrearmed/alsa.o
+LDFLAGS += -lasound
+endif
+ifneq ($(findstring sdl,$(SOUND_DRIVERS)),)
+obj/spu/spu_pcsxrearmed/out.o: CFLAGS += -DHAVE_SDL
+OBJS += obj/spu/spu_pcsxrearmed/sdl.o
+endif
+ifneq ($(findstring pulseaudio,$(SOUND_DRIVERS)),)
+obj/spu/spu_pcsxrearmed/out.o: CFLAGS += -DHAVE_PULSE
+OBJS += obj/spu/spu_pcsxrearmed/pulseaudio.o
+endif
+ifneq ($(findstring libretro,$(SOUND_DRIVERS)),)
+obj/spu/spu_pcsxrearmed/out.o: CFLAGS += -DHAVE_LIBRETRO
+endif
+
+endif
+#******************************************
+# spu_pcsxrearmed END
+#******************************************
+
+CXXFLAGS := $(CFLAGS) -fno-rtti
+
+#If V=1 was passed to 'make', do not hide commands:
+ifdef V
+	HIDECMD:=
+else
+	HIDECMD:=@
+endif
+
+$(TARGET): $(OBJS) 
+	@echo Linking $(TARGET)...
+	$(HIDECMD)$(LD) $(OBJS) $(LDFLAGS) -o $@
+
+obj/%.o: src/%.c
+	@echo Compiling $<...
+	$(HIDECMD)$(CC) $(CFLAGS) -c $< -o $@
+
+obj/%.o: src/%.cpp
+	@echo Compiling $<...
+	$(HIDECMD)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+obj/%.o: src/%.s
+	@echo Compiling $<...
+	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+
+obj/%.o: src/%.S
+	@echo Compiling $<...
+	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+
+$(sort $(OBJDIRS)):
+	$(HIDECMD)$(MD) $@
+
+maketree: $(sort $(OBJDIRS))
+
+clean:
+	$(RM) -r obj
+	$(RM) $(TARGET)

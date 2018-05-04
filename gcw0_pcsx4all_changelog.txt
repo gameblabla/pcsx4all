@@ -1,0 +1,20 @@
+gcw0_pcsx4all_20170830_4.opk:
+1. Fixed a bug that prevented keypresses in some cases.
+2. Stripped binary with `--strip-unneeded` to reduce size.
+
+gcw0_pcsx4all_20170830_3.opk:
+1. Holding start+select now speeds up emulation by setting the frameskip value to 3. Pressing start or select restores the default value.
+
+gcw0_pcsx4all_20170830_2.opk:
+1. Pressing down on the analog stick opens the menu when the 'Analog Arrow Keys' setting is off. Diagonals do not trigger the menu.
+
+gcw0_pcsx4all_20170830_1.opk:
+1. Automatic resolution fix was added for Grandia (SLPS02124), so that it displays in 352x240.
+2. [pixel skip] was changed to [Clip 368 -> 352] to fix display bugs in titles like Grandia.
+3. Changed menu keys:
+	select+start: menu
+	start+select: none (For Tekken 3, quit to main menu.)
+4. Added [Analog Arrow Keys] in core settings:
+	Analog Arrow Keys off: analog left=L2, analog right=R2, analog up=L2+R2, analog down=menu
+	Analog Arrow Keys on: analog stick = arrow keys, select+B=B, select+L1=L2, select+L2=R2
+

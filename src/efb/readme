@@ -1,0 +1,7 @@
+EFB stands for (Enhanced FrameBuffer driver for rs97 only).
+Since lack of fliping function (wrong implemented) in original kernel driver, therefore, I try to implement it in kernel driver (efb.ko).
+For long-term solution, creating new framebuffer device (/dev/fb2) will be more important rather than optimized for each emulator (user level).
+For short-term solution, I just implement flip function with DMA in this kernel driver.
+Thanks
+
+Steward
