@@ -18,6 +18,7 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA 02111-1307 USA.           *
 ***************************************************************************/
+#include "gpu_inner_blend.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Inner loop driver instantiation file

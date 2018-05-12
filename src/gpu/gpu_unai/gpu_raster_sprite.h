@@ -121,7 +121,7 @@ void gpuDrawS16(PtrUnion packet)
   {
     // send corner cases to general handler
     packet.U4[3] = 0x00100010;
-    gpuDrawS(gpuSpriteSpanFn<0x20>);
+    gpuDrawS(packet, gpuSpriteSpanFn<0x20>);
     return;
   }
 

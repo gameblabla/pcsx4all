@@ -2,14 +2,13 @@ TARGET = pcsx4all
 PORT   = sdl
 
 # Using 'gpulib' adapted from PCSX Rearmed is default, specify
-#  USE_GPULIB=0 as param to 'make' when building to disable it.
+# USE_GPULIB=0 as param to 'make' when building to disable it.
 USE_GPULIB ?= 1
 
 #GPU   = gpu_dfxvideo
 #GPU   = gpu_drhell
 #GPU    = gpu_null
 GPU    = gpu_unai
-
 SPU    = spu_pcsxrearmed
 
 RM     = rm -f
@@ -18,12 +17,10 @@ CC     = gcc
 CXX    = g++
 LD     = g++
 
-SYSROOT     := $(shell $(CC) --print-sysroot)
-SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
-SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
-SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
+SDL_CFLAGS  := $(shell sdl-config --cflags)
+SDL_LIBS    := $(shell sdl-config --libs)
 
-CFLAGS = -ggdb3 -O2 -march=native -DGCW_ZERO \
+CFLAGS = -ggdb3 -march=native -DGCW_ZERO \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
 	-Isrc/port/$(PORT) \
 	-Isrc/plugin_lib \
@@ -91,10 +88,9 @@ SOUND_DRIVERS=sdl
 #		list previously in Makefile
 OBJS += obj/spu/spu_pcsxrearmed/dma.o obj/spu/spu_pcsxrearmed/freeze.o \
 	obj/spu/spu_pcsxrearmed/out.o obj/spu/spu_pcsxrearmed/nullsnd.o \
-	obj/spu/spu_pcsxrearmed/registers.o
-#ifeq "$(ARCH)" "arm"
-#OBJS += obj/spu/spu_pcsxrearmed/arm_utils.o
-#endif
+	obj/spu/spu_pcsxrearmed/registers.o obj/spu/spu_pcsxrearmed/arm_utils.o \
+	obj/gpu/gpu_unai/gpu_arm.o
+
 ifeq "$(HAVE_C64_TOOLS)" "1"
 obj/spu/spu_pcsxrearmed/spu.o: CFLAGS += -DC64X_DSP
 obj/spu/spu_pcsxrearmed/spu.o: obj/spu/spu_pcsxrearmed/spu_c64x.c

@@ -268,7 +268,8 @@ int do_cmd_list(unsigned int *list, int list_len, int *last_cmd)
     for (i = 1; i <= len; i++)
       gpu_unai.PacketBuffer.U4[i] = list[i];
 
-    PtrUnion packet = { .ptr = (void*)&gpu_unai.PacketBuffer };
+    PtrUnion packet;
+    packet.ptr = (void*)&gpu_unai.PacketBuffer;
 
     switch (cmd)
     {
