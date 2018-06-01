@@ -615,10 +615,10 @@ int do_cmd_list(unsigned int *list, int list_len, int *last_cmd)
 
       case 0x7C:
       case 0x7D:
-#ifdef __arm__
+#if defined(__arm__) || defined(RS97)
         if ((gpu_unai.GPU_GP1 & 0x180) == 0 && (gpu_unai.Masking | gpu_unai.PixelMSB) == 0)
         {
-          gpuSetCLUT    (gpu_unai.PacketBuffer.U4[2] >> 16);
+          gpuSetCLUT(gpu_unai.PacketBuffer.U4[2] >> 16);
           gpuDrawS16(packet);
           break;
         }

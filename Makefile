@@ -35,7 +35,7 @@ ifdef A320
 endif
 
 ifdef RS97
-  C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97
+  C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -I/home/steward/Github/gh_retrogame_toolchain/for_os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL
 endif
 
 ifdef GCW0
@@ -97,6 +97,10 @@ OBJS += obj/gpu/$(GPU)/gpulib_if.o
 OBJS += obj/gpu/gpulib/gpu.o obj/gpu/gpulib/vout_port.o
 else
 OBJS += obj/gpu/$(GPU)/gpu.o
+endif
+
+ifeq ($(RS97),1)
+OBJS += obj/gpu/$(GPU)/gpu_mips.o
 endif
 ######################################################################
 
