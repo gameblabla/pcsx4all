@@ -92,7 +92,11 @@ void gpuDrawS(PtrUnion packet, const PS gpuSpriteSpanDriver)
 }
 
 #if defined(__arm__) || defined(RS97)
-#include "gpu_arm.h"
+#if defined(RS97)
+	#include "gpu_mips.h"
+#else
+	#include "gpu_arm.h"
+#endif
 
 /* Notaz 4bit sprites optimization */
 void gpuDrawS16(PtrUnion packet)

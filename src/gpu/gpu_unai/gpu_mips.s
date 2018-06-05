@@ -5,14 +5,37 @@
  * See the COPYING file in the top-level directory.
  */
 .text
-#.align 2
+.align 2
 .set noreorder
 
+.global _memcpy
 .global draw_spr16_full
 .ent draw_spr16_full
 
-# in: r0=dst, r2=pal, r12=0x1e
-.macro do_4_pixels rs ibase obase
+_memcpy: # (void *dst, void *src, int len)
+	andi $t0, $a2, 0x03
+	bnez $t0, 0f
+	nop
+0:
+	lh $t0, 0($a1)
+	sh $t0, 0($a0)
+	addi $a0, $a0, 2
+	addi $a1, $a1, 2
+	sub $a2, $a2, 2
+	bnez $a2, 0b
+	nop
+	jr $ra
+1:
+	lw $t0, 0($a1)
+	sw $t0, 0($a0)
+	addi $a0, $a0, 4
+	addi $a1, $a1, 4
+	sub $a2, $a2, 4
+	bnez $a2, 1b
+	nop
+	jr $ra
+
+.macro do_4_pixels rs ibase obase # in: r0=dst, r2=pal, r12=0x1e
 .if \ibase - 1 < 0
 	sll $t6, \rs, 1
 	and $t2, $t7, $t6
