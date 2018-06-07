@@ -98,10 +98,6 @@ OBJS += obj/gpu/gpulib/gpu.o obj/gpu/gpulib/vout_port.o
 else
 OBJS += obj/gpu/$(GPU)/gpu.o
 endif
-
-ifeq ($(RS97),1)
-OBJS += obj/gpu/$(GPU)/gpu_mips.o
-endif
 ######################################################################
 
 OBJS += obj/gte.o

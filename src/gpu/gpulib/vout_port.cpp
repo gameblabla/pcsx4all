@@ -730,11 +730,74 @@ void vout_update(void)
   switch ( w0 )
   {
   	case 256: {
-  		for (int y1=y0+h1; y0<y1; y0+=incY) {
-  			GPU_Blit256(src16 + src16_offs, dst16, isRGB24);
-  			dst16 += VIDEO_WIDTH;
-  			src16_offs = (src16_offs + h0) & src16_offs_msk;
-  		}
+			#if defined(RS97)
+				__asm__ (
+				".set noreorder									\n"
+				"  move $a0, %[src16]						\n"
+				"  move $a1, %[dst16]						\n"
+				"  move $a2, %[h0]							\n"
+				"  move $a3, %[h1]							\n"
+				"  move $t0, %[src16_offs]			\n"
+				"  move $t1, %[src16_offs_msk]	\n"
+				"  move $t2, %[incY]						\n"
+				"  li $t7, 1										\n"
+				"0: 														\n"
+				"  li $t3, 32										\n"
+				"  add $t4, $a0, $t0						\n"
+				"  move $t6, $a1                \n"
+
+				"1:															\n"
+				"  lh $t5, 0*2($t4)							\n"
+				"  sh $t5, 0*2($t6)							\n"
+				"  lh $t5, 1*2($t4)							\n"
+				"  sh $t5, 1*2($t6)							\n"
+				"  lh $t5, 1*2($t6)							\n"
+				"  sh $t5, 2*2($t6)							\n"
+				"  lh $t5, 2*2($t4)							\n"
+				"  sh $t5, 3*2($t6)							\n"
+				"  lh $t5, 3*2($t4)							\n"
+				"  sh $t5, 4*2($t6)							\n"
+				"  lh $t5, 4*2($t4)							\n"
+				"  sh $t5, 5*2($t6)							\n"
+				"  lh $t5, 5*2($t4)							\n"
+				"  sh $t5, 6*2($t6)							\n"
+				"  lh $t5, 6*2($t6)							\n"
+				"  sh $t5, 7*2($t6)							\n"
+				"  lh $t5, 6*2($t4)							\n"
+				"  sh $t5, 8*2($t6)							\n"
+				"  lh $t5, 7*2($t4)							\n"
+				"  sh $t5, 9*2($t6)							\n"
+				"  addi $t6, $t6, 10*2					\n"
+				"  addi $t4, $t4, 8*2						\n"
+				"  sub $t3, $t3, $t7            \n"
+				"  bnez $t3, 1b									\n"
+				"  nop													\n"
+
+				"  addi $a1, $a1, 640*2					\n"
+				"  add $t6, $t0, $a2            \n"
+				"  and $t0, $t6, $t1						\n"
+				"  sub $a3, $a3, $t2						\n"
+				"  bnez $a3, 0b									\n"
+				"  nop													\n"
+				:
+				: 
+				[src16] 					"r" (src16), 
+				[dst16] 					"r" (dst16),
+				[h0]    					"r" (h0),
+				[h1]    					"r" (h1),
+				[src16_offs] 			"r" (src16_offs),
+				[src16_offs_msk]	"r" (src16_offs_msk),
+				[incY]						"r" (incY)
+				:
+				"$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2"
+				);
+			#else
+  			for (int y1=y0+h1; y0<y1; y0+=incY) {
+  				GPU_Blit256(src16 + src16_offs, dst16, isRGB24);
+  				dst16 += VIDEO_WIDTH;
+  				src16_offs = (src16_offs + h0) & src16_offs_msk;
+  			}
+			#endif
   	} break;
 
   	case 368: {
