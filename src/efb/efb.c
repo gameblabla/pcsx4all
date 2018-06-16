@@ -37,6 +37,8 @@
 #include <linux/platform_device.h>
 #include <asm/div64.h>
 
+#include <asm/jzsoc.h>
+
 #define SDL_NUM               2
 #define MAX_XRES              800
 #define MAX_YRES              480
@@ -396,9 +398,201 @@ static int lcd_thread(void* unused)
 	return 0;
 }
 
-static irqreturn_t lcd_interrupt_handler(int irq, void *arg)
+static void ctrl_disable(void)
 {
-  return IRQ_HANDLED;
+  unsigned int cnt;
+
+  // Use regular disable: finishes current frame, then stops.
+  REG_LCD_CTRL|= LCD_CTRL_DIS;
+
+  // Wait 20 ms for frame to end (at 60 Hz, one frame is 17 ms).
+  for(cnt=20; cnt; cnt-= 4){
+    if(REG_LCD_STATE & LCD_STATE_LDD){
+      break;
+    }
+    msleep(4);
+  }
+
+  if(!cnt){
+    printk("%s, LCD disable timeout\n", __func__);
+  }
+  REG_LCD_STATE&= ~LCD_STATE_LDD;
+}
+
+static void jzfb_ipu_disable(void)
+{
+  unsigned int timeout = 1000;
+
+  if(REG_IPU_CTRL & IPU_CTRL_CHIP_EN){
+    REG_IPU_CTRL|= IPU_CTRL_STOP;
+    do{  
+      if(REG_IPU_STATUS & IPU_STATUS_OUT_END){
+        break;
+      }    
+      msleep(1);
+    }while(--timeout);
+
+    if(!timeout){
+      printk("%s, timeout while disabling IPU\n", __func__);
+    }    
+  }
+  REG_IPU_CTRL&= ~IPU_CTRL_CHIP_EN;
+}
+
+static void jz4760fb_set_panel_mode(void)
+{
+	// w,   h,   fclk, hsw, vsw, elw, blw, efw, bfw
+	// 320, 240, 60,   50,  1,   10,  70,  5,   5
+	const int w = 320;
+	const int h = 480;
+	const int hsw = 50;
+	const int vsw = 1;
+	const int elw = 10;
+	const int blw = 70;
+	const int efw = 5;
+	const int bfw = 5;
+  
+	// Configure LCDC
+  REG_LCD_CFG = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
+  	LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
+    LCD_CFG_MODE_TFT_16BIT |   /* output 18bpp */
+    LCD_CFG_PCP |  /* Pixel clock polarity: falling edge */
+    LCD_CFG_HSP |   /* Hsync polarity: active low */
+    LCD_CFG_VSP;
+
+  // Enable IPU auto-restart
+  REG_LCD_IPUR = LCD_IPUR_IPUREN | (blw + w + elw) * vsw / 3;
+
+  // Set HT / VT / HDS / HDE / VDS / VDE / HPE / VPE
+  REG_LCD_VAT = (blw + w + elw) << LCD_VAT_HT_BIT | (bfw + h + efw) << LCD_VAT_VT_BIT;
+  REG_LCD_DAH = blw << LCD_DAH_HDS_BIT | (blw + w) << LCD_DAH_HDE_BIT;
+  REG_LCD_DAV = bfw << LCD_DAV_VDS_BIT | (bfw + h) << LCD_DAV_VDE_BIT;
+  REG_LCD_HSYNC = hsw << LCD_HSYNC_HPE_BIT;
+  REG_LCD_VSYNC = vsw << LCD_VSYNC_VPE_BIT;
+
+  // Enable foreground 1, OSD mode
+  REG_LCD_OSDC = LCD_OSDC_F1EN | LCD_OSDC_OSDEN;
+
+  // Enable IPU, 18/24 bpp output
+  REG_LCD_OSDCTRL = LCD_OSDCTRL_IPU | LCD_OSDCTRL_OSDBPP_18_24;
+
+  // Set a black background
+  REG_LCD_BGC = 0;
+}
+
+static void jzfb_ipu_configure(struct jzfb *jzfb, const struct jz4760lcd_panel_t *panel)
+{
+  struct fb_info *fb = jzfb->fb;
+  u32 ctrl, coef_index=0, size, format = 2 << IPU_D_FMT_OUT_FMT_BIT;
+  unsigned int outputW=panel->w, outputH=panel->h, xpos=0, ypos=0;
+
+  // Enable the chip, reset all the registers
+  writel(IPU_CTRL_CHIP_EN | IPU_CTRL_RST, jzfb->ipu_base + IPU_CTRL);
+
+  switch(jzfb->bpp){
+  case 16:
+    format|= 3 << IPU_D_FMT_IN_FMT_BIT;
+    break;
+  case 32:
+  default:
+    format|= 2 << IPU_D_FMT_IN_FMT_BIT;
+    break;
+  }
+  writel(format, jzfb->ipu_base + IPU_D_FMT);
+
+  // Set the input height/width/stride
+  size = fb->fix.line_length << IPU_IN_GS_W_BIT | fb->var.yres << IPU_IN_GS_H_BIT;
+  writel(size, jzfb->ipu_base + IPU_IN_GS);
+  writel(fb->fix.line_length, jzfb->ipu_base + IPU_Y_STRIDE);
+
+  // Set the input address
+#ifdef CONFIG_PANEL_HX8347A01
+  writel((u32)virt_to_phys(lcd_frame_lcd), jzfb->ipu_base + IPU_Y_ADDR);
+#endif
+
+#ifdef CONFIG_PANEL_NT39016
+  writel((u32)virt_to_phys(lcd_frame_fb), jzfb->ipu_base + IPU_Y_ADDR);
+#endif
+
+  ctrl = IPU_CTRL_CHIP_EN | IPU_CTRL_LCDC_SEL | IPU_CTRL_FM_IRQ_EN;
+  if(fb->fix.type == FB_TYPE_PACKED_PIXELS){
+    ctrl|= IPU_CTRL_SPKG_SEL;
+  }
+
+  if(scaling_required(jzfb)){
+    unsigned int numW=panel->w, denomW=fb->var.xres, numH=panel->h, denomH=fb->var.yres;
+
+    BUG_ON(reduce_fraction(&numW, &denomW) < 0);
+    BUG_ON(reduce_fraction(&numH, &denomH) < 0);
+
+    if(keep_aspect_ratio){
+      unsigned int ratioW = (UINT_MAX >> 6) * numW / denomW, ratioH = (UINT_MAX >> 6) * numH / denomH;
+      if(ratioW < ratioH){
+        numH = numW;
+        denomH = denomW;
+      } 
+      else{
+        numW = numH;
+        denomW = denomH;
+      }
+    }
+
+    if(numW != 1 || denomW != 1){
+      set_coefs(jzfb, IPU_HRSZ_COEF_LUT, numW, denomW);
+      coef_index |= ((numW - 1) << 16);
+      ctrl |= IPU_CTRL_HRSZ_EN;
+    }
+
+    if(numH != 1 || denomH != 1){
+      set_coefs(jzfb, IPU_VRSZ_COEF_LUT, numH, denomH);
+      coef_index |= numH - 1;
+      ctrl|= IPU_CTRL_VRSZ_EN;
+    }
+
+    outputH = fb->var.yres * numH / denomH;
+    outputW = fb->var.xres * numW / denomW;
+
+    // If we are upscaling horizontally, the last columns of pixels
+    // shall be hidden, as they usually contain garbage: the last
+    // resizing coefficients, when applied to the last column of the
+    // input frame, instruct the IPU to blend the pixels with the
+    // ones that correspond to the next column, that is to say the
+    // leftmost column of pixels of the input frame.
+    if(numW > denomW && denomW != 1){
+      outputW -= numW / denomW;
+    }
+  }
+
+  writel(ctrl, jzfb->ipu_base + IPU_CTRL);
+
+  // Set the LUT index register
+  writel(coef_index, jzfb->ipu_base + IPU_RSZ_COEF_INDEX);
+
+  // Set the output height/width/stride
+  size = (outputW * 4) << IPU_OUT_GS_W_BIT | outputH << IPU_OUT_GS_H_BIT;
+  writel(size, jzfb->ipu_base + IPU_OUT_GS);
+  writel(outputW * 4, jzfb->ipu_base + IPU_OUT_STRIDE);
+
+  // Resize Foreground1 to the output size of the IPU
+  xpos = (panel->w - outputW) / 2;
+  ypos = (panel->h - outputH) / 2;
+  jzfb_foreground_resize(jzfb, xpos, ypos, outputW, outputH);
+
+  dev_dbg(&jzfb->pdev->dev, "Scaling %ux%u to %ux%u\n", fb->var.xres, fb->var.yres, outputW, outputH);
+  printk("%s, scaling %ux%u to %ux%u\n", __func__, fb->var.xres, fb->var.yres, outputW, outputH);
+}
+
+static void jzfb_ipu_reset(void)
+{
+  ctrl_disable();
+  //clk_enable(jzfb->ipuclk);
+  jzfb_ipu_disable();
+  REG_IPU_CTRL = IPU_CTRL_CHIP_EN | IPU_CTRL_RST;
+  jz4760fb_set_panel_mode();
+	/*
+  jzfb_ipu_configure(jzfb, jz_panel);
+  jzfb_ipu_enable(jzfb);
+  ctrl_enable(jzfb);*/
 }
 
 static int myfb_probe(struct platform_device *device)
@@ -488,6 +682,7 @@ static int myfb_probe(struct platform_device *device)
     }
     memset(mylcd.lram_virt[x], 0, mylcd.lram_size);
   }
+	jzfb_ipu_reset();
 	
 	mylcd.is_double_buffer = 1;
 	mylcd.double_buffer_ready = 0;
