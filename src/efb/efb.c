@@ -58,7 +58,8 @@
 
 #define EFB_FBIO_WAITFORVSYNC  _IOWR(0, 0, int)
 
-struct myfb_par {
+struct myfb_par
+{
   struct device *dev;
 
   u32 pseudo_palette[PALETTE_SIZE];
@@ -76,7 +77,8 @@ struct myfb_par {
   struct fb_fix_screeninfo fix;
 };
 
-struct _mylcd {
+struct _mylcd
+{
   struct myfb_par *fb[SDL_NUM];
   unsigned int cur_fb;
 
@@ -91,20 +93,20 @@ struct _mylcd {
   void __iomem *io_reg;
   struct resource *lcd_reg;
 
-	int is_buffer_ready;
+  int is_buffer_ready;
   unsigned int irq;
   unsigned int avg_filter;
   unsigned int vsync_flag;
   unsigned int vsync_timeout;
   wait_queue_head_t vsync_wait;
 
-	int thread_id;
-	int thread_exit;
+  int thread_id;
+  int thread_exit;
 
-	int extra_options;
-	int is_double_buffer;
-	int double_buffer_ready;
-	int wait_frame_ready;
+  int extra_options;
+  int is_double_buffer;
+  int double_buffer_ready;
+  int wait_frame_ready;
 };
 
 static struct _mylcd mylcd;
@@ -126,63 +128,70 @@ static int myfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
   unsigned long bpp = var->bits_per_pixel/8;
   unsigned long line_size = var->xres_virtual * bpp;
 
-  printk("%s(fb%d), xres:%d, yres:%d, bpp:%d, xres_virtual:%d, yres_virtual:%d\n", 
-    __func__, par->id, var->xres, var->yres, var->bits_per_pixel, var->xres_virtual, var->yres_virtual);
-  if((var->xres > MAX_XRES) || (var->yres > MAX_YRES) || (var->bits_per_pixel > MAX_BPP)){
+  printk("%s(fb%d), xres:%d, yres:%d, bpp:%d, xres_virtual:%d, yres_virtual:%d\n",
+         __func__, par->id, var->xres, var->yres, var->bits_per_pixel, var->xres_virtual, var->yres_virtual);
+  if((var->xres > MAX_XRES) || (var->yres > MAX_YRES) || (var->bits_per_pixel > MAX_BPP))
+  {
     printk("%s, invalid parameter\n", __func__);
     return -EINVAL;
   }
 
-  switch(var->bits_per_pixel){
-  case 16:
-    var->transp.offset = 0;
-    var->transp.length = 0;
-    var->red.offset = 11;
-    var->red.length = 5;
-    var->green.offset = 5;
-    var->green.length = 6;
-    var->blue.offset = 0;
-    var->blue.length = 5;
-    break;
-  case 24:
-    var->transp.offset = 0;
-    var->transp.length = 0;
-    var->red.offset = 16;
-    var->red.length = 8;
-    var->green.offset = 8;
-    var->green.length = 8;
-    var->blue.offset = 0;
-    var->blue.length = 8;
-    break;
-  case 32:
-    var->transp.offset = 24;
-    var->transp.length = 8;
-    var->red.offset = 16;
-    var->red.length = 8;
-    var->green.offset = 8;
-    var->green.length = 8;
-    var->blue.offset = 0;
-    var->blue.length = 8;
-    break;
+  switch(var->bits_per_pixel)
+  {
+    case 16:
+      var->transp.offset = 0;
+      var->transp.length = 0;
+      var->red.offset = 11;
+      var->red.length = 5;
+      var->green.offset = 5;
+      var->green.length = 6;
+      var->blue.offset = 0;
+      var->blue.length = 5;
+      break;
+    case 24:
+      var->transp.offset = 0;
+      var->transp.length = 0;
+      var->red.offset = 16;
+      var->red.length = 8;
+      var->green.offset = 8;
+      var->green.length = 8;
+      var->blue.offset = 0;
+      var->blue.length = 8;
+      break;
+    case 32:
+      var->transp.offset = 24;
+      var->transp.length = 8;
+      var->red.offset = 16;
+      var->red.length = 8;
+      var->green.offset = 8;
+      var->green.length = 8;
+      var->blue.offset = 0;
+      var->blue.length = 8;
+      break;
   }
   var->red.msb_right = 0;
   var->green.msb_right = 0;
   var->blue.msb_right = 0;
   var->transp.msb_right = 0;
 
-  if(line_size * var->yres_virtual > par->vram_size){
+  if(line_size * var->yres_virtual > par->vram_size)
+  {
     var->yres_virtual = par->vram_size / line_size;
   }
-  if(var->yres > var->yres_virtual){
+  if(var->yres > var->yres_virtual)
+  {
     var->yres = var->yres_virtual;
   }
-  if(var->xres > var->xres_virtual){
+  if(var->xres > var->xres_virtual)
+  {
     var->xres = var->xres_virtual;
   }
-  if(var->xres + var->xoffset > var->xres_virtual){
+  if(var->xres + var->xoffset > var->xres_virtual)
+  {
     var->xoffset = var->xres_virtual - var->xres;
   }
-  if(var->yres + var->yoffset > var->yres_virtual){
+  if(var->yres + var->yoffset > var->yres_virtual)
+  {
     var->yoffset = var->yres_virtual - var->yres;
   }
   return 0;
@@ -192,20 +201,24 @@ static int myfb_remove(struct platform_device *dev)
 {
   struct fb_info *info = dev_get_drvdata(&dev->dev);
 
-	if(mylcd.thread_id){
-		mylcd.thread_exit = 1;
-		//kill_pid(find_vpid(mylcd.thread_id), SIGKILL, 1);
-	}
+  if(mylcd.thread_id)
+  {
+    mylcd.thread_exit = 1;
+    //kill_pid(find_vpid(mylcd.thread_id), SIGKILL, 1);
+  }
 
-  if(info){
+  if(info)
+  {
     int x;
     struct myfb_par *par = info->par;
 
     unregister_framebuffer(info);
     fb_dealloc_cmap(&info->cmap);
     dma_free_coherent(NULL, par->vram_size, par->vram_virt, par->vram_phys);
-    if(par->id == 1){
-      for(x=0; x<LCD_RAM_PAGE; x++){
+    if(par->id == 1)
+    {
+      for(x=0; x<LCD_RAM_PAGE; x++)
+      {
         dma_free_coherent(NULL, mylcd.lram_size, mylcd.lram_virt[x], mylcd.lram_phys[x]);
       }
     }
@@ -219,30 +232,37 @@ static void lcd_pixel_process(unsigned int old_w, unsigned int old_h, unsigned i
 {
   uint16_t r, g, b;
   unsigned int x, y, l, c, e;
-	uint16_t *src = mylcd.lram_virt[LCD_RAW_INDEX];
+  uint16_t *src = mylcd.lram_virt[LCD_RAW_INDEX];
   uint16_t *dst = mylcd.lram_virt[LCD_SCR_INDEX];
 
   //printk("%s, x:%d, y:%d, bpp:%d\n", __func__, old_w, old_h, bpp);
-  for(y=mylcd.dma_yoffset; y<LCD_YRES; y++){
-    for(x=mylcd.dma_xoffset; x<LCD_XRES; x++){
+  for(y=mylcd.dma_yoffset; y<LCD_YRES; y++)
+  {
+    for(x=mylcd.dma_xoffset; x<LCD_XRES; x++)
+    {
       l = ((y * 1000 * old_h) / LCD_YRES) / 1000;
       c = ((x * 1000 * old_w) / LCD_XRES) / 1000;
-      if(bpp != 24){
-        if(LCD_XRES == old_w){
+      if(bpp != 24)
+      {
+        if(LCD_XRES == old_w)
+        {
           r = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0xf800) >> 8);
           g = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0x7e0) >> 3);
           b = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0x1f) << 3);
         }
-        else{
+        else
+        {
           e = 0;
-          if(x != (LCD_XRES - 1)){
+          if(x != (LCD_XRES - 1))
+          {
             e = 1;
           }
           r = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0xf800) >> 8);
           g = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0x7e0) >> 3);
           b = ((*((uint16_t*)src + (l * old_w) + c + 0) & 0x1f) << 3);
-          
-          if(mylcd.avg_filter){
+
+          if(mylcd.avg_filter)
+          {
             r+= ((*((uint16_t*)src + (l * old_w) + c + e) & 0xf800) >> 8);
             r>>= 1;
             g+= ((*((uint16_t*)src + (l * old_w) + c + e) & 0x7e0) >> 3);
@@ -252,24 +272,25 @@ static void lcd_pixel_process(unsigned int old_w, unsigned int old_h, unsigned i
           }
         }
       }
-      else{
+      else
+      {
         b = *((uint8_t*)src + (l * old_w * 3) + (c * 3) + 0);
         g = *((uint8_t*)src + (l * old_w * 3) + (c * 3) + 1);
         r = *((uint8_t*)src + (l * old_w * 3) + (c * 3) + 2);
-      } 
+      }
       *((uint16_t*)dst + ((LCD_XRES - x) * LCD_YRES) + y) = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | ((b & 0xf8) >> 3);
     }
   }
-	mylcd.is_buffer_ready = 1;
+  mylcd.is_buffer_ready = 1;
 }
 
 static int myfb_set_par(struct fb_info *info)
 {
   struct myfb_par *par = info->par;
-  
-  printk("%s(fb%d), xres:%d, yres:%d, bpp:%d, xoffset:%d, yoffset:%d, xvirtual:%d, yvirtual:%d\n", __func__, 
-    par->id, info->var.xres, info->var.yres, info->var.bits_per_pixel, info->var.xoffset, info->var.yoffset, 
-		info->var.xres_virtual, info->var.yres_virtual);
+
+  printk("%s(fb%d), xres:%d, yres:%d, bpp:%d, xoffset:%d, yoffset:%d, xvirtual:%d, yvirtual:%d\n", __func__,
+         par->id, info->var.xres, info->var.yres, info->var.bits_per_pixel, info->var.xoffset, info->var.yoffset,
+         info->var.xres_virtual, info->var.yres_virtual);
 
   fb_var_to_videomode(&par->mode, &info->var);
   par->bpp = info->var.bits_per_pixel;
@@ -277,28 +298,32 @@ static int myfb_set_par(struct fb_info *info)
   info->fix.line_length = (par->mode.xres * par->bpp) / 8;
 
   mylcd.cur_fb = par->id;
-	if(mylcd.lram_virt[LCD_DMA_INDEX]){
-  	memset(mylcd.lram_virt[LCD_DMA_INDEX], 0, (LCD_XRES * LCD_YRES * LCD_BPP) / 8);
-	}
-  
+  if(mylcd.lram_virt[LCD_DMA_INDEX])
+  {
+    memset(mylcd.lram_virt[LCD_DMA_INDEX], 0, (LCD_XRES * LCD_YRES * LCD_BPP) / 8);
+  }
+
   mylcd.dma_yoffset = 0;
-  if(LCD_YRES > info->var.yres){
+  if(LCD_YRES > info->var.yres)
+  {
     mylcd.dma_yoffset = (LCD_YRES - info->var.yres) / 2;
   }
 
   mylcd.dma_xoffset = 0;
-  if(LCD_XRES > info->var.xres){
+  if(LCD_XRES > info->var.xres)
+  {
     mylcd.dma_xoffset = (LCD_XRES - info->var.xres) / 2;
   }
-  mylcd.dma_addr = par->vram_virt + (mylcd.dma_xoffset * info->fix.line_length) + ((mylcd.dma_xoffset * info->var.bits_per_pixel) / 8); 
+  mylcd.dma_addr = par->vram_virt + (mylcd.dma_xoffset * info->fix.line_length) + ((mylcd.dma_xoffset * info->var.bits_per_pixel) / 8);
 
   mylcd.avg_filter = 0;
-  if(info->var.xres == 512){ // for PS1 game with x resolution = 512 pixels
+  if(info->var.xres == 512)  // for PS1 game with x resolution = 512 pixels
+  {
     mylcd.avg_filter = 1;
   }
-	mylcd.wait_frame_ready = WAIT_FRAME_COUNT;
-	mylcd.is_double_buffer = (info->var.yres_virtual == info->var.yres) ? 0 : 1;
-	printk("%s, double buffer: %d\n", __func__, mylcd.is_double_buffer);
+  mylcd.wait_frame_ready = WAIT_FRAME_COUNT;
+  mylcd.is_double_buffer = (info->var.yres_virtual == info->var.yres) ? 0 : 1;
+  printk("%s, double buffer: %d\n", __func__, mylcd.is_double_buffer);
   return 0;
 }
 
@@ -306,11 +331,12 @@ static int fb_wait_for_vsync(struct fb_info *info)
 {
   int ret;
 
-  mylcd.vsync_flag = 0; 
+  mylcd.vsync_flag = 0;
   ret = wait_event_interruptible_timeout(mylcd.vsync_wait, mylcd.vsync_flag != 0, mylcd.vsync_timeout);
-  if(ret < 0){
+  if(ret < 0)
+  {
     return ret;
-  } 
+  }
   return (ret == 0) ? -ETIMEDOUT : 0;
 }
 
@@ -320,15 +346,16 @@ static int myfb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
   struct myfb_par *par = info->par;
 
   printk("%s(fb%d)++\n", __func__, par->id);
-  switch(cmd){
-  case EFB_FBIO_WAITFORVSYNC:
-    printk("%s, FBIO_WAITFORVSYNC\n", __func__);
-    ret = fb_wait_for_vsync(info);
-    break;
-  default:
-    ret = -EINVAL;
-    printk("%s, unknown ioctl: 0x%x\n", __func__, cmd);
-    break;
+  switch(cmd)
+  {
+    case EFB_FBIO_WAITFORVSYNC:
+      printk("%s, FBIO_WAITFORVSYNC\n", __func__);
+      ret = fb_wait_for_vsync(info);
+      break;
+    default:
+      ret = -EINVAL;
+      printk("%s, unknown ioctl: 0x%x\n", __func__, cmd);
+      break;
   }
   printk("%s(ret:%d)--\n", __func__, ret);
   return ret;
@@ -336,7 +363,7 @@ static int myfb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 
 static int myfb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-	return 0;
+  return 0;
 }
 
 static int myfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
@@ -346,20 +373,22 @@ static int myfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
   struct fb_fix_screeninfo *fix = &info->fix;
 
   printk("%s(fb%d), xres:%d, yres:%d, xoffset:%d, yoffset:%d\n", __func__, par->id, var->xres, var->yres, var->xoffset, var->yoffset);
-  if((var->xoffset != info->var.xoffset) || (var->yoffset != info->var.yoffset)){
+  if((var->xoffset != info->var.xoffset) || (var->yoffset != info->var.yoffset))
+  {
     memcpy(&new_var, &info->var, sizeof(new_var));
     new_var.xoffset = var->xoffset;
     new_var.yoffset = var->yoffset;
-    memcpy(&info->var, &new_var, sizeof(new_var));  
+    memcpy(&info->var, &new_var, sizeof(new_var));
     mylcd.dma_addr = par->vram_virt + (new_var.yoffset * fix->line_length) + ((new_var.xoffset * info->var.bits_per_pixel) / 8);
 
-		memcpy(mylcd.lram_virt[LCD_RAW_INDEX], mylcd.dma_addr, (var->xres * var->yres * info->var.bits_per_pixel) / 8);
-		mylcd.double_buffer_ready = 1;
+    memcpy(mylcd.lram_virt[LCD_RAW_INDEX], mylcd.dma_addr, (var->xres * var->yres * info->var.bits_per_pixel) / 8);
+    mylcd.double_buffer_ready = 1;
   }
   return 0;
 }
 
-static struct fb_ops myfb_ops = {
+static struct fb_ops myfb_ops =
+{
   .owner          = THIS_MODULE,
   .fb_check_var   = myfb_check_var,
   .fb_set_par     = myfb_set_par,
@@ -375,27 +404,33 @@ static struct fb_ops myfb_ops = {
 
 static int lcd_thread(void* unused)
 {
-	struct myfb_par *par;
-	while(mylcd.thread_exit == 0){
-		msleep(10);
-		par = mylcd.fb[mylcd.cur_fb];
-		if(mylcd.is_double_buffer){
-			if(mylcd.double_buffer_ready){
-				mylcd.double_buffer_ready = 0;
-				lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
-			}
-		}
-		else{
-			if(mylcd.wait_frame_ready){
-				mylcd.wait_frame_ready-= 1;
-			}
-			else{
-				memcpy(mylcd.lram_virt[LCD_RAW_INDEX], mylcd.dma_addr, (par->var.xres * par->var.yres * par->var.bits_per_pixel) / 8);
-				lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
-			}
-		}
-	}
-	return 0;
+  struct myfb_par *par;
+  while(mylcd.thread_exit == 0)
+  {
+    msleep(10);
+    par = mylcd.fb[mylcd.cur_fb];
+    if(mylcd.is_double_buffer)
+    {
+      if(mylcd.double_buffer_ready)
+      {
+        mylcd.double_buffer_ready = 0;
+        lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
+      }
+    }
+    else
+    {
+      if(mylcd.wait_frame_ready)
+      {
+        mylcd.wait_frame_ready-= 1;
+      }
+      else
+      {
+        memcpy(mylcd.lram_virt[LCD_RAW_INDEX], mylcd.dma_addr, (par->var.xres * par->var.yres * par->var.bits_per_pixel) / 8);
+        lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
+      }
+    }
+  }
+  return 0;
 }
 
 static void ctrl_disable(void)
@@ -406,14 +441,17 @@ static void ctrl_disable(void)
   REG_LCD_CTRL|= LCD_CTRL_DIS;
 
   // Wait 20 ms for frame to end (at 60 Hz, one frame is 17 ms).
-  for(cnt=20; cnt; cnt-= 4){
-    if(REG_LCD_STATE & LCD_STATE_LDD){
+  for(cnt=20; cnt; cnt-= 4)
+  {
+    if(REG_LCD_STATE & LCD_STATE_LDD)
+    {
       break;
     }
     msleep(4);
   }
 
-  if(!cnt){
+  if(!cnt)
+  {
     printk("%s, LCD disable timeout\n", __func__);
   }
   REG_LCD_STATE&= ~LCD_STATE_LDD;
@@ -423,42 +461,47 @@ static void jzfb_ipu_disable(void)
 {
   unsigned int timeout = 1000;
 
-  if(REG_IPU_CTRL & IPU_CTRL_CHIP_EN){
+  if(REG_IPU_CTRL & IPU_CTRL_CHIP_EN)
+  {
     REG_IPU_CTRL|= IPU_CTRL_STOP;
-    do{  
-      if(REG_IPU_STATUS & IPU_STATUS_OUT_END){
+    do
+    {
+      if(REG_IPU_STATUS & IPU_STATUS_OUT_END)
+      {
         break;
-      }    
+      }
       msleep(1);
-    }while(--timeout);
+    }
+    while(--timeout);
 
-    if(!timeout){
+    if(!timeout)
+    {
       printk("%s, timeout while disabling IPU\n", __func__);
-    }    
+    }
   }
   REG_IPU_CTRL&= ~IPU_CTRL_CHIP_EN;
 }
 
 static void jz4760fb_set_panel_mode(void)
 {
-	// w,   h,   fclk, hsw, vsw, elw, blw, efw, bfw
-	// 320, 240, 60,   50,  1,   10,  70,  5,   5
-	const int w = 320;
-	const int h = 480;
-	const int hsw = 50;
-	const int vsw = 1;
-	const int elw = 10;
-	const int blw = 70;
-	const int efw = 5;
-	const int bfw = 5;
-  
-	// Configure LCDC
+  // w,   h,   fclk, hsw, vsw, elw, blw, efw, bfw
+  // 320, 240, 60,   50,  1,   10,  70,  5,   5
+  const int w = 320;
+  const int h = 480;
+  const int hsw = 50;
+  const int vsw = 1;
+  const int elw = 10;
+  const int blw = 70;
+  const int efw = 5;
+  const int bfw = 5;
+
+  // Configure LCDC
   REG_LCD_CFG = LCD_CFG_LCDPIN_LCD | LCD_CFG_RECOVER | /* Underrun recover */
-  	LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
-    LCD_CFG_MODE_TFT_16BIT |   /* output 18bpp */
-    LCD_CFG_PCP |  /* Pixel clock polarity: falling edge */
-    LCD_CFG_HSP |   /* Hsync polarity: active low */
-    LCD_CFG_VSP;
+                LCD_CFG_MODE_GENERIC_TFT | /* General TFT panel */
+                LCD_CFG_MODE_TFT_16BIT |   /* output 18bpp */
+                LCD_CFG_PCP |  /* Pixel clock polarity: falling edge */
+                LCD_CFG_HSP |   /* Hsync polarity: active low */
+                LCD_CFG_VSP;
 
   // Enable IPU auto-restart
   REG_LCD_IPUR = LCD_IPUR_IPUREN | (blw + w + elw) * vsw / 3;
@@ -489,14 +532,15 @@ static void jzfb_ipu_configure(struct jzfb *jzfb, const struct jz4760lcd_panel_t
   // Enable the chip, reset all the registers
   writel(IPU_CTRL_CHIP_EN | IPU_CTRL_RST, jzfb->ipu_base + IPU_CTRL);
 
-  switch(jzfb->bpp){
-  case 16:
-    format|= 3 << IPU_D_FMT_IN_FMT_BIT;
-    break;
-  case 32:
-  default:
-    format|= 2 << IPU_D_FMT_IN_FMT_BIT;
-    break;
+  switch(jzfb->bpp)
+  {
+    case 16:
+      format|= 3 << IPU_D_FMT_IN_FMT_BIT;
+      break;
+    case 32:
+    default:
+      format|= 2 << IPU_D_FMT_IN_FMT_BIT;
+      break;
   }
   writel(format, jzfb->ipu_base + IPU_D_FMT);
 
@@ -515,35 +559,42 @@ static void jzfb_ipu_configure(struct jzfb *jzfb, const struct jz4760lcd_panel_t
 #endif
 
   ctrl = IPU_CTRL_CHIP_EN | IPU_CTRL_LCDC_SEL | IPU_CTRL_FM_IRQ_EN;
-  if(fb->fix.type == FB_TYPE_PACKED_PIXELS){
+  if(fb->fix.type == FB_TYPE_PACKED_PIXELS)
+  {
     ctrl|= IPU_CTRL_SPKG_SEL;
   }
 
-  if(scaling_required(jzfb)){
+  if(scaling_required(jzfb))
+  {
     unsigned int numW=panel->w, denomW=fb->var.xres, numH=panel->h, denomH=fb->var.yres;
 
     BUG_ON(reduce_fraction(&numW, &denomW) < 0);
     BUG_ON(reduce_fraction(&numH, &denomH) < 0);
 
-    if(keep_aspect_ratio){
+    if(keep_aspect_ratio)
+    {
       unsigned int ratioW = (UINT_MAX >> 6) * numW / denomW, ratioH = (UINT_MAX >> 6) * numH / denomH;
-      if(ratioW < ratioH){
+      if(ratioW < ratioH)
+      {
         numH = numW;
         denomH = denomW;
-      } 
-      else{
+      }
+      else
+      {
         numW = numH;
         denomW = denomH;
       }
     }
 
-    if(numW != 1 || denomW != 1){
+    if(numW != 1 || denomW != 1)
+    {
       set_coefs(jzfb, IPU_HRSZ_COEF_LUT, numW, denomW);
       coef_index |= ((numW - 1) << 16);
       ctrl |= IPU_CTRL_HRSZ_EN;
     }
 
-    if(numH != 1 || denomH != 1){
+    if(numH != 1 || denomH != 1)
+    {
       set_coefs(jzfb, IPU_VRSZ_COEF_LUT, numH, denomH);
       coef_index |= numH - 1;
       ctrl|= IPU_CTRL_VRSZ_EN;
@@ -558,7 +609,8 @@ static void jzfb_ipu_configure(struct jzfb *jzfb, const struct jz4760lcd_panel_t
     // input frame, instruct the IPU to blend the pixels with the
     // ones that correspond to the next column, that is to say the
     // leftmost column of pixels of the input frame.
-    if(numW > denomW && denomW != 1){
+    if(numW > denomW && denomW != 1)
+    {
       outputW -= numW / denomW;
     }
   }
@@ -589,7 +641,7 @@ static void jzfb_ipu_reset(void)
   jzfb_ipu_disable();
   REG_IPU_CTRL = IPU_CTRL_CHIP_EN | IPU_CTRL_RST;
   jz4760fb_set_panel_mode();
-	/*
+  /*
   jzfb_ipu_configure(jzfb, jz_panel);
   jzfb_ipu_enable(jzfb);
   ctrl_enable(jzfb);*/
@@ -601,10 +653,12 @@ static int myfb_probe(struct platform_device *device)
   struct fb_info *info=NULL;
   struct myfb_par *par=NULL;
 
-	printk("%s\n", __func__);
-  for(x=0; x<SDL_NUM; x++){
+  printk("%s\n", __func__);
+  for(x=0; x<SDL_NUM; x++)
+  {
     info = framebuffer_alloc(sizeof(struct myfb_par), &device->dev);
-    if(!info){
+    if(!info)
+    {
       printk("%s, failed to allocate framebuffer\n", __func__);
       return -ENOMEM; // sorry, no error handling
     }
@@ -618,9 +672,9 @@ static int myfb_probe(struct platform_device *device)
 
     par->var.grayscale = 0;
     par->var.bits_per_pixel = par->bpp;
-    par->var.activate = FB_ACTIVATE_FORCE; 
+    par->var.activate = FB_ACTIVATE_FORCE;
     fb_videomode_to_var(&par->var, &par->mode);
-    
+
     info->cmap.len = 32;
     info->var = par->var;
     info->fbops = &myfb_ops;
@@ -631,7 +685,8 @@ static int myfb_probe(struct platform_device *device)
     // init buffer
     par->vram_size = (MAX_XRES * MAX_YRES * MAX_BPP * 4) / 8; // compatible with openpandora
     par->vram_virt = dma_alloc_coherent(NULL, par->vram_size, (resource_size_t*)&par->vram_phys, GFP_KERNEL | GFP_DMA);
-    if(!par->vram_virt){
+    if(!par->vram_virt)
+    {
       printk("%s, failed to allocate dma buffer for vram\n", __func__);
       return -ENOMEM; // sorry, no error handling
     }
@@ -651,12 +706,14 @@ static int myfb_probe(struct platform_device *device)
     info->fix = par->fix;
 
     par->v_palette_base = dma_alloc_coherent(NULL, PALETTE_SIZE, (resource_size_t*)&par->p_palette_base, GFP_KERNEL | GFP_DMA);
-    if(!par->v_palette_base){
+    if(!par->v_palette_base)
+    {
       printk("%s, failed to allocate dma buffer for v_palette\n", __func__);
       return -ENOMEM; // sorry, no error handling
     }
     memset(par->v_palette_base, 0, PALETTE_SIZE);
-    if(fb_alloc_cmap(&info->cmap, PALETTE_SIZE, 0)){
+    if(fb_alloc_cmap(&info->cmap, PALETTE_SIZE, 0))
+    {
       printk("%s, failed to allocate buffer for cmap\n", __func__);
       return -ENOMEM; // sorry, no error handling
     }
@@ -666,7 +723,8 @@ static int myfb_probe(struct platform_device *device)
     mylcd.fb[x] = par;
     fb_set_var(info, &par->var);
     dev_set_drvdata(&device->dev, info);
-    if(register_framebuffer(info) < 0){
+    if(register_framebuffer(info) < 0)
+    {
       printk("%s, failed to register framebuffer fb%d\n", __func__, x);
       return -ENOMEM; // sorry, no error handling
     }
@@ -674,27 +732,29 @@ static int myfb_probe(struct platform_device *device)
 
   // init buffer
   mylcd.lram_size = (LCD_XRES * LCD_YRES * LCD_BPP) / 8;
-  for(x=0; x<LCD_RAM_PAGE; x++){
+  for(x=0; x<LCD_RAM_PAGE; x++)
+  {
     mylcd.lram_virt[x] = dma_alloc_coherent(NULL, mylcd.lram_size, (resource_size_t*)&mylcd.lram_phys[x], GFP_KERNEL | GFP_DMA);
-    if(!mylcd.lram_virt[x]){
+    if(!mylcd.lram_virt[x])
+    {
       printk("%s, failed to allocate dma buffer for lram[%d]\n", __func__, x);
       return -ENOMEM; // sorry, no error handling
     }
     memset(mylcd.lram_virt[x], 0, mylcd.lram_size);
   }
-	jzfb_ipu_reset();
-	
-	mylcd.is_double_buffer = 1;
-	mylcd.double_buffer_ready = 0;
+  jzfb_ipu_reset();
+
+  mylcd.is_double_buffer = 1;
+  mylcd.double_buffer_ready = 0;
   memcpy(mylcd.lram_virt[LCD_RAW_INDEX], mylcd.fb[0]->vram_virt, (LCD_XRES * LCD_YRES * LCD_BPP) / 8);
-	lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
+  lcd_pixel_process(par->var.xres, par->var.yres, par->var.bits_per_pixel);
 
   mylcd.vsync_timeout = HZ / 5;
   init_waitqueue_head(&mylcd.vsync_wait);
- 
-	mylcd.thread_exit = 0;
-	mylcd.thread_id = kernel_thread(lcd_thread, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
-	printk("%s, thread id: 0x%x\n", __func__, mylcd.thread_id);
+
+  mylcd.thread_exit = 0;
+  mylcd.thread_id = kernel_thread(lcd_thread, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
+  printk("%s, thread id: 0x%x\n", __func__, mylcd.thread_id);
   return 0;
 }
 
@@ -710,7 +770,8 @@ static int myfb_resume(struct platform_device *dev)
   return 0;
 }
 
-static struct platform_driver fb_driver = {
+static struct platform_driver fb_driver =
+{
   .probe    = myfb_probe,
   .remove   = myfb_remove,
   .suspend  = myfb_suspend,
@@ -723,7 +784,7 @@ static struct platform_driver fb_driver = {
 
 static int __init fb_init(void)
 {
-  memset(&mylcd, 0 ,sizeof(mylcd));
+  memset(&mylcd, 0,sizeof(mylcd));
   return platform_driver_register(&fb_driver);
 }
 

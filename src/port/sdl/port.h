@@ -24,9 +24,10 @@ static inline int fsync(int f)
 #endif
 
 #if defined(RS97)
-struct _mydma {
-	int fd;
-	uint16_t *ptr;
+struct _mydma
+{
+  int fd;
+  uint16_t *ptr;
 };
 extern struct _mydma mydma;
 #endif

@@ -71,21 +71,23 @@ struct _mydma mydma;
 int map_dma_buffer(void)
 {
   mydma.fd = open("/dev/mem", O_RDWR | O_SYNC);
-  if(mydma.fd < 0){  
+  if(mydma.fd < 0)
+  {
     printf("%s, failed to open /dev/mem\n", __func__);
-    exit(-1);  
+    exit(-1);
   }
   mydma.ptr = (uint16_t*)mmap(0, DMA_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mydma.fd, DMA_ADDR);
-	printf("%s, mapped DMA address: 0x%x\n", __func__, (unsigned int)mydma.ptr);
-	return 0;
+  printf("%s, mapped DMA address: 0x%x\n", __func__, (unsigned int)mydma.ptr);
+  return 0;
 }
 
 void unmap_dma_buffer(void)
 {
-  if(mydma.ptr){
+  if(mydma.ptr)
+  {
     munmap(mydma.ptr, DMA_SIZE);
     close(mydma.fd);
-		mydma.fd = -1;
+    mydma.fd = -1;
   }
 }
 #endif
@@ -105,9 +107,9 @@ static void pcsx4all_exit(void)
 
   // Store config to file
   config_save();
-	#if defined(RS97)
-  	unmap_dma_buffer();
-	#endif
+#if defined(RS97)
+  unmap_dma_buffer();
+#endif
 }
 
 static char *home = NULL;
@@ -853,15 +855,17 @@ void video_flip(void)
   }
 
 #if !defined(RS97)
-  if(SDL_MUSTLOCK(screen)){
+  if(SDL_MUSTLOCK(screen))
+  {
     SDL_UnlockSurface(screen);
-	}
+  }
 
   SDL_Flip(screen);
 
-  if(SDL_MUSTLOCK(screen)){
+  if(SDL_MUSTLOCK(screen))
+  {
     SDL_LockSurface(screen);
-	}
+  }
   SCREEN = (Uint16 *)screen->pixels;
 #endif
 }
@@ -1045,10 +1049,10 @@ int main (int argc, char **argv)
 
   // Check if LastDir exists.
   probe_lastdir();
-	
-	#if defined(RS97)
-  	map_dma_buffer();
-	#endif
+
+#if defined(RS97)
+  map_dma_buffer();
+#endif
 
   // command line options
   bool param_parse_error = 0;
@@ -1401,18 +1405,18 @@ int main (int argc, char **argv)
 #ifdef SDL_TRIPLEBUF
   int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
 #else
-	#if defined(RS97)
-  	int flags = SDL_HWSURFACE;
-	#else
-  	int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
-	#endif
+#if defined(RS97)
+  int flags = SDL_HWSURFACE;
+#else
+  int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
+#endif
 #endif
 
-	#if defined(RS97)
-  	screen = SDL_SetVideoMode(320, 480, 16, flags);
-	#else
-  	screen = SDL_SetVideoMode(320, 240, 16, flags);
-	#endif
+#if defined(RS97)
+  screen = SDL_SetVideoMode(320, 480, 16, flags);
+#else
+  screen = SDL_SetVideoMode(320, 240, 16, flags);
+#endif
   if (!screen)
   {
     puts("Failed to set video mode");
@@ -1599,17 +1603,17 @@ void port_printf(int x, int y, const char *text)
     0x00,0x00,0x76,0xDC,0x00,0x00,0x00,0x00,0x10,0x28,0x10,0x54,0xAA,0x44,0x00,0x00,
   };
 
-	int interval = 1;
-	#if defined(RS97)
-	  y*= 2;
-		interval = 2;
-	#endif
+  int interval = 1;
+#if defined(RS97)
+  y*= 2;
+  interval = 2;
+#endif
 
-	#if defined(RS97)
-	 	unsigned short *screen = (mydma.ptr + x + y * 320);
-	#else
-	 	unsigned short *screen = (SCREEN + x + y * 320);
-	#endif
+#if defined(RS97)
+  unsigned short *screen = (mydma.ptr + x + y * 320);
+#else
+  unsigned short *screen = (SCREEN + x + y * 320);
+#endif
 
   for (int i = 0; i < strlen(text); i++)
   {

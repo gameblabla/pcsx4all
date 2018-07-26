@@ -93,7 +93,7 @@ void gpuDrawS(PtrUnion packet, const PS gpuSpriteSpanDriver)
 
 #if defined(__arm__) || defined(RS97)
 #if defined(__arm__)
-	#include "gpu_arm.h"
+  #include "gpu_arm.h"
 #endif
 
 /* Notaz 4bit sprites optimization */
@@ -138,82 +138,82 @@ void gpuDrawS16(PtrUnion packet)
   else if (ymax - y0 < 16)
     h = ymax - y0;
 
-	#if defined(RS97)
-		__asm__ (
-			".set noreorder											\n"
-			".macro do_4_pixels rs ibase obase 	\n"
-			".if \\ibase - 1 < 0								\n"
-			"   sll $t6, \\rs, 1								\n"
-			"	  and $t2, $t7, $t6								\n"
-			".else															\n"
-			"  srl $t6, \\rs, \\ibase-1					\n"
-			"  and $t2, $t7, $t6								\n"
-			".endif															\n"
+#if defined(RS97)
+  __asm__ (
+    ".set noreorder											\n"
+    ".macro do_4_pixels rs ibase obase 	\n"
+    ".if \\ibase - 1 < 0								\n"
+    "   sll $t6, \\rs, 1								\n"
+    "	  and $t2, $t7, $t6								\n"
+    ".else															\n"
+    "  srl $t6, \\rs, \\ibase-1					\n"
+    "  and $t2, $t7, $t6								\n"
+    ".endif															\n"
 
-			"  srl $t6, \\rs, \\ibase+3					\n"
-			"  and $t3, $t7, $t6								\n"
-			"  srl $t6, \\rs, \\ibase+7					\n"
-			"  and $t4, $t7, $t6								\n"
-			"  srl $t6, \\rs, \\ibase+11				\n"
-			"  and $t5, $t7, $t6								\n"
+    "  srl $t6, \\rs, \\ibase+3					\n"
+    "  and $t3, $t7, $t6								\n"
+    "  srl $t6, \\rs, \\ibase+7					\n"
+    "  and $t4, $t7, $t6								\n"
+    "  srl $t6, \\rs, \\ibase+11				\n"
+    "  and $t5, $t7, $t6								\n"
 
-			"  add $t6, $a2, $t2								\n"
-			"  lh $t2, 0($t6)										\n"
-			"  add $t6, $a2, $t3								\n"
-			"  lh $t3, 0($t6)										\n"
-			"  add $t6, $a2, $t4								\n"
-			"  lh $t4, 0($t6)										\n"
-			"  add $t6, $a2, $t5								\n"
-			"  lh $t5, 0($t6)										\n"
+    "  add $t6, $a2, $t2								\n"
+    "  lh $t2, 0($t6)										\n"
+    "  add $t6, $a2, $t3								\n"
+    "  lh $t3, 0($t6)										\n"
+    "  add $t6, $a2, $t4								\n"
+    "  lh $t4, 0($t6)										\n"
+    "  add $t6, $a2, $t5								\n"
+    "  lh $t5, 0($t6)										\n"
 
-			"  beqz $t2, 1f											\n"
-			"  nop															\n"
-			"  sh $t2, \\obase+0($a0)						\n"
-			"1:																	\n"
-			"  beqz $t3, 2f											\n"
-			"  nop															\n"
-			"  sh $t3, \\obase+2($a0)						\n"
-			"2:																	\n"
-			"  beqz $t4, 3f											\n"
-			"  nop															\n"
-			"  sh $t4, \\obase+4($a0)						\n"
-			"3:																	\n"
-			"  beqz $t5, 4f											\n"
-			"  nop															\n"
-			"  sh $t5, \\obase+6($a0)						\n"
-			"4:																	\n"
-			".endm															\n"
+    "  beqz $t2, 1f											\n"
+    "  nop															\n"
+    "  sh $t2, \\obase+0($a0)						\n"
+    "1:																	\n"
+    "  beqz $t3, 2f											\n"
+    "  nop															\n"
+    "  sh $t3, \\obase+2($a0)						\n"
+    "2:																	\n"
+    "  beqz $t4, 3f											\n"
+    "  nop															\n"
+    "  sh $t4, \\obase+4($a0)						\n"
+    "3:																	\n"
+    "  beqz $t5, 4f											\n"
+    "  nop															\n"
+    "  sh $t5, \\obase+6($a0)						\n"
+    "4:																	\n"
+    ".endm															\n"
 
-			"  move $a0, %[vram_off]						\n"
-			"  move $a1, %[tba_off]							\n"
-			"  move $a2, %[cba]									\n"
-			"  move $a3, %[h]										\n"
-			"  li $t7, 0x1e											\n"
-			"0:																	\n"
-			"  lw $t0, 0($a1)										\n"
-			"  lw $t1, 4($a1)										\n"
-			"  do_4_pixels $t0, 0,  0						\n"
-			"  do_4_pixels $t0, 16, 8						\n"
-			"  do_4_pixels $t1, 0,  16					\n"
-			"  do_4_pixels $t1, 16, 24					\n"
-			"  li $t6, 1												\n"
-			"  subu $a3, $a3, $t6								\n"
-			"  addiu $a0, $a0, 2048							\n"
-			"  addiu $a1, $a1, 2048							\n"
-			"  bnez $a3, 0b											\n"
-			"  nop															\n"
-			:
-			: 
-			[vram_off] 	"r"	(&gpu_unai.vram[FRAME_OFFSET(x0, y0)]),
-			[tba_off]		"r"	(&gpu_unai.TBA[FRAME_OFFSET(u0/4, v0)]),
-			[cba]				"r" (gpu_unai.CBA),
-			[h]					"r"	(h)
-			:
-			"$a0", "$a1", "$a2", "$a3"
-		);
-	#else
-	  draw_spr16_full(&gpu_unai.vram[FRAME_OFFSET(x0, y0)], &gpu_unai.TBA[FRAME_OFFSET(u0/4, v0)], gpu_unai.CBA, h);
-	#endif
+    "  move $a0, %[vram_off]						\n"
+    "  move $a1, %[tba_off]							\n"
+    "  move $a2, %[cba]									\n"
+    "  move $a3, %[h]										\n"
+    "  li $t7, 0x1e											\n"
+    "0:																	\n"
+    "  lw $t0, 0($a1)										\n"
+    "  lw $t1, 4($a1)										\n"
+    "  do_4_pixels $t0, 0,  0						\n"
+    "  do_4_pixels $t0, 16, 8						\n"
+    "  do_4_pixels $t1, 0,  16					\n"
+    "  do_4_pixels $t1, 16, 24					\n"
+    "  li $t6, 1												\n"
+    "  subu $a3, $a3, $t6								\n"
+    "  addiu $a0, $a0, 2048							\n"
+    "  addiu $a1, $a1, 2048							\n"
+    "  bnez $a3, 0b											\n"
+    "  nop															\n"
+    :
+    :
+    [vram_off] 	"r"	(&gpu_unai.vram[FRAME_OFFSET(x0, y0)]),
+    [tba_off]		"r"	(&gpu_unai.TBA[FRAME_OFFSET(u0/4, v0)]),
+    [cba]				"r" (gpu_unai.CBA),
+    [h]					"r"	(h)
+    :
+    "$a0", "$a1", "$a2", "$a3"
+  );
+#else
+  draw_spr16_full(&gpu_unai.vram[FRAME_OFFSET(x0, y0)], &gpu_unai.TBA[FRAME_OFFSET(u0/4, v0)], gpu_unai.CBA, h);
+#endif
 }
 #endif // __arm__
 

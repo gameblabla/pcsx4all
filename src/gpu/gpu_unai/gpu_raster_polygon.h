@@ -1250,8 +1250,9 @@ void gpuDrawPolyGT(const PtrUnion packet, const PP gpuPolySpanDriver, u32 is_qua
   do
   {
     const PolyVertex* vptrs[3];
-    if (polyUseTriangle(vbuf, cur_pass, vptrs) == false)
+    if (polyUseTriangle(vbuf, cur_pass, vptrs) == false){
       continue;
+    }
 
     s32 xa, xb, ya, yb;
     s32 x3, dx3, x4, dx4, dx;
@@ -1531,7 +1532,9 @@ void gpuDrawPolyGT(const PtrUnion packet, const PP gpuPolySpanDriver, u32 is_qua
       {
         //senquack - break out of final loop if nothing to be drawn (1st loop
         //           must always be taken to setup dx3/dx4)
-        if (y1 == y2) break;
+        if (y1 == y2) {
+          break;
+        }
 
         ya = y1;
         yb = y2;
@@ -1666,11 +1669,14 @@ void gpuDrawPolyGT(const PtrUnion packet, const PP gpuPolySpanDriver, u32 is_qua
         ya = ymin;
       }
 
-      if (yb > ymax) yb = ymax;
+      if (yb > ymax) {
+        yb = ymax;
+      }
 
       int loop1 = yb - ya;
-      if (loop1 <= 0)
+      if (loop1 <= 0){
         continue;
+      }
 
       u16* PixelBase = &((u16*)gpu_unai.vram)[FRAME_OFFSET(0, ya)];
       int li=gpu_unai.ilace_mask;
@@ -1682,8 +1688,12 @@ void gpuDrawPolyGT(const PtrUnion packet, const PP gpuPolySpanDriver, u32 is_qua
            u3 += du3, v3 += dv3,
            r3 += dr3, g3 += dg3, b3 += db3 )
       {
-        if (ya&li) continue;
-        if ((ya&pi)==pif) continue;
+        if (ya & li) {
+          continue;
+        }
+        if ((ya & pi) == pif) {
+          continue;
+        }
 
         u32 u4, v4;
         u32 r4, g4, b4;
@@ -1727,9 +1737,12 @@ void gpuDrawPolyGT(const PtrUnion packet, const PP gpuPolySpanDriver, u32 is_qua
         gpu_unai.v = v4;
         gpu_unai.gCol = gpuPackGouraudCol(r4, g4, b4);
 
-        if (xb > xmax) xb = xmax;
-        if ((xb - xa) > 0)
+        if (xb > xmax) {
+          xb = xmax;
+        }
+        if ((xb - xa) > 0){
           gpuPolySpanDriver(gpu_unai, PixelBase + xa, (xb - xa));
+        }
       }
     }
   }

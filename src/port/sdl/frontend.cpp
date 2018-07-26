@@ -910,11 +910,11 @@ static void gui_state_load_hint(int slot)
   {
     x = 160-8;
     y = 70;
-    #if defined(RS97)
-      const int dst_stride = 320*2;
-    #else
-      const int dst_stride = 320;
-    #endif
+#if defined(RS97)
+    const int dst_stride = 320*2;
+#else
+    const int dst_stride = 320;
+#endif
     uint16_t *dst = (uint16_t*)SCREEN + y * dst_stride + x;
     for (int j=0; j < 120; ++j)
     {
@@ -2034,7 +2034,8 @@ static void ShowMenuItem(int x, int y, MENUITEM *mi)
       sprintf(string, "%s %s", mi->name, (*mi->showval)());
       port_printf(x, y, string);
     }
-    else{
+    else
+    {
       port_printf(x, y, mi->name);
     }
   }
@@ -2053,16 +2054,16 @@ static void ShowMenu(MENU *menu)
       mi->hint();
   }
 
-	// show cursor
-	port_printf(menu->x - 3 * 8, menu->y + menu->cur * 10, "-->");
+  // show cursor
+  port_printf(menu->x - 3 * 8, menu->y + menu->cur * 10, "-->");
 
-	// general copyrights info
-	#if defined(RS97)
-		port_printf( 8 * 8, 10, "PCSX4ALL v2.4 for RetroGame");
-	#else
-		port_printf( 8 * 8, 10, "pcsx4all 2.4 for GCW-Zero");
-	#endif
-	port_printf( 4 * 8, 20, "Built on " __DATE__ " at " __TIME__);
+  // general copyrights info
+#if defined(RS97)
+  port_printf( 8 * 8, 10, "PCSX4ALL v2.4 for RetroGame");
+#else
+  port_printf( 8 * 8, 10, "pcsx4all 2.4 for GCW-Zero");
+#endif
+  port_printf( 4 * 8, 20, "Built on " __DATE__ " at " __TIME__);
 }
 
 static int gui_RunMenu(MENU *menu)
