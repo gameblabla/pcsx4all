@@ -18,9 +18,9 @@ RECOMPILER = mips
 
 RM  = rm -f
 MD  = mkdir
-CC  = mipsel-linux-gcc
-CXX = mipsel-linux-g++
-LD  = mipsel-linux-g++
+CC  = /opt/rs97-toolchain/bin/mipsel-linux-gcc
+CXX = /opt/rs97-toolchain/bin/mipsel-linux-g++
+LD  = /opt/rs97-toolchain/bin/mipsel-linux-g++
 
 SYSROOT    := $(shell $(CC) --print-sysroot)
 SDL_CONFIG := $(SYSROOT)/usr/bin/sdl-config
@@ -35,14 +35,14 @@ ifdef A320
 endif
 
 ifdef RS97
-  C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -I/home/steward/Github/rs97_toolchain/os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL
+  C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -I/opt/rs97_toolchain/os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL
 endif
 
 ifdef GCW0
 	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 endif
 
-CFLAGS = $(C_ARCH) -mplt -mno-shared -ggdb3 -O2 -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -mno-shared -mplt -mno-mips16 -O2 -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -60,7 +60,8 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lrt -lz
+CFLAGS += -fdata-sections -ffunction-sections
+LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lrt -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \

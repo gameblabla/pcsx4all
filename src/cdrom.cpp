@@ -1398,6 +1398,7 @@ void cdrWrite1(unsigned char rt)
 {
   u8 set_loc[3];
   int i;
+  int temp;
 
   CDR_LOG_IO("cdr w1: %02x\n", rt);
 
@@ -1442,7 +1443,9 @@ void cdrWrite1(unsigned char rt)
         set_loc[i] = btoi(cdr.Param[i]);
 
       i = msf2sec(cdr.SetSectorPlay);
-      i = abs(i - msf2sec(set_loc));
+      temp = i;
+      temp = temp - msf2sec(set_loc);
+      i = abs(temp);
       if (i > 16)
         cdr.Seeked = SEEK_PENDING;
 

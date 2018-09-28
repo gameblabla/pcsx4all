@@ -35,23 +35,23 @@
 enum
 {
   DKEY_SELECT = 0,
-  DKEY_L3,
-  DKEY_R3,
-  DKEY_START,
-  DKEY_UP,
-  DKEY_RIGHT,
-  DKEY_DOWN,
-  DKEY_LEFT,
-  DKEY_L2,
-  DKEY_R2,
-  DKEY_L1,
-  DKEY_R1,
-  DKEY_TRIANGLE,
-  DKEY_CIRCLE,
-  DKEY_CROSS,
-  DKEY_SQUARE,
+  DKEY_L3 = 1,
+  DKEY_R3 = 2,
+  DKEY_START = 3,
+  DKEY_UP = 4,
+  DKEY_RIGHT = 5,
+  DKEY_DOWN = 6,
+  DKEY_LEFT = 7,
+  DKEY_L2 = 8,
+  DKEY_R2 = 9,
+  DKEY_L1 = 10,
+  DKEY_R1 =  11,
+  DKEY_TRIANGLE = 12,
+  DKEY_CIRCLE = 13,
+  DKEY_CROSS = 14,
+  DKEY_SQUARE= 15,
 
-  DKEY_TOTAL
+  DKEY_TOTAL = 16
 };
 
 static SDL_Surface *screen;
@@ -556,6 +556,7 @@ static struct
   { SDLK_DOWN,		DKEY_DOWN },
   { SDLK_LEFT,		DKEY_LEFT },
   { SDLK_RIGHT,		DKEY_RIGHT },
+  
 #ifdef GCW_ZERO
   { SDLK_LSHIFT,		DKEY_SQUARE },
   { SDLK_LCTRL,		DKEY_CIRCLE },
@@ -563,6 +564,8 @@ static struct
   { SDLK_LALT,		DKEY_CROSS },
   { SDLK_TAB,		DKEY_L1 },
   { SDLK_BACKSPACE,	DKEY_R1 },
+  { SDLK_END,		DKEY_L2 },
+  { SDLK_3,			DKEY_R2 },
   { SDLK_ESCAPE,		DKEY_SELECT },
 #else
   { SDLK_a,		DKEY_SQUARE },
@@ -575,6 +578,7 @@ static struct
   { SDLK_r,		DKEY_R2 },
   { SDLK_BACKSPACE,	DKEY_SELECT },
 #endif
+
   { SDLK_RETURN,		DKEY_START },
   { 0, 0 }
 };
@@ -657,37 +661,6 @@ void pad_update(void)
             break;
         }
         break;
-      case SDL_JOYAXISMOTION:
-        switch (event.jaxis.axis)
-        {
-          case 0: /* X axis */
-            axisval = event.jaxis.value;
-            analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
-            if (axisval > joy_commit_range)
-            {
-              analog1 |= ANALOG_RIGHT;
-            }
-            else if (axisval < -joy_commit_range)
-            {
-              analog1 |= ANALOG_LEFT;
-            }
-            break;
-          case 1: /* Y axis*/
-            axisval = event.jaxis.value;
-            analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
-            if (axisval > joy_commit_range)
-            {
-              analog1 |= ANALOG_DOWN;
-            }
-            else if (axisval < -joy_commit_range)
-            {
-              analog1 |= ANALOG_UP;
-            }
-            break;
-        }
-        break;
-      case SDL_JOYBUTTONDOWN:
-        break;
       default:
         break;
     }
@@ -711,6 +684,8 @@ void pad_update(void)
   /* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
   // SELECT +
+
+  
   if (keys[SDLK_ESCAPE])
   {
     if (!keys[SDLK_RETURN])
@@ -734,6 +709,7 @@ void pad_update(void)
   {
     menu_check = 0;
   }
+
   if (use_speedup)
   {
     if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
@@ -745,6 +721,9 @@ void pad_update(void)
       use_speedup = false;
     }
   }
+  
+
+
   //
   if (Config.AnalogArrow)
   {
@@ -755,26 +734,7 @@ void pad_update(void)
       pad1 &= ~(1 << DKEY_SELECT);
       pad1 |= (1 << DKEY_CROSS);
     }
-    // SELECT+L1 for psx's L2
-    if (keys[SDLK_ESCAPE] && keys[SDLK_TAB])
-    {
-      pad1 &= ~(1 << DKEY_L2);
-      pad1 |= (1 << DKEY_L1);
-    }
-    else
-    {
-      pad1 |= (1 << DKEY_L2);
-    }
-    // SELECT+R1 for R2
-    if (keys[SDLK_ESCAPE] && keys[SDLK_BACKSPACE])
-    {
-      pad1 &= ~(1 << DKEY_R2);
-      pad1 |= (1 << DKEY_R1);
-    }
-    else
-    {
-      pad1 |= (1 << DKEY_R2);
-    }
+
     if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
     {
       pad1 &= ~(1 << DKEY_UP);
@@ -795,24 +755,12 @@ void pad_update(void)
   else
   {
     // Analog Arrow Off
-    pad1 |= (1 << DKEY_L2) | (1 << DKEY_R2);
-    if (analog1 == ANALOG_UP)
-    {
-      pad1 &= ~((1 << DKEY_L2) | (1 << DKEY_R2));
-    }
-    else if (analog1 == ANALOG_DOWN)
+	if (analog1 == ANALOG_DOWN)
     {
       menu_check = 2;
     }
-    else if (analog1 & ANALOG_LEFT)
-    {
-      pad1 &= ~(1 << DKEY_L2);
-    }
-    else if (analog1 & ANALOG_RIGHT)
-    {
-      pad1 &= ~(1 << DKEY_R2);
-    }
   }
+
 
   // SELECT+START for menu
   if (menu_check == 2 && !keys[SDLK_LALT])
@@ -1402,14 +1350,14 @@ int main (int argc, char **argv)
 
   atexit(pcsx4all_exit);
 
-#ifdef SDL_TRIPLEBUF
-  int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
-#else
 #if defined(RS97)
-  int flags = SDL_HWSURFACE;
+	int flags = SDL_HWSURFACE;
 #else
-  int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
-#endif
+	#ifdef SDL_TRIPLEBUF
+		int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
+	#else
+		int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
+	#endif
 #endif
 
 #if defined(RS97)

@@ -12,6 +12,12 @@
 #include <sys/types.h>
 #include <assert.h>
 
+
+#ifndef PATH_MAX
+#define PATH_MAX 2048
+#endif
+
+
 ///////////////////////////
 // Windows compatibility //
 ///////////////////////////
