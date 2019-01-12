@@ -910,11 +910,7 @@ static void gui_state_load_hint(int slot)
   {
     x = 160-8;
     y = 70;
-#if defined(RS97)
-    const int dst_stride = 320*2;
-#else
     const int dst_stride = 320;
-#endif
     uint16_t *dst = (uint16_t*)SCREEN + y * dst_stride + x;
     for (int j=0; j < 120; ++j)
     {

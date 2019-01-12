@@ -670,12 +670,8 @@ extern volatile uint16_t *dma_buffer;
 // TODO: clean up / improve / add HW scaling support
 void vout_update(void)
 {
-#if defined(RS97)
-  const int VIDEO_WIDTH = 640;
-#else
   const int VIDEO_WIDTH = 320;
-#endif
-
+  
   //Debugging:
 #if 0
   if (gpu.screen.w != gpu.screen.hres)
@@ -700,11 +696,7 @@ void vout_update(void)
   }
 
   bool isRGB24 = gpu.status.rgb24;
-#if defined(RS97)
-  u16* dst16 = (u16*)mydma.ptr;
-#else
   u16* dst16 = (u16*)SCREEN;
-#endif
   u16* src16 = (u16*)gpu.vram;
 
   // PS1 fb read wraps around (fixes black screen in 'Tobal no. 1')

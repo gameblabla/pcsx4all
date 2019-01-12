@@ -63,35 +63,6 @@ static bool emu_running = false;
 void config_load();
 void config_save();
 
-#if defined(RS97)
-#define DMA_ADDR 	0x4200000
-#define DMA_SIZE	320*480*2
-struct _mydma mydma;
-
-int map_dma_buffer(void)
-{
-  mydma.fd = open("/dev/mem", O_RDWR | O_SYNC);
-  if(mydma.fd < 0)
-  {
-    printf("%s, failed to open /dev/mem\n", __func__);
-    exit(-1);
-  }
-  mydma.ptr = (uint16_t*)mmap(0, DMA_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mydma.fd, DMA_ADDR);
-  printf("%s, mapped DMA address: 0x%x\n", __func__, (unsigned int)mydma.ptr);
-  return 0;
-}
-
-void unmap_dma_buffer(void)
-{
-  if(mydma.ptr)
-  {
-    munmap(mydma.ptr, DMA_SIZE);
-    close(mydma.fd);
-    mydma.fd = -1;
-  }
-}
-#endif
-
 static void pcsx4all_exit(void)
 {
   if (SDL_MUSTLOCK(screen))
@@ -107,9 +78,6 @@ static void pcsx4all_exit(void)
 
   // Store config to file
   config_save();
-#if defined(RS97)
-  unmap_dma_buffer();
-#endif
 }
 
 static char *home = NULL;
@@ -802,7 +770,6 @@ void video_flip(void)
     port_printf(5, 5, pl_data.stats_msg);
   }
 
-#if !defined(RS97)
   if(SDL_MUSTLOCK(screen))
   {
     SDL_UnlockSurface(screen);
@@ -815,7 +782,6 @@ void video_flip(void)
     SDL_LockSurface(screen);
   }
   SCREEN = (Uint16 *)screen->pixels;
-#endif
 }
 
 /* This is used by gpu_dfxvideo only as it doesn't scale itself */
@@ -997,10 +963,6 @@ int main (int argc, char **argv)
 
   // Check if LastDir exists.
   probe_lastdir();
-
-#if defined(RS97)
-  map_dma_buffer();
-#endif
 
   // command line options
   bool param_parse_error = 0;
@@ -1351,7 +1313,7 @@ int main (int argc, char **argv)
   atexit(pcsx4all_exit);
 
 #if defined(RS97)
-	int flags = SDL_HWSURFACE;
+	int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
 #else
 	#ifdef SDL_TRIPLEBUF
 		int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
@@ -1360,11 +1322,7 @@ int main (int argc, char **argv)
 	#endif
 #endif
 
-#if defined(RS97)
-  screen = SDL_SetVideoMode(320, 480, 16, flags);
-#else
   screen = SDL_SetVideoMode(320, 240, 16, flags);
-#endif
   if (!screen)
   {
     puts("Failed to set video mode");
@@ -1552,16 +1510,8 @@ void port_printf(int x, int y, const char *text)
   };
 
   int interval = 1;
-#if defined(RS97)
-  y*= 2;
-  interval = 2;
-#endif
 
-#if defined(RS97)
-  unsigned short *screen = (mydma.ptr + x + y * 320);
-#else
   unsigned short *screen = (SCREEN + x + y * 320);
-#endif
 
   for (int i = 0; i < strlen(text); i++)
   {
