@@ -8,7 +8,7 @@ typedef struct
 } disasm_label;
 
 void disasm_mips_instruction(u32 opcode, char *buffer, u32 pc,
-                             disasm_label *labels, u32 num_labels);
+ disasm_label *labels, u32 num_labels);
 
 extern const char *reg_names[];
 

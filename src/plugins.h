@@ -25,10 +25,10 @@
 #include "r3000a.h"
 
 #ifndef _WIN32
-  #define CALLBACK
+#define CALLBACK
 #else
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
 
 #include "psemu_plugin_defs.h"
@@ -39,19 +39,17 @@ void ReleasePlugins(void);
 
 // GPU structures
 
-typedef struct
-{
-  uint32_t ulFreezeVersion;
-  uint32_t ulStatus;
-  uint32_t ulControl[256];
-  unsigned char psxVRam[1024*512*2];
+typedef struct {
+	uint32_t ulFreezeVersion;
+	uint32_t ulStatus;
+	uint32_t ulControl[256];
+	unsigned char psxVRam[1024*512*2];
 } GPUFreeze_t;
 
-typedef struct
-{
-  uint8_t *vram;
-  uint16_t x, y, w, h, hres, vres;
-  bool depth24, pal;
+typedef struct {
+	uint8_t *vram;
+	uint16_t x, y, w, h, hres, vres;
+	bool depth24, pal;
 } GPUScreenInfo_t;
 
 /// GPU functions
@@ -71,30 +69,28 @@ void GPU_requestScreenRedraw(void);
 void GPU_getScreenInfo(GPUScreenInfo_t *sinfo);
 
 #ifdef USE_GPULIB
-  void GPU_vBlank(int is_vblank, int lcf);
+void GPU_vBlank(int is_vblank, int lcf);
 #endif
 
 // CDROM structures
 
-struct CdrStat
-{
-  uint32_t Type;
-  uint32_t Status;
-  unsigned char Time[3];
+struct CdrStat {
+	uint32_t Type;
+	uint32_t Status;
+	unsigned char Time[3];
 };
 
 // Updated to newer PCSX Reloaded/Rearmed code:
-struct SubQ
-{
-  char res0[12];
-  unsigned char ControlAndADR;
-  unsigned char TrackNumber;
-  unsigned char IndexNumber;
-  unsigned char TrackRelativeAddress[3];
-  unsigned char Filler;
-  unsigned char AbsoluteAddress[3];
-  unsigned char CRC[2];
-  char res1[72];
+struct SubQ {
+	char res0[12];
+	unsigned char ControlAndADR;
+	unsigned char TrackNumber;
+	unsigned char IndexNumber;
+	unsigned char TrackRelativeAddress[3];
+	unsigned char Filler;
+	unsigned char AbsoluteAddress[3];
+	unsigned char CRC[2];
+	char res1[72];
 };
 
 // CDROM functions
@@ -104,7 +100,7 @@ long CDR_shutdown(void);
 long CDR_open(void);
 long CDR_close(void);
 long CDR_getTN(unsigned char *);
-long CDR_getTD(unsigned char, unsigned char *);
+long CDR_getTD(unsigned char , unsigned char *);
 long CDR_readTrack(unsigned char *);
 extern unsigned char *(*CDR_getBuffer)(void);
 long CDR_play(unsigned char *);
@@ -114,15 +110,14 @@ unsigned char *CDR_getBufferSub(void);
 
 // SPU structures
 
-typedef struct
-{
-  unsigned char PluginName[8];
-  uint32_t PluginVersion;
-  uint32_t Size;
-  unsigned char SPUPorts[0x200];
-  unsigned char SPURam[0x80000];
-  xa_decode_t xa;
-  unsigned char *SPUInfo;
+typedef struct {
+	unsigned char PluginName[8];
+	uint32_t PluginVersion;
+	uint32_t Size;
+	unsigned char SPUPorts[0x200];
+	unsigned char SPURam[0x80000];
+	xa_decode_t xa;
+	unsigned char *SPUInfo;
 } SPUFreeze_t;
 
 // SPU functions, should have C linkage
@@ -166,7 +161,7 @@ long CALLBACK SPU_init(void);
 
 // ** See comment for #ifdef above regarding SPUinit
 #ifndef SPU_PCSXREARMED
-  #define SPU_init SPUinit
+#define SPU_init SPUinit
 #endif
 
 #define SPU_open SPUopen

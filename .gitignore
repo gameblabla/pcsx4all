@@ -1,0 +1,15 @@
+*.o
+obj
+*.swp
+pcsx4all*
+stdin.txt
+stdout.txt
+*.mcr
+*.iso
+*.bin
+*.img
+*.diff
+*.sh
+*.bat
+err.txt
+*.ipk

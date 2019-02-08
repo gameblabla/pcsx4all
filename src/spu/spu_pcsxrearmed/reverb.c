@@ -32,212 +32,212 @@
 
 INLINE void StartREVERB(int ch)
 {
-  if(spu.s_chan[ch].bReverb && (spu.spuCtrl&0x80))      // reverb possible?
+ if(spu.s_chan[ch].bReverb && (spu.spuCtrl&0x80))      // reverb possible?
   {
-    spu.s_chan[ch].bRVBActive=!!spu_config.iUseReverb;
+   spu.s_chan[ch].bRVBActive=!!spu_config.iUseReverb;
   }
-  else spu.s_chan[ch].bRVBActive=0;                     // else -> no reverb
+ else spu.s_chan[ch].bRVBActive=0;                     // else -> no reverb
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 INLINE int rvb2ram_offs(int curr, int space, int iOff)
 {
-  iOff += curr;
-  if (iOff >= 0x40000) iOff -= space;
-  return iOff;
+ iOff += curr;
+ if (iOff >= 0x40000) iOff -= space;
+ return iOff;
 }
 
 // get_buffer content helper: takes care about wraps
 #define g_buffer(var) \
-  ((int)(signed short)spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var)])
+ ((int)(signed short)spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var)])
 
 // saturate iVal and store it as var
 #define s_buffer(var, iVal) \
-  ssat32_to_16(iVal); \
-  spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var)] = iVal
+ ssat32_to_16(iVal); \
+ spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var)] = iVal
 
 #define s_buffer1(var, iVal) \
-  ssat32_to_16(iVal); \
-  spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var + 1)] = iVal
+ ssat32_to_16(iVal); \
+ spu.spuMem[rvb2ram_offs(curr_addr, space, rvb->var + 1)] = iVal
 
 ////////////////////////////////////////////////////////////////////////
 
 // portions based on spu2-x from PCSX2
 static void MixREVERB(int *SSumLR, int *RVB, int ns_to, int curr_addr)
 {
-  const REVERBInfo *rvb = spu.rvb;
-  int IIR_ALPHA = rvb->IIR_ALPHA;
-  int IIR_COEF = rvb->IIR_COEF;
-  int space = 0x40000 - rvb->StartAddr;
-  int l, r, ns;
+ const REVERBInfo *rvb = spu.rvb;
+ int IIR_ALPHA = rvb->IIR_ALPHA;
+ int IIR_COEF = rvb->IIR_COEF;
+ int space = 0x40000 - rvb->StartAddr;
+ int l, r, ns;
 
-  for (ns = 0; ns < ns_to * 2; )
+ for (ns = 0; ns < ns_to * 2; )
   {
-    int ACC0, ACC1, FB_A0, FB_A1, FB_B0, FB_B1;
-    int mix_dest_a0, mix_dest_a1, mix_dest_b0, mix_dest_b1;
+   int ACC0, ACC1, FB_A0, FB_A1, FB_B0, FB_B1;
+   int mix_dest_a0, mix_dest_a1, mix_dest_b0, mix_dest_b1;
 
-    int input_L = RVB[ns]   * rvb->IN_COEF_L;
-    int input_R = RVB[ns+1] * rvb->IN_COEF_R;
+   int input_L = RVB[ns]   * rvb->IN_COEF_L;
+   int input_R = RVB[ns+1] * rvb->IN_COEF_R;
 
-    int IIR_INPUT_A0 = ((g_buffer(IIR_SRC_A0) * IIR_COEF) + input_L) >> 15;
-    int IIR_INPUT_A1 = ((g_buffer(IIR_SRC_A1) * IIR_COEF) + input_R) >> 15;
-    int IIR_INPUT_B0 = ((g_buffer(IIR_SRC_B0) * IIR_COEF) + input_L) >> 15;
-    int IIR_INPUT_B1 = ((g_buffer(IIR_SRC_B1) * IIR_COEF) + input_R) >> 15;
+   int IIR_INPUT_A0 = ((g_buffer(IIR_SRC_A0) * IIR_COEF) + input_L) >> 15;
+   int IIR_INPUT_A1 = ((g_buffer(IIR_SRC_A1) * IIR_COEF) + input_R) >> 15;
+   int IIR_INPUT_B0 = ((g_buffer(IIR_SRC_B0) * IIR_COEF) + input_L) >> 15;
+   int IIR_INPUT_B1 = ((g_buffer(IIR_SRC_B1) * IIR_COEF) + input_R) >> 15;
 
-    int iir_dest_a0 = g_buffer(IIR_DEST_A0);
-    int iir_dest_a1 = g_buffer(IIR_DEST_A1);
-    int iir_dest_b0 = g_buffer(IIR_DEST_B0);
-    int iir_dest_b1 = g_buffer(IIR_DEST_B1);
+   int iir_dest_a0 = g_buffer(IIR_DEST_A0);
+   int iir_dest_a1 = g_buffer(IIR_DEST_A1);
+   int iir_dest_b0 = g_buffer(IIR_DEST_B0);
+   int iir_dest_b1 = g_buffer(IIR_DEST_B1);
 
-    int IIR_A0 = iir_dest_a0 + ((IIR_INPUT_A0 - iir_dest_a0) * IIR_ALPHA >> 15);
-    int IIR_A1 = iir_dest_a1 + ((IIR_INPUT_A1 - iir_dest_a1) * IIR_ALPHA >> 15);
-    int IIR_B0 = iir_dest_b0 + ((IIR_INPUT_B0 - iir_dest_b0) * IIR_ALPHA >> 15);
-    int IIR_B1 = iir_dest_b1 + ((IIR_INPUT_B1 - iir_dest_b1) * IIR_ALPHA >> 15);
+   int IIR_A0 = iir_dest_a0 + ((IIR_INPUT_A0 - iir_dest_a0) * IIR_ALPHA >> 15);
+   int IIR_A1 = iir_dest_a1 + ((IIR_INPUT_A1 - iir_dest_a1) * IIR_ALPHA >> 15);
+   int IIR_B0 = iir_dest_b0 + ((IIR_INPUT_B0 - iir_dest_b0) * IIR_ALPHA >> 15);
+   int IIR_B1 = iir_dest_b1 + ((IIR_INPUT_B1 - iir_dest_b1) * IIR_ALPHA >> 15);
 
-    preload(SSumLR + ns + 64*2/4 - 4);
+   preload(SSumLR + ns + 64*2/4 - 4);
 
-    s_buffer1(IIR_DEST_A0, IIR_A0);
-    s_buffer1(IIR_DEST_A1, IIR_A1);
-    s_buffer1(IIR_DEST_B0, IIR_B0);
-    s_buffer1(IIR_DEST_B1, IIR_B1);
+   s_buffer1(IIR_DEST_A0, IIR_A0);
+   s_buffer1(IIR_DEST_A1, IIR_A1);
+   s_buffer1(IIR_DEST_B0, IIR_B0);
+   s_buffer1(IIR_DEST_B1, IIR_B1);
 
-    preload(RVB + ns + 64*2/4 - 4);
+   preload(RVB + ns + 64*2/4 - 4);
 
-    ACC0 = (g_buffer(ACC_SRC_A0) * rvb->ACC_COEF_A +
-            g_buffer(ACC_SRC_B0) * rvb->ACC_COEF_B +
-            g_buffer(ACC_SRC_C0) * rvb->ACC_COEF_C +
-            g_buffer(ACC_SRC_D0) * rvb->ACC_COEF_D) >> 15;
-    ACC1 = (g_buffer(ACC_SRC_A1) * rvb->ACC_COEF_A +
-            g_buffer(ACC_SRC_B1) * rvb->ACC_COEF_B +
-            g_buffer(ACC_SRC_C1) * rvb->ACC_COEF_C +
-            g_buffer(ACC_SRC_D1) * rvb->ACC_COEF_D) >> 15;
+   ACC0 = (g_buffer(ACC_SRC_A0) * rvb->ACC_COEF_A +
+           g_buffer(ACC_SRC_B0) * rvb->ACC_COEF_B +
+           g_buffer(ACC_SRC_C0) * rvb->ACC_COEF_C +
+           g_buffer(ACC_SRC_D0) * rvb->ACC_COEF_D) >> 15;
+   ACC1 = (g_buffer(ACC_SRC_A1) * rvb->ACC_COEF_A +
+           g_buffer(ACC_SRC_B1) * rvb->ACC_COEF_B +
+           g_buffer(ACC_SRC_C1) * rvb->ACC_COEF_C +
+           g_buffer(ACC_SRC_D1) * rvb->ACC_COEF_D) >> 15;
 
-    FB_A0 = g_buffer(FB_SRC_A0);
-    FB_A1 = g_buffer(FB_SRC_A1);
-    FB_B0 = g_buffer(FB_SRC_B0);
-    FB_B1 = g_buffer(FB_SRC_B1);
+   FB_A0 = g_buffer(FB_SRC_A0);
+   FB_A1 = g_buffer(FB_SRC_A1);
+   FB_B0 = g_buffer(FB_SRC_B0);
+   FB_B1 = g_buffer(FB_SRC_B1);
 
-    mix_dest_a0 = ACC0 - ((FB_A0 * rvb->FB_ALPHA) >> 15);
-    mix_dest_a1 = ACC1 - ((FB_A1 * rvb->FB_ALPHA) >> 15);
+   mix_dest_a0 = ACC0 - ((FB_A0 * rvb->FB_ALPHA) >> 15);
+   mix_dest_a1 = ACC1 - ((FB_A1 * rvb->FB_ALPHA) >> 15);
 
-    mix_dest_b0 = FB_A0 + (((ACC0 - FB_A0) * rvb->FB_ALPHA - FB_B0 * rvb->FB_X) >> 15);
-    mix_dest_b1 = FB_A1 + (((ACC1 - FB_A1) * rvb->FB_ALPHA - FB_B1 * rvb->FB_X) >> 15);
+   mix_dest_b0 = FB_A0 + (((ACC0 - FB_A0) * rvb->FB_ALPHA - FB_B0 * rvb->FB_X) >> 15);
+   mix_dest_b1 = FB_A1 + (((ACC1 - FB_A1) * rvb->FB_ALPHA - FB_B1 * rvb->FB_X) >> 15);
 
-    s_buffer(MIX_DEST_A0, mix_dest_a0);
-    s_buffer(MIX_DEST_A1, mix_dest_a1);
-    s_buffer(MIX_DEST_B0, mix_dest_b0);
-    s_buffer(MIX_DEST_B1, mix_dest_b1);
+   s_buffer(MIX_DEST_A0, mix_dest_a0);
+   s_buffer(MIX_DEST_A1, mix_dest_a1);
+   s_buffer(MIX_DEST_B0, mix_dest_b0);
+   s_buffer(MIX_DEST_B1, mix_dest_b1);
 
-    l = (mix_dest_a0 + mix_dest_b0) / 2;
-    r = (mix_dest_a1 + mix_dest_b1) / 2;
+   l = (mix_dest_a0 + mix_dest_b0) / 2;
+   r = (mix_dest_a1 + mix_dest_b1) / 2;
 
-    l = (l * rvb->VolLeft)  >> 15; // 15?
-    r = (r * rvb->VolRight) >> 15;
+   l = (l * rvb->VolLeft)  >> 15; // 15?
+   r = (r * rvb->VolRight) >> 15;
 
-    SSumLR[ns++] += l;
-    SSumLR[ns++] += r;
-    SSumLR[ns++] += l;
-    SSumLR[ns++] += r;
+   SSumLR[ns++] += l;
+   SSumLR[ns++] += r;
+   SSumLR[ns++] += l;
+   SSumLR[ns++] += r;
 
-    curr_addr++;
-    if (curr_addr >= 0x40000) curr_addr = rvb->StartAddr;
+   curr_addr++;
+   if (curr_addr >= 0x40000) curr_addr = rvb->StartAddr;
   }
 }
 
 static void MixREVERB_off(int *SSumLR, int ns_to, int curr_addr)
 {
-  const REVERBInfo *rvb = spu.rvb;
-  int space = 0x40000 - rvb->StartAddr;
-  int l, r, ns;
+ const REVERBInfo *rvb = spu.rvb;
+ int space = 0x40000 - rvb->StartAddr;
+ int l, r, ns;
 
-  for (ns = 0; ns < ns_to * 2; )
+ for (ns = 0; ns < ns_to * 2; )
   {
-    preload(SSumLR + ns + 64*2/4 - 4);
+   preload(SSumLR + ns + 64*2/4 - 4);
 
-    l = (g_buffer(MIX_DEST_A0) + g_buffer(MIX_DEST_B0)) / 2;
-    r = (g_buffer(MIX_DEST_A1) + g_buffer(MIX_DEST_B1)) / 2;
+   l = (g_buffer(MIX_DEST_A0) + g_buffer(MIX_DEST_B0)) / 2;
+   r = (g_buffer(MIX_DEST_A1) + g_buffer(MIX_DEST_B1)) / 2;
 
-    l = (l * rvb->VolLeft)  >> 15;
-    r = (r * rvb->VolRight) >> 15;
+   l = (l * rvb->VolLeft)  >> 15;
+   r = (r * rvb->VolRight) >> 15;
 
-    SSumLR[ns++] += l;
-    SSumLR[ns++] += r;
-    SSumLR[ns++] += l;
-    SSumLR[ns++] += r;
+   SSumLR[ns++] += l;
+   SSumLR[ns++] += r;
+   SSumLR[ns++] += l;
+   SSumLR[ns++] += r;
 
-    curr_addr++;
-    if (curr_addr >= 0x40000) curr_addr = rvb->StartAddr;
+   curr_addr++;
+   if (curr_addr >= 0x40000) curr_addr = rvb->StartAddr;
   }
 }
 
 static void REVERBPrep(void)
 {
-  REVERBInfo *rvb = spu.rvb;
-  int space, t;
+ REVERBInfo *rvb = spu.rvb;
+ int space, t;
 
-  t = spu.regArea[(H_SPUReverbAddr - 0xc00) >> 1];
-  if (t == 0xFFFF || t <= 0x200)
-    spu.rvb->StartAddr = spu.rvb->CurrAddr = 0;
-  else if (spu.rvb->StartAddr != (t << 2))
-    spu.rvb->StartAddr = spu.rvb->CurrAddr = t << 2;
+ t = spu.regArea[(H_SPUReverbAddr - 0xc00) >> 1];
+ if (t == 0xFFFF || t <= 0x200)
+  spu.rvb->StartAddr = spu.rvb->CurrAddr = 0;
+ else if (spu.rvb->StartAddr != (t << 2))
+  spu.rvb->StartAddr = spu.rvb->CurrAddr = t << 2;
 
-  space = 0x40000 - rvb->StartAddr;
+ space = 0x40000 - rvb->StartAddr;
 
-#define prep_offs(v, r) \
-  t = spu.regArea[(0x1c0 + r) >> 1] * 4; \
-  while (t >= space) \
-    t -= space; \
-  rvb->v = t
-#define prep_offs2(d, r1, r2) \
-  t = spu.regArea[(0x1c0 + r1) >> 1] * 4; \
-  t -= spu.regArea[(0x1c0 + r2) >> 1] * 4; \
-  while (t < 0) \
-    t += space; \
-  while (t >= space) \
-    t -= space; \
-  rvb->d = t
+ #define prep_offs(v, r) \
+   t = spu.regArea[(0x1c0 + r) >> 1] * 4; \
+   while (t >= space) \
+     t -= space; \
+   rvb->v = t
+ #define prep_offs2(d, r1, r2) \
+   t = spu.regArea[(0x1c0 + r1) >> 1] * 4; \
+   t -= spu.regArea[(0x1c0 + r2) >> 1] * 4; \
+   while (t < 0) \
+     t += space; \
+   while (t >= space) \
+     t -= space; \
+   rvb->d = t
 
-  prep_offs(IIR_SRC_A0, 32);
-  prep_offs(IIR_SRC_A1, 34);
-  prep_offs(IIR_SRC_B0, 36);
-  prep_offs(IIR_SRC_B1, 38);
-  prep_offs(IIR_DEST_A0, 20);
-  prep_offs(IIR_DEST_A1, 22);
-  prep_offs(IIR_DEST_B0, 36);
-  prep_offs(IIR_DEST_B1, 38);
-  prep_offs(ACC_SRC_A0, 24);
-  prep_offs(ACC_SRC_A1, 26);
-  prep_offs(ACC_SRC_B0, 28);
-  prep_offs(ACC_SRC_B1, 30);
-  prep_offs(ACC_SRC_C0, 40);
-  prep_offs(ACC_SRC_C1, 42);
-  prep_offs(ACC_SRC_D0, 44);
-  prep_offs(ACC_SRC_D1, 46);
-  prep_offs(MIX_DEST_A0, 52);
-  prep_offs(MIX_DEST_A1, 54);
-  prep_offs(MIX_DEST_B0, 56);
-  prep_offs(MIX_DEST_B1, 58);
-  prep_offs2(FB_SRC_A0, 52, 0);
-  prep_offs2(FB_SRC_A1, 54, 0);
-  prep_offs2(FB_SRC_B0, 56, 2);
-  prep_offs2(FB_SRC_B1, 58, 2);
+ prep_offs(IIR_SRC_A0, 32);
+ prep_offs(IIR_SRC_A1, 34);
+ prep_offs(IIR_SRC_B0, 36);
+ prep_offs(IIR_SRC_B1, 38);
+ prep_offs(IIR_DEST_A0, 20);
+ prep_offs(IIR_DEST_A1, 22);
+ prep_offs(IIR_DEST_B0, 36);
+ prep_offs(IIR_DEST_B1, 38);
+ prep_offs(ACC_SRC_A0, 24);
+ prep_offs(ACC_SRC_A1, 26);
+ prep_offs(ACC_SRC_B0, 28);
+ prep_offs(ACC_SRC_B1, 30);
+ prep_offs(ACC_SRC_C0, 40);
+ prep_offs(ACC_SRC_C1, 42);
+ prep_offs(ACC_SRC_D0, 44);
+ prep_offs(ACC_SRC_D1, 46);
+ prep_offs(MIX_DEST_A0, 52);
+ prep_offs(MIX_DEST_A1, 54);
+ prep_offs(MIX_DEST_B0, 56);
+ prep_offs(MIX_DEST_B1, 58);
+ prep_offs2(FB_SRC_A0, 52, 0);
+ prep_offs2(FB_SRC_A1, 54, 0);
+ prep_offs2(FB_SRC_B0, 56, 2);
+ prep_offs2(FB_SRC_B1, 58, 2);
 
 #undef prep_offs
 #undef prep_offs2
-  rvb->dirty = 0;
+ rvb->dirty = 0;
 }
 
 INLINE void REVERBDo(int *SSumLR, int *RVB, int ns_to, int curr_addr)
 {
-  if (spu.spuCtrl & 0x80)                               // -> reverb on? oki
-  {
-    MixREVERB(SSumLR, RVB, ns_to, curr_addr);
-  }
-  else if (spu.rvb->VolLeft || spu.rvb->VolRight)
-  {
-    MixREVERB_off(SSumLR, ns_to, curr_addr);
-  }
+ if (spu.spuCtrl & 0x80)                               // -> reverb on? oki
+ {
+  MixREVERB(SSumLR, RVB, ns_to, curr_addr);
+ }
+ else if (spu.rvb->VolLeft || spu.rvb->VolRight)
+ {
+  MixREVERB_off(SSumLR, ns_to, curr_addr);
+ }
 }
 
 ////////////////////////////////////////////////////////////////////////

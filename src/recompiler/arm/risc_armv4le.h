@@ -17,8 +17,8 @@
  */
 
 #ifdef DEBUG_CPU
-  static unsigned immediates=0;
-  static unsigned immsize=0;
+static unsigned immediates=0;
+static unsigned immsize=0;
 #endif
 
 // CHUI: El maximo de opodes por immediate sin tabla
@@ -278,543 +278,434 @@ typedef Bit8u HostReg;
 #define PLD(dst,imm) (0xf5d0f000 + ((dst) << 16) + ((imm)&0xfff) )
 
 // move a full register from reg_src to reg_dst
-static void gen_mov_regs(HostReg reg_dst,HostReg reg_src)
-{
-  if(reg_src == reg_dst || !rec_phase) return;
-  write32( MOV_REG_LSL_IMM(reg_dst, reg_src, 0) );      // mov reg_dst, reg_src
+static void gen_mov_regs(HostReg reg_dst,HostReg reg_src) {
+	if(reg_src == reg_dst || !rec_phase) return;
+	write32( MOV_REG_LSL_IMM(reg_dst, reg_src, 0) );      // mov reg_dst, reg_src
 }
 
-static Bit32u genimm(Bit32u imm,Bit32u *encoded)
-{
-  if(imm==0)
-  {
-    *encoded=0;
-    return 1;
-  }
+static Bit32u genimm(Bit32u imm,Bit32u *encoded) {
+  if(imm==0) {*encoded=0;return 1;}
   int i=32;
   while(i>0)
   {
-    if(imm<256)
-    {
+    if(imm<256) {
       *encoded=((i&30)<<7)|imm;
       return 1;
     }
-    imm=(imm>>2)|(imm<<30);
-    i-=2;
+    imm=(imm>>2)|(imm<<30);i-=2;
   }
   return 0;
 }
 
 
 // CHUI: Cuenta cuantos opcodes usara para poner un immediate
-static int getImmOpcodes(Bit32u imm)
-{
-  int ret=0;
-  Bits scale = 0;
-  while (imm)
-  {
-    while ((imm & 3) == 0)
-    {
-      imm>>=2;
-      scale+=2;
-    }
-    ret++;
-    imm>>=8;
-    scale+=8;
-  }
-  return ret;
+static int getImmOpcodes(Bit32u imm) {
+	int ret=0;
+	Bits scale = 0;
+	while (imm) {
+		while ((imm & 3) == 0) {
+			imm>>=2;
+			scale+=2;
+		}
+		ret++;
+		imm>>=8;
+		scale+=8;
+	}
+	return ret;
 }
 
 // move a 32bit constant value into dest_reg using table
-static void gen_mov_dword_to_reg_imm_table(HostReg dest_reg,Bit32u imm)
-{
-  immPtr[immCount]=(unsigned)armPtr;
-  immData[immCount++]=imm;
-  write32(LDR_IMM((dest_reg), HOST_pc, 0));
+static void gen_mov_dword_to_reg_imm_table(HostReg dest_reg,Bit32u imm) {
+	immPtr[immCount]=(unsigned)armPtr;
+	immData[immCount++]=imm;
+	write32(LDR_IMM((dest_reg), HOST_pc, 0));
 
 }
 
 // move a 32bit constant value into dest_reg
-static void gen_mov_dword_to_reg_imm(HostReg dest_reg,Bit32u imm)
-{
-  Bit32u armval;
-  if (!rec_phase) return;
+static void gen_mov_dword_to_reg_imm(HostReg dest_reg,Bit32u imm) {
+	Bit32u armval;
+	if (!rec_phase) return;
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
-  dbgf("\t\t\tgen_mov_dword_to_reg_imm(r%i,%p)\n",dest_reg,imm);
+	unsigned optr=(unsigned)armPtr;
+	dbgf("\t\t\tgen_mov_dword_to_reg_imm(r%i,%p)\n",dest_reg,imm);
 #endif
-  if(genimm(imm,&armval))
-  {
-    write32( MOV_IMM_INT(dest_reg,armval) );
-  }
-  else if(genimm(~imm,&armval))
-  {
-    write32( MVN_IMM_INT(dest_reg,armval) );
-  }
-  else
-  {
+	if(genimm(imm,&armval))
+	{
+		write32( MOV_IMM_INT(dest_reg,armval) );
+	}
+	else if(genimm(~imm,&armval))
+	{
+		write32( MVN_IMM_INT(dest_reg,armval) );
+	}
+	else {
 // CHUI: Se sustituye por tabla de inmediatos si es necesario
-    if (getImmOpcodes(imm)<=MAX_IMM_OPCODES)
-    {
-      Bits first, scale;
-      scale = 0;
-      first = 1;
-      while (imm)
-      {
-        while ((imm & 3) == 0)
-        {
-          imm>>=2;
-          scale+=2;
-        }
-        if (first)
-        {
-          write32( MOV_IMM(dest_reg, imm & 0xff, ROTATE_SCALE(scale)) );      // mov dest_reg, #((imm & 0xff) << scale)
-          first = 0;
-        }
-        else
-        {
-          write32( ORR_IMM(dest_reg, dest_reg, imm & 0xff, ROTATE_SCALE(scale)) );      // orr dest_reg, dest_reg, #((imm & 0xff) << scale)
-        }
-        imm>>=8;
-        scale+=8;
-      }
-    }
-    else
-      gen_mov_dword_to_reg_imm_table(dest_reg,imm);
-  }
+		if (getImmOpcodes(imm)<=MAX_IMM_OPCODES) {
+			Bits first, scale;
+			scale = 0;
+			first = 1;
+			while (imm) {
+				while ((imm & 3) == 0) {
+					imm>>=2;
+					scale+=2;
+				}
+				if (first) {
+					write32( MOV_IMM(dest_reg, imm & 0xff, ROTATE_SCALE(scale)) );      // mov dest_reg, #((imm & 0xff) << scale)
+					first = 0;
+				} else {
+					write32( ORR_IMM(dest_reg, dest_reg, imm & 0xff, ROTATE_SCALE(scale)) );      // orr dest_reg, dest_reg, #((imm & 0xff) << scale)
+				}
+				imm>>=8;
+				scale+=8;
+			}
+		} else
+			gen_mov_dword_to_reg_imm_table(dest_reg,imm);
+	}
 #ifdef DEBUG_CPU
-  immediates++;
-  immsize+=(((unsigned)armPtr)-optr);
+	immediates++;
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 // helper function for gen_mov_word_to_reg
-static void gen_mov_word_to_reg_helper(HostReg dest_reg,void* data,bool dword,HostReg data_reg)
-{
+static void gen_mov_word_to_reg_helper(HostReg dest_reg,void* data,bool dword,HostReg data_reg) {
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
+	unsigned optr=(unsigned)armPtr;
 #endif
-  // alignment....
-  if (dword)
-  {
-    if ((Bit32u)data & 3)
-    {
-      if ( ((Bit32u)data & 3) == 2 )
-      {
-        write32( LDRH_IMM(dest_reg, data_reg, 0) );      // ldrh dest_reg, [data_reg]
-        write32( LDRH_IMM(temp2, data_reg, 2) );      // ldrh temp2, [data_reg, #2]
-        write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 16) );      // orr dest_reg, dest_reg, temp2, lsl #16
-      }
-      else
-      {
-        write32( LDRB_IMM(dest_reg, data_reg, 0) );      // ldrb dest_reg, [data_reg]
-        write32( LDRH_IMM(temp2, data_reg, 1) );      // ldrh temp2, [data_reg, #1]
-        write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 8) );      // orr dest_reg, dest_reg, temp2, lsl #8
-        write32( LDRB_IMM(temp2, data_reg, 3) );      // ldrb temp2, [data_reg, #3]
-        write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 24) );      // orr dest_reg, dest_reg, temp2, lsl #24
-      }
-    }
-    else
-    {
-      write32( LDR_IMM(dest_reg, data_reg, 0) );      // ldr dest_reg, [data_reg]
-    }
-  }
-  else
-  {
-    if ((Bit32u)data & 1)
-    {
-      write32( LDRB_IMM(dest_reg, data_reg, 0) );      // ldrb dest_reg, [data_reg]
-      write32( LDRB_IMM(temp2, data_reg, 1) );      // ldrb temp2, [data_reg, #1]
-      write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 8) );      // orr dest_reg, dest_reg, temp2, lsl #8
-    }
-    else
-    {
-      write32( LDRH_IMM(dest_reg, data_reg, 0) );      // ldrh dest_reg, [data_reg]
-    }
-  }
+	// alignment....
+	if (dword) {
+		if ((Bit32u)data & 3) {
+			if ( ((Bit32u)data & 3) == 2 ) {
+				write32( LDRH_IMM(dest_reg, data_reg, 0) );      // ldrh dest_reg, [data_reg]
+				write32( LDRH_IMM(temp2, data_reg, 2) );      // ldrh temp2, [data_reg, #2]
+				write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 16) );      // orr dest_reg, dest_reg, temp2, lsl #16
+			} else {
+				write32( LDRB_IMM(dest_reg, data_reg, 0) );      // ldrb dest_reg, [data_reg]
+				write32( LDRH_IMM(temp2, data_reg, 1) );      // ldrh temp2, [data_reg, #1]
+				write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 8) );      // orr dest_reg, dest_reg, temp2, lsl #8
+				write32( LDRB_IMM(temp2, data_reg, 3) );      // ldrb temp2, [data_reg, #3]
+				write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 24) );      // orr dest_reg, dest_reg, temp2, lsl #24
+			}
+		} else {
+			write32( LDR_IMM(dest_reg, data_reg, 0) );      // ldr dest_reg, [data_reg]
+		}
+	} else {
+		if ((Bit32u)data & 1) {
+			write32( LDRB_IMM(dest_reg, data_reg, 0) );      // ldrb dest_reg, [data_reg]
+			write32( LDRB_IMM(temp2, data_reg, 1) );      // ldrb temp2, [data_reg, #1]
+			write32( ORR_REG_LSL_IMM(dest_reg, dest_reg, temp2, 8) );      // orr dest_reg, dest_reg, temp2, lsl #8
+		} else {
+			write32( LDRH_IMM(dest_reg, data_reg, 0) );      // ldrh dest_reg, [data_reg]
+		}
+	}
 #ifdef DEBUG_CPU
-  immsize+=(((unsigned)armPtr)-optr);
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 // move a 32bit (dword==true) or 16bit (dword==false) value from memory into dest_reg
 // 16bit moves may destroy the upper 16bit of the destination register
-static void gen_mov_word_to_reg(HostReg dest_reg,void* data,bool dword)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(temp1, (Bit32u)data);
-  gen_mov_word_to_reg_helper(dest_reg, data, dword, temp1);
+static void gen_mov_word_to_reg(HostReg dest_reg,void* data,bool dword) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(temp1, (Bit32u)data);
+	gen_mov_word_to_reg_helper(dest_reg, data, dword, temp1);
 }
 
 // move a 16bit constant value into dest_reg
 // the upper 16bit of the destination register may be destroyed
-INLINE void gen_mov_word_to_reg_imm(HostReg dest_reg,Bit16u imm)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(dest_reg, (Bit32u)imm);
+INLINE void gen_mov_word_to_reg_imm(HostReg dest_reg,Bit16u imm) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(dest_reg, (Bit32u)imm);
 }
 
 // helper function for gen_mov_word_from_reg
-static void gen_mov_word_from_reg_helper(HostReg src_reg,void* dest,bool dword, HostReg data_reg)
-{
+static void gen_mov_word_from_reg_helper(HostReg src_reg,void* dest,bool dword, HostReg data_reg) {
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
+	unsigned optr=(unsigned)armPtr;
 #endif
-  // alignment....
-  if (dword)
-  {
-    if ((Bit32u)dest & 3)
-    {
-      if ( ((Bit32u)dest & 3) == 2 )
-      {
-        write32( STRH_IMM(src_reg, data_reg, 0) );      // strh src_reg, [data_reg]
-        write32( MOV_REG_LSR_IMM(temp2, src_reg, 16) );      // mov temp2, src_reg, lsr #16
-        write32( STRH_IMM(temp2, data_reg, 2) );      // strh temp2, [data_reg, #2]
-      }
-      else
-      {
-        write32( STRB_IMM(src_reg, data_reg, 0) );      // strb src_reg, [data_reg]
-        write32( MOV_REG_LSR_IMM(temp2, src_reg, 8) );      // mov temp2, src_reg, lsr #8
-        write32( STRH_IMM(temp2, data_reg, 1) );      // strh temp2, [data_reg, #1]
-        write32( MOV_REG_LSR_IMM(temp2, temp2, 16) );      // mov temp2, temp2, lsr #16
-        write32( STRB_IMM(temp2, data_reg, 3) );      // strb temp2, [data_reg, #3]
-      }
-    }
-    else
-    {
-      write32( STR_IMM(src_reg, data_reg, 0) );      // str src_reg, [data_reg]
-    }
-  }
-  else
-  {
-    if ((Bit32u)dest & 1)
-    {
-      write32( STRB_IMM(src_reg, data_reg, 0) );      // strb src_reg, [data_reg]
-      write32( MOV_REG_LSR_IMM(temp2, src_reg, 8) );      // mov temp2, src_reg, lsr #8
-      write32( STRB_IMM(temp2, data_reg, 1) );      // strb temp2, [data_reg, #1]
-    }
-    else
-    {
-      write32( STRH_IMM(src_reg, data_reg, 0) );      // strh src_reg, [data_reg]
-    }
-  }
+	// alignment....
+	if (dword) {
+		if ((Bit32u)dest & 3) {
+			if ( ((Bit32u)dest & 3) == 2 ) {
+				write32( STRH_IMM(src_reg, data_reg, 0) );      // strh src_reg, [data_reg]
+				write32( MOV_REG_LSR_IMM(temp2, src_reg, 16) );      // mov temp2, src_reg, lsr #16
+				write32( STRH_IMM(temp2, data_reg, 2) );      // strh temp2, [data_reg, #2]
+			} else {
+				write32( STRB_IMM(src_reg, data_reg, 0) );      // strb src_reg, [data_reg]
+				write32( MOV_REG_LSR_IMM(temp2, src_reg, 8) );      // mov temp2, src_reg, lsr #8
+				write32( STRH_IMM(temp2, data_reg, 1) );      // strh temp2, [data_reg, #1]
+				write32( MOV_REG_LSR_IMM(temp2, temp2, 16) );      // mov temp2, temp2, lsr #16
+				write32( STRB_IMM(temp2, data_reg, 3) );      // strb temp2, [data_reg, #3]
+			}
+		} else {
+			write32( STR_IMM(src_reg, data_reg, 0) );      // str src_reg, [data_reg]
+		}
+	} else {
+		if ((Bit32u)dest & 1) {
+			write32( STRB_IMM(src_reg, data_reg, 0) );      // strb src_reg, [data_reg]
+			write32( MOV_REG_LSR_IMM(temp2, src_reg, 8) );      // mov temp2, src_reg, lsr #8
+			write32( STRB_IMM(temp2, data_reg, 1) );      // strb temp2, [data_reg, #1]
+		} else {
+			write32( STRH_IMM(src_reg, data_reg, 0) );      // strh src_reg, [data_reg]
+		}
+	}
 #ifdef DEBUG_CPU
-  immsize+=(((unsigned)armPtr)-optr);
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 // move 32bit (dword==true) or 16bit (dword==false) of a register into memory
-static void gen_mov_word_from_reg(HostReg src_reg,void* dest,bool dword)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(temp1, (Bit32u)dest);
-  gen_mov_word_from_reg_helper(src_reg, dest, dword, temp1);
+static void gen_mov_word_from_reg(HostReg src_reg,void* dest,bool dword) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(temp1, (Bit32u)dest);
+	gen_mov_word_from_reg_helper(src_reg, dest, dword, temp1);
 }
 
 // move an 8bit value from memory into dest_reg
 // the upper 24bit of the destination register can be destroyed
 // this function does not use FC_OP1/FC_OP2 as dest_reg as these
 // registers might not be directly byte-accessible on some architectures
-static void gen_mov_byte_to_reg_low(HostReg dest_reg,void* data)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(temp1, (Bit32u)data);
-  write32( LDRB_IMM(dest_reg, temp1, 0) );      // ldrb dest_reg, [temp1]
+static void gen_mov_byte_to_reg_low(HostReg dest_reg,void* data) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(temp1, (Bit32u)data);
+	write32( LDRB_IMM(dest_reg, temp1, 0) );      // ldrb dest_reg, [temp1]
 }
 
 // move an 8bit value from memory into dest_reg
 // the upper 24bit of the destination register can be destroyed
 // this function can use FC_OP1/FC_OP2 as dest_reg which are
 // not directly byte-accessible on some architectures
-INLINE void gen_mov_byte_to_reg_low_canuseword(HostReg dest_reg,void* data)
-{
-  if (!rec_phase) return;
-  gen_mov_byte_to_reg_low(dest_reg, data);
+INLINE void gen_mov_byte_to_reg_low_canuseword(HostReg dest_reg,void* data) {
+	if (!rec_phase) return;
+	gen_mov_byte_to_reg_low(dest_reg, data);
 }
 
 // move an 8bit constant value into dest_reg
 // the upper 24bit of the destination register can be destroyed
 // this function does not use FC_OP1/FC_OP2 as dest_reg as these
 // registers might not be directly byte-accessible on some architectures
-static void gen_mov_byte_to_reg_low_imm(HostReg dest_reg,Bit8u imm)
-{
-  if (!rec_phase) return;
-  write32( MOV_IMM(dest_reg, imm, 0) );      // mov dest_reg, #(imm)
+static void gen_mov_byte_to_reg_low_imm(HostReg dest_reg,Bit8u imm) {
+	if (!rec_phase) return;
+	write32( MOV_IMM(dest_reg, imm, 0) );      // mov dest_reg, #(imm)
 }
 
 // move an 8bit constant value into dest_reg
 // the upper 24bit of the destination register can be destroyed
 // this function can use FC_OP1/FC_OP2 as dest_reg which are
 // not directly byte-accessible on some architectures
-INLINE void gen_mov_byte_to_reg_low_imm_canuseword(HostReg dest_reg,Bit8u imm)
-{
-  if (!rec_phase) return;
-  gen_mov_byte_to_reg_low_imm(dest_reg, imm);
+INLINE void gen_mov_byte_to_reg_low_imm_canuseword(HostReg dest_reg,Bit8u imm) {
+	if (!rec_phase) return;
+	gen_mov_byte_to_reg_low_imm(dest_reg, imm);
 }
 
 // move the lowest 8bit of a register into memory
-static void gen_mov_byte_from_reg_low(HostReg src_reg,void* dest)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(temp1, (Bit32u)dest);
-  write32( STRB_IMM(src_reg, temp1, 0) );      // strb src_reg, [temp1]
+static void gen_mov_byte_from_reg_low(HostReg src_reg,void* dest) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(temp1, (Bit32u)dest);
+	write32( STRB_IMM(src_reg, temp1, 0) );      // strb src_reg, [temp1]
 }
 
 // convert an 8bit word to a 32bit dword
 // the register is zero-extended (sign==false) or sign-extended (sign==true)
-static void gen_extend_byte(bool sign,HostReg reg)
-{
-  if (!rec_phase) return;
-  if (sign)
-  {
-    write32( MOV_REG_LSL_IMM(reg, reg, 24) );      // mov reg, reg, lsl #24
-    write32( MOV_REG_ASR_IMM(reg, reg, 24) );      // mov reg, reg, asr #24
-  }
-  else
-  {
-    write32( AND_IMM(reg, reg, 0xff, 0) );      // and reg, reg, #0xff
-  }
+static void gen_extend_byte(bool sign,HostReg reg) {
+	if (!rec_phase) return;
+	if (sign) {
+		write32( MOV_REG_LSL_IMM(reg, reg, 24) );      // mov reg, reg, lsl #24
+		write32( MOV_REG_ASR_IMM(reg, reg, 24) );      // mov reg, reg, asr #24
+	} else {
+		write32( AND_IMM(reg, reg, 0xff, 0) );      // and reg, reg, #0xff
+	}
 }
 
 // convert a 16bit word to a 32bit dword
 // the register is zero-extended (sign==false) or sign-extended (sign==true)
-static void gen_extend_word(bool sign,HostReg reg)
-{
-  if (!rec_phase) return;
-  if (sign)
-  {
-    write32( MOV_REG_LSL_IMM(reg, reg, 16) );      // mov reg, reg, lsl #16
-    write32( MOV_REG_ASR_IMM(reg, reg, 16) );      // mov reg, reg, asr #16
-  }
-  else
-  {
-    write32( MOV_REG_LSL_IMM(reg, reg, 16) );      // mov reg, reg, lsl #16
-    write32( MOV_REG_LSR_IMM(reg, reg, 16) );      // mov reg, reg, lsr #16
-  }
+static void gen_extend_word(bool sign,HostReg reg) {
+	if (!rec_phase) return;
+	if (sign) {
+		write32( MOV_REG_LSL_IMM(reg, reg, 16) );      // mov reg, reg, lsl #16
+		write32( MOV_REG_ASR_IMM(reg, reg, 16) );      // mov reg, reg, asr #16
+	} else {
+		write32( MOV_REG_LSL_IMM(reg, reg, 16) );      // mov reg, reg, lsl #16
+		write32( MOV_REG_LSR_IMM(reg, reg, 16) );      // mov reg, reg, lsr #16
+	}
 }
 
 
 // add a 32bit constant value to a full register using table
-static void gen_add_imm_table(HostReg reg_dest,HostReg reg_src,Bit32u imm)
-{
-  immPtr[immCount]=(unsigned)armPtr;
-  immData[immCount++]=imm;
-  write32(LDR_IMM((temp1), HOST_pc, 0));
-  write32(ADD_REG_LSL_IMM((reg_dest),(reg_src),(temp1),0));
+static void gen_add_imm_table(HostReg reg_dest,HostReg reg_src,Bit32u imm) {
+	immPtr[immCount]=(unsigned)armPtr;
+	immData[immCount++]=imm;
+	write32(LDR_IMM((temp1), HOST_pc, 0));
+	write32(ADD_REG_LSL_IMM((reg_dest),(reg_src),(temp1),0));
 }
 
 // add a 32bit constant value to a full register
-static void gen_add_imm(HostReg reg_dest,HostReg reg_src,Bit32u imm)
-{
-  if (!rec_phase) return;
-  if(!imm)
-  {
-    if (reg_dest!=reg_src)
-      write32( MOV_REG_LSL_IMM(reg_dest, reg_src, 0) );      // mov reg_dst, reg_src
-    return;
-  }
+static void gen_add_imm(HostReg reg_dest,HostReg reg_src,Bit32u imm) {
+	if (!rec_phase) return;
+	if(!imm) {
+		if (reg_dest!=reg_src)
+			write32( MOV_REG_LSL_IMM(reg_dest, reg_src, 0) );      // mov reg_dst, reg_src
+		return;
+	}
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
-  dbgf("\t\t\tgen_add_imm(r%i,r%i,%p)\n",reg_dest,reg_src,imm);
+	unsigned optr=(unsigned)armPtr;
+	dbgf("\t\t\tgen_add_imm(r%i,r%i,%p)\n",reg_dest,reg_src,imm);
 #endif
-  if (imm == 0xffffffff)
-  {
-    write32( SUB_IMM(reg_dest, reg_src, 1, 0) );      // sub reg, reg, #1
-  }
-  else
-  {
-    if (imm<0x100)
-    {
-      write32(ADD_IMM(reg_dest, reg_src, imm, 0));
-    }
-    else
-    {
+	if (imm == 0xffffffff) {
+		write32( SUB_IMM(reg_dest, reg_src, 1, 0) );      // sub reg, reg, #1
+	} else {
+		if (imm<0x100) {
+			write32(ADD_IMM(reg_dest, reg_src, imm, 0));
+		} else {
 // CHUI: Se sustituye por tabla de inmediatos si es necesario
-      if (getImmOpcodes(imm)<=MAX_IMM_OPCODES)
-      {
-        Bits scale = 0;
-        int first = 1;
-        while (imm)
-        {
-          while ((imm & 3) == 0)
-          {
-            imm>>=2;
-            scale+=2;
-          }
-          if (first)
-          {
-            write32( ADD_IMM(reg_dest, reg_src, imm & 0xff, ROTATE_SCALE(scale)) );      // add reg, reg, #((imm & 0xff) << scale)
-            first=0;
-          }
-          else
-            write32( ADD_IMM(reg_dest, reg_dest, imm & 0xff, ROTATE_SCALE(scale)) );      // add reg, reg, #((imm & 0xff) << scale)
-          imm>>=8;
-          scale+=8;
-        }
-      }
-      else
-        gen_add_imm_table(reg_dest,reg_src,imm);
-    }
-  }
+			if (getImmOpcodes(imm)<=MAX_IMM_OPCODES) {
+				Bits scale = 0;
+				int first = 1;
+				while (imm) {
+					while ((imm & 3) == 0) {
+						imm>>=2;
+						scale+=2;
+					}
+					if (first) {
+						write32( ADD_IMM(reg_dest, reg_src, imm & 0xff, ROTATE_SCALE(scale)) );      // add reg, reg, #((imm & 0xff) << scale)
+						first=0;
+					} else
+						write32( ADD_IMM(reg_dest, reg_dest, imm & 0xff, ROTATE_SCALE(scale)) );      // add reg, reg, #((imm & 0xff) << scale)
+					imm>>=8;
+					scale+=8;
+				}
+			} else
+				gen_add_imm_table(reg_dest,reg_src,imm);
+		}
+	}
 #ifdef DEBUG_CPU
-  immediates++;
-  immsize+=(((unsigned)armPtr)-optr);
+	immediates++;
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 
 // sub a 32bit constant value to a full register using table
-static void gen_sub_imm_table(HostReg reg_dest,HostReg reg_src,Bit32u imm)
-{
-  immPtr[immCount]=(unsigned)armPtr;
-  immData[immCount++]=imm;
-  write32(LDR_IMM((temp1), HOST_pc, 0));
-  write32(SUB_REG_LSL_IMM((reg_dest),(reg_src),(temp1),0));
+static void gen_sub_imm_table(HostReg reg_dest,HostReg reg_src,Bit32u imm) {
+	immPtr[immCount]=(unsigned)armPtr;
+	immData[immCount++]=imm;
+	write32(LDR_IMM((temp1), HOST_pc, 0));
+	write32(SUB_REG_LSL_IMM((reg_dest),(reg_src),(temp1),0));
 }
 
 // sub a 32bit constant value to a full register
-static void gen_sub_imm(HostReg reg_dest,HostReg reg_src,Bit32u imm)
-{
-  if (!rec_phase) return;
-  if(!imm)
-  {
-    if (reg_dest!=reg_src)
-      write32( MOV_REG_LSL_IMM(reg_dest, reg_src, 0) );      // mov reg_dst, reg_src
-    return;
-  }
+static void gen_sub_imm(HostReg reg_dest,HostReg reg_src,Bit32u imm) {
+	if (!rec_phase) return;
+	if(!imm) {
+		if (reg_dest!=reg_src)
+			write32( MOV_REG_LSL_IMM(reg_dest, reg_src, 0) );      // mov reg_dst, reg_src
+		return;
+	}
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
-  dbgf("\t\t\tgen_sub_imm(r%i,r%i,%p)\n",reg_dest,reg_src,imm);
+	unsigned optr=(unsigned)armPtr;
+	dbgf("\t\t\tgen_sub_imm(r%i,r%i,%p)\n",reg_dest,reg_src,imm);
 #endif
-  if (imm == 0xffffffff)
-  {
-    write32( ADD_IMM(reg_dest, reg_src, 1, 0) );      // add reg, reg, #1
-  }
-  else
-  {
-    if (imm<0x100)
-    {
-      write32(SUB_IMM(reg_dest, reg_src, imm, 0));
-    }
-    else
-    {
+	if (imm == 0xffffffff) {
+		write32( ADD_IMM(reg_dest, reg_src, 1, 0) );      // add reg, reg, #1
+	} else {
+		if (imm<0x100) {
+			write32(SUB_IMM(reg_dest, reg_src, imm, 0));
+		} else {
 // CHUI: Se sustituye por tabla de inmediatos si es necesario
-      if (getImmOpcodes(imm)<=MAX_IMM_OPCODES)
-      {
-        Bits scale = 0;
-        int first = 1;
-        while (imm)
-        {
-          while ((imm & 3) == 0)
-          {
-            imm>>=2;
-            scale+=2;
-          }
-          if (first)
-          {
-            write32( SUB_IMM(reg_dest, reg_src, imm & 0xff, ROTATE_SCALE(scale)) );      // sub reg, reg, #((imm & 0xff) << scale)
-            first=0;
-          }
-          else
-            write32( SUB_IMM(reg_dest, reg_dest, imm & 0xff, ROTATE_SCALE(scale)) );      // sub reg, reg, #((imm & 0xff) << scale)
-          imm>>=8;
-          scale+=8;
-        }
-      }
-      else
-        gen_sub_imm_table(reg_dest,reg_src,imm);
-    }
-  }
+			if (getImmOpcodes(imm)<=MAX_IMM_OPCODES) {
+				Bits scale = 0;
+				int first = 1;
+				while (imm) {
+					while ((imm & 3) == 0) {
+						imm>>=2;
+						scale+=2;
+					}
+					if (first) {
+						write32( SUB_IMM(reg_dest, reg_src, imm & 0xff, ROTATE_SCALE(scale)) );      // sub reg, reg, #((imm & 0xff) << scale)
+						first=0;
+					} else
+						write32( SUB_IMM(reg_dest, reg_dest, imm & 0xff, ROTATE_SCALE(scale)) );      // sub reg, reg, #((imm & 0xff) << scale)
+					imm>>=8;
+					scale+=8;
+				}
+			} else
+				gen_sub_imm_table(reg_dest,reg_src,imm);
+		}
+	}
 #ifdef DEBUG_CPU
-  immediates++;
-  immsize+=(((unsigned)armPtr)-optr);
+	immediates++;
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 
 // CHUI: Cuenta cuantos opcodes usara para poner un immediate
-static int getImmOpcodesAnd(Bit32u imm)
-{
-  int ret=0;
-  Bit32u imm2 = ~imm;
-  Bits scale = 0;
-  while (imm2)
-  {
-    while ((imm2 & 3) == 0)
-    {
-      imm2>>=2;
-      scale+=2;
-    }
-    ret++;
-    imm2>>=8;
-    scale+=8;
-  }
-  return ret;
+static int getImmOpcodesAnd(Bit32u imm) {
+	int ret=0;
+	Bit32u imm2 = ~imm;
+	Bits scale = 0;
+	while (imm2) {
+		while ((imm2 & 3) == 0) {
+			imm2>>=2;
+			scale+=2;
+		}
+		ret++;
+		imm2>>=8;
+		scale+=8;
+	}
+	return ret;
 }
 
 // and a 32bit constant value to a full register using table
-static void gen_and_imm_table(HostReg reg,Bit32u imm)
-{
-  immPtr[immCount]=(unsigned)armPtr;
-  immData[immCount++]=imm;
-  write32(LDR_IMM((temp1), HOST_pc, 0));
-  write32(AND_REG_LSL_IMM((reg),(reg),(temp1),0));
+static void gen_and_imm_table(HostReg reg,Bit32u imm) {
+	immPtr[immCount]=(unsigned)armPtr;
+	immData[immCount++]=imm;
+	write32(LDR_IMM((temp1), HOST_pc, 0));
+	write32(AND_REG_LSL_IMM((reg),(reg),(temp1),0));
 }
 
 // and a 32bit constant value with a full register
-static void gen_and_imm(HostReg reg,Bit32u imm)
-{
-  if (!rec_phase) return;
-  Bit32u imm2 = ~imm;
-  if(!imm2) return;
+static void gen_and_imm(HostReg reg,Bit32u imm) {
+	if (!rec_phase) return;
+	Bit32u imm2 = ~imm;
+	if(!imm2) return;
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
-  dbgf("\t\t\tgen_and_imm(r%i,%p)\n",reg,imm);
+	unsigned optr=(unsigned)armPtr;
+	dbgf("\t\t\tgen_and_imm(r%i,%p)\n",reg,imm);
 #endif
-  if (!imm)
-  {
-    write32( MOV_IMM(reg, 0, 0) );      // mov reg, #0
-  }
-  else
-  {
-    if (imm<0x100)
-    {
-      write32(AND_IMM(reg, reg, imm, 0));
-    }
-    else
-    {
+	if (!imm) {
+		write32( MOV_IMM(reg, 0, 0) );      // mov reg, #0
+	} else {
+		if (imm<0x100) {
+			write32(AND_IMM(reg, reg, imm, 0));
+		} else {
 // CHUI: Se sustituye por tabla de inmediatos si es necesario
-      if (getImmOpcodesAnd(imm)<=MAX_IMM_OPCODES)
-      {
-        Bits scale = 0;
-        while (imm2)
-        {
-          while ((imm2 & 3) == 0)
-          {
-            imm2>>=2;
-            scale+=2;
-          }
-          write32( BIC_IMM(reg, reg, imm2 & 0xff, ROTATE_SCALE(scale)) );      // bic reg, reg, #((imm2 & 0xff) << scale)
-          imm2>>=8;
-          scale+=8;
-        }
-      }
-      else
-        gen_and_imm_table(reg,imm);
-    }
-  }
+			if (getImmOpcodesAnd(imm)<=MAX_IMM_OPCODES) {
+				Bits scale = 0;
+				while (imm2) {
+					while ((imm2 & 3) == 0) {
+						imm2>>=2;
+						scale+=2;
+					}
+					write32( BIC_IMM(reg, reg, imm2 & 0xff, ROTATE_SCALE(scale)) );      // bic reg, reg, #((imm2 & 0xff) << scale)
+					imm2>>=8;
+					scale+=8;
+				}
+			} else
+				gen_and_imm_table(reg,imm);
+		}
+	}
 #ifdef DEBUG_CPU
-  immediates++;
-  immsize+=(((unsigned)armPtr)-optr);
+	immediates++;
+	immsize+=(((unsigned)armPtr)-optr);
 #endif
 }
 
 // move a 32bit constant value into memory
-static void gen_mov_direct_dword(void* dest,Bit32u imm)
-{
-  if (!rec_phase) return;
-  gen_mov_dword_to_reg_imm(temp2, imm);
-  gen_mov_word_from_reg(temp2, dest, 1);
+static void gen_mov_direct_dword(void* dest,Bit32u imm) {
+	if (!rec_phase) return;
+	gen_mov_dword_to_reg_imm(temp2, imm);
+	gen_mov_word_from_reg(temp2, dest, 1);
 }
 
 // conditional jump if register is zero
@@ -833,106 +724,80 @@ static Bit32u gen_create_branch_on_zero(HostReg reg,bool dword) {
 
 // conditional jump if register is nonzero
 // the destination is set by gen_fill_branch() later
-static Bit32u gen_create_branch_on_nonzero(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );      // cmp reg, #0
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );      // movs temp1, reg, lsl #16
-  }
-  write32( BNE_FWD(0) );      // bne j
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_nonzero(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );      // cmp reg, #0
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );      // movs temp1, reg, lsl #16
+	}
+	write32( BNE_FWD(0) );      // bne j
+	return ((Bit32u)armPtr-4);
 }
 
-static Bit32u gen_create_branch_on_zero(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );      // cmp reg, #0
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );      // movs temp1, reg, lsl #16
-  }
-  write32( BEQ_FWD(0) );      // bne j
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_zero(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );      // cmp reg, #0
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );      // movs temp1, reg, lsl #16
+	}
+	write32( BEQ_FWD(0) );      // bne j
+	return ((Bit32u)armPtr-4);
 }
 
 
-static Bit32u gen_create_branch_on_ltz(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
-  }
-  write32( BLT_FWD(0) );
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_ltz(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
+	}
+	write32( BLT_FWD(0) );
+	return ((Bit32u)armPtr-4);
 }
 
-static Bit32u gen_create_branch_on_gtz(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
-  }
-  write32( BGT_FWD(0) );
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_gtz(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
+	}
+	write32( BGT_FWD(0) );
+	return ((Bit32u)armPtr-4);
 }
 
-static Bit32u gen_create_branch_on_letz(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
-  }
-  write32( BLE_FWD(0) );
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_letz(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
+	}
+	write32( BLE_FWD(0) );
+	return ((Bit32u)armPtr-4);
 }
 
-static Bit32u gen_create_branch_on_getz(HostReg reg,bool dword)
-{
-  if (dword)
-  {
-    write32( CMP_IMM(reg, 0, 0) );
-  }
-  else
-  {
-    write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
-  }
-  write32( BGE_FWD(0) );
-  return ((Bit32u)armPtr-4);
+static Bit32u gen_create_branch_on_getz(HostReg reg,bool dword) {
+	if (dword) {
+		write32( CMP_IMM(reg, 0, 0) );
+	} else {
+		write32( MOVS_REG_LSL_IMM(temp1, reg, 16) );
+	}
+	write32( BGE_FWD(0) );
+	return ((Bit32u)armPtr-4);
 }
 
 // calculate relative offset and fill it into the location pointed to by data
-INLINE void gen_fill_branch(DRC_PTR_SIZE_IM data)
-{
-  if (!rec_phase) return;
+INLINE void gen_fill_branch(DRC_PTR_SIZE_IM data) {
+	if (!rec_phase) return;
 // CHUI: Si es necesario rellenamos de NOP para no tener problemas
-  while((u32)armPtr < (data+8))
-    write32(NOP);
-  *(Bit32u*)data=( (*(Bit32u*)data) & 0xff000000 ) | ( ( ((Bit32u)armPtr - (data+8)) >> 2 ) & 0x00ffffff );
+	while((u32)armPtr < (data+8))
+		write32(NOP);
+	*(Bit32u*)data=( (*(Bit32u*)data) & 0xff000000 ) | ( ( ((Bit32u)armPtr - (data+8)) >> 2 ) & 0x00ffffff );
 }
 
-INLINE void gen_align4(void)
-{
+INLINE void gen_align4(void) {
 #ifdef REC_USE_ALIGN
-  if (!rec_phase) return;
-  while(((u32)armPtr)&0x1f)
-    write32(NOP);
+	if (!rec_phase) return;
+	while(((u32)armPtr)&0x1f)
+		write32(NOP);
 #endif
 }

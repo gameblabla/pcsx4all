@@ -111,69 +111,63 @@ typedef signed int			Bits;
 #define MOV32MtoR_regs(reg,mem) write32( LDR_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV32RtoM_regs(mem,reg) write32( STR_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV32ItoM_regs(mem,value) MOV32ItoR(HOST_ip,value);MOV32RtoM_regs(mem,HOST_ip)
-
-INLINE void ADD8ItoM_regs(u32 dest,Bit8s imm)
-{
-  if(!imm) return;
-  MOV32MtoR_regs(temp3,dest);
-  if (imm >= 0)
-  {
-    write32( ADD_IMM(temp3, temp3, (Bit32s)imm, 0) );      // add temp3, temp3, #(imm)
-  }
-  else
-  {
-    write32( SUB_IMM(temp3, temp3, -((Bit32s)imm), 0) );      // sub temp3, temp3, #(-imm)
-  }
-  MOV32RtoM_regs(dest,temp3);
+												
+INLINE void ADD8ItoM_regs(u32 dest,Bit8s imm) {
+	if(!imm) return;
+	MOV32MtoR_regs(temp3,dest);
+	if (imm >= 0) {
+		write32( ADD_IMM(temp3, temp3, (Bit32s)imm, 0) );      // add temp3, temp3, #(imm)
+	} else {
+		write32( SUB_IMM(temp3, temp3, -((Bit32s)imm), 0) );      // sub temp3, temp3, #(-imm)
+	}
+	MOV32RtoM_regs(dest,temp3);
 }
 
-INLINE void ADD32ItoM_regs(u32 dest,Bit32u imm)
-{
-  if(!imm) return;
-  if ( (imm<128) || (imm>=0xffffff80) )
-  {
-    ADD8ItoM_regs(dest,(Bit8s)imm);
-    return;
-  }
-  MOV32MtoR_regs(temp3,dest);
-  gen_mov_dword_to_reg_imm(temp2, imm);
-  write32( ADD_REG_LSL_IMM(temp3, temp3, temp2, 0) );      // add temp3, temp3, temp2
-  MOV32RtoM_regs(dest,temp3);
+INLINE void ADD32ItoM_regs(u32 dest,Bit32u imm) {
+	if(!imm) return;
+	if ( (imm<128) || (imm>=0xffffff80) ) {
+		ADD8ItoM_regs(dest,(Bit8s)imm);
+		return;
+	}
+	MOV32MtoR_regs(temp3,dest);
+	gen_mov_dword_to_reg_imm(temp2, imm);
+	write32( ADD_REG_LSL_IMM(temp3, temp3, temp2, 0) );      // add temp3, temp3, temp2
+	MOV32RtoM_regs(dest,temp3);
 }
 
 #define GET_PTR() \
-  { \
-    write32(0xe1a0c821); /*	mov	ip, r1, lsr #16 */ \
-    write32(0xe790210c); /* ldr	r2, [r0, ip, lsl #2] */ \
-    write32(0xe1a00801); /* mov	r0, r1, lsl #16 */ \
-    write32(0xe1a01820); /* mov	r1, r0, lsr #16 */ \
-    write32(0xe0923001); /* adds	r3, r2, r1 */ \
-    write32(0xe1a00003); /* mov	r0, r3 */ \
-    write32(0x17920001); /*	ldrne	r0, [r2, r1] */ \
-  }
+{ \
+	write32(0xe1a0c821); /*	mov	ip, r1, lsr #16 */ \
+	write32(0xe790210c); /* ldr	r2, [r0, ip, lsl #2] */ \
+	write32(0xe1a00801); /* mov	r0, r1, lsl #16 */ \
+	write32(0xe1a01820); /* mov	r1, r0, lsr #16 */ \
+	write32(0xe0923001); /* adds	r3, r2, r1 */ \
+	write32(0xe1a00003); /* mov	r0, r3 */ \
+	write32(0x17920001); /*	ldrne	r0, [r2, r1] */ \
+}
 
 #define RET_NC() \
-  { \
-    write32(0xe8bd0ff0); /* ldmfd sp!, {r4-r11} */ \
-    write32(0xe8bd8000); /* ldmfd sp!, {pc} */ \
-  }
+{ \
+	write32(0xe8bd0ff0); /* ldmfd sp!, {r4-r11} */ \
+	write32(0xe8bd8000); /* ldmfd sp!, {pc} */ \
+}
 
 #define RET() \
-  { \
-    if (block) \
-    { \
-      RET_NC(); \
-    } \
-    else \
-    { \
-      MOV32ItoR(HOST_a1,(Bit32u)psxRecLUT); \
-      MOV32MtoR(HOST_a2,&psxRegs.pc); \
-      GET_PTR(); \
-      j8Ptr[4]=JNZ8(HOST_a1); \
-      RET_NC(); \
-      armSetJ8(j8Ptr[4]); \
-      MOV32RtoR(HOST_pc,HOST_a1); \
-    } \
-  }
+{ \
+	if (block) \
+	{ \
+		RET_NC(); \
+	} \
+	else \
+	{ \
+		MOV32ItoR(HOST_a1,(Bit32u)psxRecLUT); \
+		MOV32MtoR(HOST_a2,&psxRegs.pc); \
+		GET_PTR(); \
+		j8Ptr[4]=JNZ8(HOST_a1); \
+		RET_NC(); \
+		armSetJ8(j8Ptr[4]); \
+		MOV32RtoR(HOST_pc,HOST_a1); \
+	} \
+}
 
 #endif

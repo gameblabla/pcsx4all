@@ -29,15 +29,6 @@ static inline int fsync(int f)
 }
 #endif
 
-#if defined(RS97)
-struct _mydma
-{
-  int fd;
-  uint16_t *ptr;
-};
-extern struct _mydma mydma;
-#endif
-
 #define	CONFIG_VERSION	0
 
 unsigned get_ticks(void);

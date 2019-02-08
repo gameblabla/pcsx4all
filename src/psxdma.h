@@ -31,28 +31,28 @@
 // interrupts enum and intCycle struct (much cleaner than before)
 // from PCSX Reloaded/Rearmed as well as new event queue (psxEvqueues.h)
 #define GPUDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_GPUDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_GPUDMA, eCycle); \
+}
 
 #define SPUDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_SPUDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_SPUDMA, eCycle); \
+}
 
 #define MDECOUTDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_MDECOUTDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_MDECOUTDMA, eCycle); \
+}
 
 #define MDECINDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_MDECINDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_MDECINDMA, eCycle); \
+}
 
 #define GPUOTCDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_GPUOTCDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_GPUOTCDMA, eCycle); \
+}
 
 #define CDRDMA_INT(eCycle) { \
-    psxEvqueueAdd(PSXINT_CDRDMA, eCycle); \
-  }
+	psxEvqueueAdd(PSXINT_CDRDMA, eCycle); \
+}
 
 void psxDma2(u32 madr, u32 bcr, u32 chcr);
 void psxDma3(u32 madr, u32 bcr, u32 chcr);

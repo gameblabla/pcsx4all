@@ -21,7 +21,7 @@
 #include "port.h"
 
 ////////////////////////////////////////////////////////////////////////
-// memory image of the PSX vram
+// memory image of the PSX vram 
 ////////////////////////////////////////////////////////////////////////
 
 unsigned char  *psxVSecure;
@@ -78,10 +78,10 @@ time_t tStart;
 ////////////////////////////////////////////////////////////////////////
 
 INLINE void SetFixes(void)
-{
+ {
   if(dwActFixes&0x02) sDispWidths[4]=384;
   else                sDispWidths[4]=368;
-}
+ }
 
 ////////////////////////////////////////////////////////////////////////
 // INIT, will be called after lib load... well, just do some var init...
@@ -89,88 +89,88 @@ INLINE void SetFixes(void)
 
 long CALLBACK GPU_init(void)                                // GPU INIT
 {
-  memset(ulStatusControl,0,256*sizeof(uint32_t));  // init save state scontrol field
+ memset(ulStatusControl,0,256*sizeof(uint32_t));  // init save state scontrol field
 
-  psxVSecure = (unsigned char *)malloc((512*2)*1024 + (1024*1024)); // always alloc one extra MB for soft drawing funcs security
-  if (!psxVSecure)
-    return -1;
+ psxVSecure = (unsigned char *)malloc((512*2)*1024 + (1024*1024)); // always alloc one extra MB for soft drawing funcs security
+ if (!psxVSecure)
+  return -1;
 
-//!!! ATTENTION !!!
-  psxVub=psxVSecure + 512 * 1024;                           // security offset into double sized psx vram!
+ //!!! ATTENTION !!!
+ psxVub=psxVSecure + 512 * 1024;                           // security offset into double sized psx vram!
 
-  psxVsb=(signed char *)psxVub;                         // different ways of accessing PSX VRAM
-  psxVsw=(signed short *)psxVub;
-  psxVsl=(int32_t *)psxVub;
-  psxVuw=(unsigned short *)psxVub;
-  psxVul=(uint32_t *)psxVub;
+ psxVsb=(signed char *)psxVub;                         // different ways of accessing PSX VRAM
+ psxVsw=(signed short *)psxVub;
+ psxVsl=(int32_t *)psxVub;
+ psxVuw=(unsigned short *)psxVub;
+ psxVul=(uint32_t *)psxVub;
 
-  psxVuw_eom=psxVuw+1024*512;                    // pre-calc of end of vram
+ psxVuw_eom=psxVuw+1024*512;                    // pre-calc of end of vram
 
-  memset(psxVSecure,0x00,(512*2)*1024 + (1024*1024));
-  memset(lGPUInfoVals,0x00,16*sizeof(uint32_t));
+ memset(psxVSecure,0x00,(512*2)*1024 + (1024*1024));
+ memset(lGPUInfoVals,0x00,16*sizeof(uint32_t));
 
-  PSXDisplay.RGB24        = FALSE;                      // init some stuff
-  PSXDisplay.Interlaced   = FALSE;
-  PSXDisplay.DrawOffset.x = 0;
-  PSXDisplay.DrawOffset.y = 0;
-  PSXDisplay.DisplayMode.x= 320;
-  PSXDisplay.DisplayMode.y= 240;
-  PreviousPSXDisplay.DisplayMode.x= 320;
-  PreviousPSXDisplay.DisplayMode.y= 240;
-  PSXDisplay.Disabled     = FALSE;
-  PreviousPSXDisplay.Range.x0 =0;
-  PreviousPSXDisplay.Range.y0 =0;
-  PSXDisplay.Range.x0=0;
-  PSXDisplay.Range.x1=0;
-  PreviousPSXDisplay.DisplayModeNew.y=0;
-  PSXDisplay.Double = 1;
-  lGPUdataRet = 0x400;
+ PSXDisplay.RGB24        = FALSE;                      // init some stuff
+ PSXDisplay.Interlaced   = FALSE;
+ PSXDisplay.DrawOffset.x = 0;
+ PSXDisplay.DrawOffset.y = 0;
+ PSXDisplay.DisplayMode.x= 320;
+ PSXDisplay.DisplayMode.y= 240;
+ PreviousPSXDisplay.DisplayMode.x= 320;
+ PreviousPSXDisplay.DisplayMode.y= 240;
+ PSXDisplay.Disabled     = FALSE;
+ PreviousPSXDisplay.Range.x0 =0;
+ PreviousPSXDisplay.Range.y0 =0;
+ PSXDisplay.Range.x0=0;
+ PSXDisplay.Range.x1=0;
+ PreviousPSXDisplay.DisplayModeNew.y=0;
+ PSXDisplay.Double = 1;
+ lGPUdataRet = 0x400;
 
-  DataWriteMode = DR_NORMAL;
+ DataWriteMode = DR_NORMAL;
 
-// Reset transfer values, to prevent mis-transfer of data
-  memset(&VRAMWrite, 0, sizeof(VRAMLoad_t));
-  memset(&VRAMRead, 0, sizeof(VRAMLoad_t));
+ // Reset transfer values, to prevent mis-transfer of data
+ memset(&VRAMWrite, 0, sizeof(VRAMLoad_t));
+ memset(&VRAMRead, 0, sizeof(VRAMLoad_t));
+ 
+ // device initialised already !
+ lGPUstatusRet = 0x14802000;
+ GPUIsIdle;
+ GPUIsReadyForCommands;
+ bDoVSyncUpdate = TRUE;
 
-// device initialised already !
-  lGPUstatusRet = 0x14802000;
-  GPUIsIdle;
-  GPUIsReadyForCommands;
-  bDoVSyncUpdate = TRUE;
+ // GPUopen()
+ 
+ // ReadConfig()
+ //UseFrameLimit=1; /* limit fps 1=on, 0=off */
+ //UseFrameSkip=1; /* frame skip 1=on, 0=off */
+ //iFrameLimit=2; /* fps limit 2=auto 1=fFrameRate, 0=off */
+ //fFrameRate=200.0f; /* fps */
+ //iUseDither=0; /* 0=off, 1=game dependant, 2=always */
+ //iUseFixes=0; /* use game fixes */
+ //dwCfgFixes=0; /* game fixes */
+ /*
+ 1=odd/even hack (Chrono Cross)
+ 2=expand screen width (Capcom fighting games)
+ 4=ignore brightness color (black screens in Lunar)
+ 8=disable coordinate check (compatibility mode)
+ 16=disable cpu saving (for precise framerate)
+ 32=PC fps calculation (better fps limit in some games)
+ 64=lazy screen update (Pandemonium 2)
+ 128=old frame skipping (skip every secon frame)
+ 256=repeated flat tex triangles (Dark Forces)
+ 512=draw quads with triangles (better g-colors, worse textures)
+ */
+ 
+ if(iUseFixes)        dwActFixes=dwCfgFixes;
+ SetFixes();
 
-// GPUopen()
+ InitFPS();
 
-// ReadConfig()
-//UseFrameLimit=1; /* limit fps 1=on, 0=off */
-//UseFrameSkip=1; /* frame skip 1=on, 0=off */
-//iFrameLimit=2; /* fps limit 2=auto 1=fFrameRate, 0=off */
-//fFrameRate=200.0f; /* fps */
-//iUseDither=0; /* 0=off, 1=game dependant, 2=always */
-//iUseFixes=0; /* use game fixes */
-//dwCfgFixes=0; /* game fixes */
-  /*
-  1=odd/even hack (Chrono Cross)
-  2=expand screen width (Capcom fighting games)
-  4=ignore brightness color (black screens in Lunar)
-  8=disable coordinate check (compatibility mode)
-  16=disable cpu saving (for precise framerate)
-  32=PC fps calculation (better fps limit in some games)
-  64=lazy screen update (Pandemonium 2)
-  128=old frame skipping (skip every secon frame)
-  256=repeated flat tex triangles (Dark Forces)
-  512=draw quads with triangles (better g-colors, worse textures)
-  */
+ bDoVSyncUpdate = TRUE;
 
-  if(iUseFixes)        dwActFixes=dwCfgFixes;
-  SetFixes();
+ ulInitDisplay();                                    // setup x
 
-  InitFPS();
-
-  bDoVSyncUpdate = TRUE;
-
-  ulInitDisplay();                                    // setup x
-
-  return 0;
+ return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -179,9 +179,9 @@ long CALLBACK GPU_init(void)                                // GPU INIT
 
 long CALLBACK GPU_shutdown(void)                            // GPU SHUTDOWN
 {
-  CloseDisplay();                                       // shutdown direct draw
-  free(psxVSecure);
-  return 0;                                             // nothinh to do
+ CloseDisplay();                                       // shutdown direct draw
+ free(psxVSecure);
+ return 0;                                             // nothinh to do
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -190,34 +190,31 @@ long CALLBACK GPU_shutdown(void)                            // GPU SHUTDOWN
 
 static void updateDisplay(void)                               // UPDATE DISPLAY
 {
-  if(PSXDisplay.Disabled)                               // disable?
+ if(PSXDisplay.Disabled)                               // disable?
   {
-    return;                                             // -> and bye
+   return;                                             // -> and bye
   }
 
-  if(dwActFixes&32)                                     // pc fps calculation fix
+ if(dwActFixes&32)                                     // pc fps calculation fix
   {
-    if(UseFrameLimit) PCFrameCap();                     // -> brake
-    if(UseFrameSkip) PCcalcfps();
+   if(UseFrameLimit) PCFrameCap();                     // -> brake
+   if(UseFrameSkip) PCcalcfps();         
   }
 
-  if(UseFrameSkip)                                      // skip ?
+ if(UseFrameSkip)                                      // skip ?
   {
-    if(!bSkipNextFrame) DoBufferSwap();                 // -> to skip or not to skip
-    if(dwActFixes&0xa0)                                 // -> pc fps calculation fix/old skipping fix
+   if(!bSkipNextFrame) DoBufferSwap();                 // -> to skip or not to skip
+   if(dwActFixes&0xa0)                                 // -> pc fps calculation fix/old skipping fix
     {
-      if((fps_skip < fFrameRateHz) && !(bSkipNextFrame))  // -> skip max one in a row
-      {
-        bSkipNextFrame = TRUE;
-        fps_skip=fFrameRateHz;
-      }
-      else bSkipNextFrame = FALSE;
+     if((fps_skip < fFrameRateHz) && !(bSkipNextFrame))  // -> skip max one in a row
+         {bSkipNextFrame = TRUE; fps_skip=fFrameRateHz;}
+     else bSkipNextFrame = FALSE;
     }
-    else FrameSkip();
+   else FrameSkip();
   }
-  else                                                  // no skip ?
+ else                                                  // no skip ?
   {
-    DoBufferSwap();                                     // -> swap
+   DoBufferSwap();                                     // -> swap
   }
 }
 
@@ -227,118 +224,115 @@ static void updateDisplay(void)                               // UPDATE DISPLAY
 
 void ChangeDispOffsetsX(void)                          // X CENTER
 {
-  long lx,l;
+ long lx,l;
 
-  if(!PSXDisplay.Range.x1) return;
+ if(!PSXDisplay.Range.x1) return;
 
-  l=PreviousPSXDisplay.DisplayMode.x;
+ l=PreviousPSXDisplay.DisplayMode.x;
 
-  l*=(long)PSXDisplay.Range.x1;
-  l/=2560;
-  lx=l;
-  l&=0xfffffff8;
+ l*=(long)PSXDisplay.Range.x1;
+ l/=2560;lx=l;l&=0xfffffff8;
 
-  if(l==PreviousPSXDisplay.Range.y1) return;            // abusing range.y1 for
-  PreviousPSXDisplay.Range.y1=(short)l;                 // storing last x range and test
+ if(l==PreviousPSXDisplay.Range.y1) return;            // abusing range.y1 for
+ PreviousPSXDisplay.Range.y1=(short)l;                 // storing last x range and test
 
-  if(lx>=PreviousPSXDisplay.DisplayMode.x)
+ if(lx>=PreviousPSXDisplay.DisplayMode.x)
   {
-    PreviousPSXDisplay.Range.x1=
-      (short)PreviousPSXDisplay.DisplayMode.x;
-    PreviousPSXDisplay.Range.x0=0;
+   PreviousPSXDisplay.Range.x1=
+    (short)PreviousPSXDisplay.DisplayMode.x;
+   PreviousPSXDisplay.Range.x0=0;
   }
-  else
+ else
   {
-    PreviousPSXDisplay.Range.x1=(short)l;
+   PreviousPSXDisplay.Range.x1=(short)l;
 
-    PreviousPSXDisplay.Range.x0=
-      (PSXDisplay.Range.x0-500)/8;
+   PreviousPSXDisplay.Range.x0=
+    (PSXDisplay.Range.x0-500)/8;
 
-    if(PreviousPSXDisplay.Range.x0<0)
-      PreviousPSXDisplay.Range.x0=0;
+   if(PreviousPSXDisplay.Range.x0<0)
+    PreviousPSXDisplay.Range.x0=0;
 
-    if((PreviousPSXDisplay.Range.x0+lx)>
-        PreviousPSXDisplay.DisplayMode.x)
+   if((PreviousPSXDisplay.Range.x0+lx)>
+      PreviousPSXDisplay.DisplayMode.x)
     {
-      PreviousPSXDisplay.Range.x0=
-        (short)(PreviousPSXDisplay.DisplayMode.x-lx);
-      PreviousPSXDisplay.Range.x0+=2; //???
+     PreviousPSXDisplay.Range.x0=
+      (short)(PreviousPSXDisplay.DisplayMode.x-lx);
+     PreviousPSXDisplay.Range.x0+=2; //???
 
-      PreviousPSXDisplay.Range.x1+=(short)(lx-l);
+     PreviousPSXDisplay.Range.x1+=(short)(lx-l);
 
-      PreviousPSXDisplay.Range.x1-=2; // makes linux stretching easier
+     PreviousPSXDisplay.Range.x1-=2; // makes linux stretching easier
 
     }
 
-    // some linux alignment security
-    PreviousPSXDisplay.Range.x0=PreviousPSXDisplay.Range.x0>>1;
-    PreviousPSXDisplay.Range.x0=PreviousPSXDisplay.Range.x0<<1;
-    PreviousPSXDisplay.Range.x1=PreviousPSXDisplay.Range.x1>>1;
-    PreviousPSXDisplay.Range.x1=PreviousPSXDisplay.Range.x1<<1;
+   // some linux alignment security
+   PreviousPSXDisplay.Range.x0=PreviousPSXDisplay.Range.x0>>1;
+   PreviousPSXDisplay.Range.x0=PreviousPSXDisplay.Range.x0<<1;
+   PreviousPSXDisplay.Range.x1=PreviousPSXDisplay.Range.x1>>1;
+   PreviousPSXDisplay.Range.x1=PreviousPSXDisplay.Range.x1<<1;
 
-    DoClearScreenBuffer();
+   DoClearScreenBuffer();
   }
 
-  bDoVSyncUpdate=TRUE;
+ bDoVSyncUpdate=TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 void ChangeDispOffsetsY(void)                          // Y CENTER
 {
-  int iT,iO=PreviousPSXDisplay.Range.y0;
-  int iOldYOffset=PreviousPSXDisplay.DisplayModeNew.y;
+ int iT,iO=PreviousPSXDisplay.Range.y0;
+ int iOldYOffset=PreviousPSXDisplay.DisplayModeNew.y;
 
 // new
 
-  if((PreviousPSXDisplay.DisplayModeNew.x+PSXDisplay.DisplayModeNew.y)>512)
+ if((PreviousPSXDisplay.DisplayModeNew.x+PSXDisplay.DisplayModeNew.y)>512)
   {
-    int dy1=512-PreviousPSXDisplay.DisplayModeNew.x;
-    int dy2=(PreviousPSXDisplay.DisplayModeNew.x+PSXDisplay.DisplayModeNew.y)-512;
+   int dy1=512-PreviousPSXDisplay.DisplayModeNew.x;
+   int dy2=(PreviousPSXDisplay.DisplayModeNew.x+PSXDisplay.DisplayModeNew.y)-512;
 
-    if(dy1>=dy2)
+   if(dy1>=dy2)
     {
-      PreviousPSXDisplay.DisplayModeNew.y=-dy2;
+     PreviousPSXDisplay.DisplayModeNew.y=-dy2;
     }
-    else
+   else
     {
-      PSXDisplay.DisplayPosition.y=0;
-      PreviousPSXDisplay.DisplayModeNew.y=-dy1;
+     PSXDisplay.DisplayPosition.y=0;
+     PreviousPSXDisplay.DisplayModeNew.y=-dy1;
     }
   }
-  else PreviousPSXDisplay.DisplayModeNew.y=0;
+ else PreviousPSXDisplay.DisplayModeNew.y=0;
 
 // eon
 
-  if(PreviousPSXDisplay.DisplayModeNew.y!=iOldYOffset) // if old offset!=new offset: recalc height
+ if(PreviousPSXDisplay.DisplayModeNew.y!=iOldYOffset) // if old offset!=new offset: recalc height
   {
-    PSXDisplay.Height = PSXDisplay.Range.y1 -
-                        PSXDisplay.Range.y0 +
-                        PreviousPSXDisplay.DisplayModeNew.y;
-    PSXDisplay.DisplayModeNew.y=PSXDisplay.Height*PSXDisplay.Double;
+   PSXDisplay.Height = PSXDisplay.Range.y1 - 
+                       PSXDisplay.Range.y0 +
+                       PreviousPSXDisplay.DisplayModeNew.y;
+   PSXDisplay.DisplayModeNew.y=PSXDisplay.Height*PSXDisplay.Double;
   }
 
 //
 
-  if(PSXDisplay.PAL) iT=48;
-  else iT=28;
+ if(PSXDisplay.PAL) iT=48; else iT=28;
 
-  if(PSXDisplay.Range.y0>=iT)
+ if(PSXDisplay.Range.y0>=iT)
   {
-    PreviousPSXDisplay.Range.y0=
-      (short)((PSXDisplay.Range.y0-iT-4)*PSXDisplay.Double);
-    if(PreviousPSXDisplay.Range.y0<0)
-      PreviousPSXDisplay.Range.y0=0;
-    PSXDisplay.DisplayModeNew.y+=
-      PreviousPSXDisplay.Range.y0;
-  }
-  else
+   PreviousPSXDisplay.Range.y0=
+    (short)((PSXDisplay.Range.y0-iT-4)*PSXDisplay.Double);
+   if(PreviousPSXDisplay.Range.y0<0)
     PreviousPSXDisplay.Range.y0=0;
-
-  if(iO!=PreviousPSXDisplay.Range.y0)
-  {
-    DoClearScreenBuffer();
+   PSXDisplay.DisplayModeNew.y+=
+    PreviousPSXDisplay.Range.y0;
   }
+ else 
+  PreviousPSXDisplay.Range.y0=0;
+
+ if(iO!=PreviousPSXDisplay.Range.y0)
+  {
+   DoClearScreenBuffer();
+ }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -347,37 +341,37 @@ void ChangeDispOffsetsY(void)                          // Y CENTER
 
 static void updateDisplayIfChanged(void)                      // UPDATE DISPLAY IF CHANGED
 {
-  if ((PSXDisplay.DisplayMode.y == PSXDisplay.DisplayModeNew.y) &&
-      (PSXDisplay.DisplayMode.x == PSXDisplay.DisplayModeNew.x))
+ if ((PSXDisplay.DisplayMode.y == PSXDisplay.DisplayModeNew.y) && 
+     (PSXDisplay.DisplayMode.x == PSXDisplay.DisplayModeNew.x))
   {
-    if((PSXDisplay.RGB24      == PSXDisplay.RGB24New) &&
-        (PSXDisplay.Interlaced == PSXDisplay.InterlacedNew)) return;
+   if((PSXDisplay.RGB24      == PSXDisplay.RGB24New) && 
+      (PSXDisplay.Interlaced == PSXDisplay.InterlacedNew)) return;
   }
 
-  PSXDisplay.RGB24         = PSXDisplay.RGB24New;       // get new infos
+ PSXDisplay.RGB24         = PSXDisplay.RGB24New;       // get new infos
 
-  PSXDisplay.DisplayMode.y = PSXDisplay.DisplayModeNew.y;
-  PSXDisplay.DisplayMode.x = PSXDisplay.DisplayModeNew.x;
-  PreviousPSXDisplay.DisplayMode.x=                     // previous will hold
-    min(640,PSXDisplay.DisplayMode.x);                   // max 640x512... that's
-  PreviousPSXDisplay.DisplayMode.y=                     // the size of my
-    min(512,PSXDisplay.DisplayMode.y);                   // back buffer surface
-  PSXDisplay.Interlaced    = PSXDisplay.InterlacedNew;
+ PSXDisplay.DisplayMode.y = PSXDisplay.DisplayModeNew.y;
+ PSXDisplay.DisplayMode.x = PSXDisplay.DisplayModeNew.x;
+ PreviousPSXDisplay.DisplayMode.x=                     // previous will hold
+  min(640,PSXDisplay.DisplayMode.x);                   // max 640x512... that's
+ PreviousPSXDisplay.DisplayMode.y=                     // the size of my 
+  min(512,PSXDisplay.DisplayMode.y);                   // back buffer surface
+ PSXDisplay.Interlaced    = PSXDisplay.InterlacedNew;
+    
+ PSXDisplay.DisplayEnd.x=                              // calc end of display
+  PSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
+ PSXDisplay.DisplayEnd.y=
+  PSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y+PreviousPSXDisplay.DisplayModeNew.y;
+ PreviousPSXDisplay.DisplayEnd.x=
+  PreviousPSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
+ PreviousPSXDisplay.DisplayEnd.y=
+  PreviousPSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y+PreviousPSXDisplay.DisplayModeNew.y;
 
-  PSXDisplay.DisplayEnd.x=                              // calc end of display
-    PSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
-  PSXDisplay.DisplayEnd.y=
-    PSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y+PreviousPSXDisplay.DisplayModeNew.y;
-  PreviousPSXDisplay.DisplayEnd.x=
-    PreviousPSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
-  PreviousPSXDisplay.DisplayEnd.y=
-    PreviousPSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y+PreviousPSXDisplay.DisplayModeNew.y;
+ ChangeDispOffsetsX();
 
-  ChangeDispOffsetsX();
+ if(iFrameLimit==2) SetAutoFrameCap();                 // -> set it
 
-  if(iFrameLimit==2) SetAutoFrameCap();                 // -> set it
-
-  if(UseFrameSkip) updateDisplay();                     // stupid stuff when frame skipping enabled
+ if(UseFrameSkip) updateDisplay();                     // stupid stuff when frame skipping enabled
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -386,34 +380,34 @@ static void updateDisplayIfChanged(void)                      // UPDATE DISPLAY 
 
 void CALLBACK GPU_updateLace(void)                      // VSYNC
 {
-  if(!(dwActFixes&1))
-    lGPUstatusRet^=0x80000000;                           // odd/even bit
+ if(!(dwActFixes&1))
+  lGPUstatusRet^=0x80000000;                           // odd/even bit
 
-  if(!(dwActFixes&32))                                  // std fps limitation?
-    CheckFrameRate();
+ if(!(dwActFixes&32))                                  // std fps limitation?
+  CheckFrameRate();
 
-  if(PSXDisplay.Interlaced)                             // interlaced mode?
+ if(PSXDisplay.Interlaced)                             // interlaced mode?
   {
-    if(bDoVSyncUpdate && PSXDisplay.DisplayMode.x>0 && PSXDisplay.DisplayMode.y>0)
+   if(bDoVSyncUpdate && PSXDisplay.DisplayMode.x>0 && PSXDisplay.DisplayMode.y>0)
     {
-      updateDisplay();
+     updateDisplay();
     }
   }
-  else                                                  // non-interlaced?
+ else                                                  // non-interlaced?
   {
-    if(dwActFixes&64)                                   // lazy screen update fix
+   if(dwActFixes&64)                                   // lazy screen update fix
     {
-      if(bDoLazyUpdate && !UseFrameSkip)
-        updateDisplay();
-      bDoLazyUpdate=FALSE;
+     if(bDoLazyUpdate && !UseFrameSkip) 
+      updateDisplay(); 
+     bDoLazyUpdate=FALSE;
     }
-    else
+   else
     {
-      if(bDoVSyncUpdate && !UseFrameSkip)               // some primitives drawn?
-        updateDisplay();                                 // -> update display
+     if(bDoVSyncUpdate && !UseFrameSkip)               // some primitives drawn?
+      updateDisplay();                                 // -> update display
     }
   }
-  bDoVSyncUpdate=FALSE;                                 // vsync done
+ bDoVSyncUpdate=FALSE;                                 // vsync done
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -423,17 +417,17 @@ void CALLBACK GPU_updateLace(void)                      // VSYNC
 
 uint32_t CALLBACK GPU_readStatus(void)             // READ STATUS
 {
-  if(dwActFixes&1)
+ if(dwActFixes&1)
   {
-    static int iNumRead=0;                              // odd/even hack
-    if((iNumRead++)==2)
+   static int iNumRead=0;                              // odd/even hack
+   if((iNumRead++)==2)
     {
-      iNumRead=0;
-      lGPUstatusRet^=0x80000000;                        // interlaced bit toggle... we do it on every 3 read status... needed by some games (like ChronoCross) with old epsxe versions (1.5.2 and older)
+     iNumRead=0;
+     lGPUstatusRet^=0x80000000;                        // interlaced bit toggle... we do it on every 3 read status... needed by some games (like ChronoCross) with old epsxe versions (1.5.2 and older)
     }
   }
 
-  return lGPUstatusRet;
+ return lGPUstatusRet;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -443,225 +437,219 @@ uint32_t CALLBACK GPU_readStatus(void)             // READ STATUS
 
 void CALLBACK GPU_writeStatus(uint32_t gdata)      // WRITE STATUS
 {
-  uint32_t lCommand=(gdata>>24)&0xff;
+ uint32_t lCommand=(gdata>>24)&0xff;
 
-  ulStatusControl[lCommand]=gdata;                      // store command for freezing
+ ulStatusControl[lCommand]=gdata;                      // store command for freezing
 
-  switch(lCommand)
+ switch(lCommand)
   {
-    //--------------------------------------------------//
-    // reset gpu
-    case 0x00:
-      memset(lGPUInfoVals,0x00,16*sizeof(uint32_t));
-      lGPUstatusRet=0x14802000;
-      PSXDisplay.Disabled=1;
-      DataWriteMode=DataReadMode=DR_NORMAL;
-      PSXDisplay.DrawOffset.x=PSXDisplay.DrawOffset.y=0;
-      drawX=drawY=0;
-      drawW=drawH=0;
-      sSetMask=0;
-      lSetMask=0;
-      bCheckMask=FALSE;
-      usMirror=0;
-      GlobalTextAddrX=0;
-      GlobalTextAddrY=0;
-      GlobalTextTP=0;
-      GlobalTextABR=0;
-      PSXDisplay.RGB24=FALSE;
-      PSXDisplay.Interlaced=FALSE;
-      bUsingTWin = FALSE;
-      return;
-    //--------------------------------------------------//
-    // dis/enable display
-    case 0x03:
+   //--------------------------------------------------//
+   // reset gpu
+   case 0x00:
+    memset(lGPUInfoVals,0x00,16*sizeof(uint32_t));
+    lGPUstatusRet=0x14802000;
+    PSXDisplay.Disabled=1;
+    DataWriteMode=DataReadMode=DR_NORMAL;
+    PSXDisplay.DrawOffset.x=PSXDisplay.DrawOffset.y=0;
+    drawX=drawY=0;drawW=drawH=0;
+    sSetMask=0;lSetMask=0;bCheckMask=FALSE;
+    usMirror=0;
+    GlobalTextAddrX=0;GlobalTextAddrY=0;
+    GlobalTextTP=0;GlobalTextABR=0;
+    PSXDisplay.RGB24=FALSE;
+    PSXDisplay.Interlaced=FALSE;
+    bUsingTWin = FALSE;
+    return;
+   //--------------------------------------------------//
+   // dis/enable display 
+   case 0x03:  
 
-      PreviousPSXDisplay.Disabled = PSXDisplay.Disabled;
-      PSXDisplay.Disabled = (gdata & 1);
+    PreviousPSXDisplay.Disabled = PSXDisplay.Disabled;
+    PSXDisplay.Disabled = (gdata & 1);
 
-      if(PSXDisplay.Disabled)
-        lGPUstatusRet|=GPUSTATUS_DISPLAYDISABLED;
-      else lGPUstatusRet&=~GPUSTATUS_DISPLAYDISABLED;
-      return;
+    if(PSXDisplay.Disabled) 
+         lGPUstatusRet|=GPUSTATUS_DISPLAYDISABLED;
+    else lGPUstatusRet&=~GPUSTATUS_DISPLAYDISABLED;
+    return;
 
-    //--------------------------------------------------//
-    // setting transfer mode
-    case 0x04:
-      gdata &= 0x03;                                     // Only want the lower two bits
+   //--------------------------------------------------//
+   // setting transfer mode
+   case 0x04:
+    gdata &= 0x03;                                     // Only want the lower two bits
 
-      DataWriteMode=DataReadMode=DR_NORMAL;
-      if(gdata==0x02) DataWriteMode=DR_VRAMTRANSFER;
-      if(gdata==0x03) DataReadMode =DR_VRAMTRANSFER;
-      lGPUstatusRet&=~GPUSTATUS_DMABITS;                 // Clear the current settings of the DMA bits
-      lGPUstatusRet|=(gdata << 29);                      // Set the DMA bits according to the received data
+    DataWriteMode=DataReadMode=DR_NORMAL;
+    if(gdata==0x02) DataWriteMode=DR_VRAMTRANSFER;
+    if(gdata==0x03) DataReadMode =DR_VRAMTRANSFER;
+    lGPUstatusRet&=~GPUSTATUS_DMABITS;                 // Clear the current settings of the DMA bits
+    lGPUstatusRet|=(gdata << 29);                      // Set the DMA bits according to the received data
 
-      return;
-    //--------------------------------------------------//
-    // setting display position
-    case 0x05:
+    return;
+   //--------------------------------------------------//
+   // setting display position
+   case 0x05: 
     {
-      PreviousPSXDisplay.DisplayPosition.x = PSXDisplay.DisplayPosition.x;
-      PreviousPSXDisplay.DisplayPosition.y = PSXDisplay.DisplayPosition.y;
+     PreviousPSXDisplay.DisplayPosition.x = PSXDisplay.DisplayPosition.x;
+     PreviousPSXDisplay.DisplayPosition.y = PSXDisplay.DisplayPosition.y;
 
 // new
-      PSXDisplay.DisplayPosition.y = (short)((gdata>>10)&0x1ff);
+     PSXDisplay.DisplayPosition.y = (short)((gdata>>10)&0x1ff);
 
-      // store the same val in some helper var, we need it on later compares
-      PreviousPSXDisplay.DisplayModeNew.x=PSXDisplay.DisplayPosition.y;
+     // store the same val in some helper var, we need it on later compares
+     PreviousPSXDisplay.DisplayModeNew.x=PSXDisplay.DisplayPosition.y;
 
-      if((PSXDisplay.DisplayPosition.y+PSXDisplay.DisplayMode.y)>512)
+     if((PSXDisplay.DisplayPosition.y+PSXDisplay.DisplayMode.y)>512)
       {
-        int dy1=512-PSXDisplay.DisplayPosition.y;
-        int dy2=(PSXDisplay.DisplayPosition.y+PSXDisplay.DisplayMode.y)-512;
+       int dy1=512-PSXDisplay.DisplayPosition.y;
+       int dy2=(PSXDisplay.DisplayPosition.y+PSXDisplay.DisplayMode.y)-512;
 
-        if(dy1>=dy2)
+       if(dy1>=dy2)
         {
-          PreviousPSXDisplay.DisplayModeNew.y=-dy2;
+         PreviousPSXDisplay.DisplayModeNew.y=-dy2;
         }
-        else
+       else
         {
-          PSXDisplay.DisplayPosition.y=0;
-          PreviousPSXDisplay.DisplayModeNew.y=-dy1;
+         PSXDisplay.DisplayPosition.y=0;
+         PreviousPSXDisplay.DisplayModeNew.y=-dy1;
         }
       }
-      else PreviousPSXDisplay.DisplayModeNew.y=0;
+     else PreviousPSXDisplay.DisplayModeNew.y=0;
 // eon
 
-      PSXDisplay.DisplayPosition.x = (short)(gdata & 0x3ff);
-      PSXDisplay.DisplayEnd.x=
-        PSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
-      PSXDisplay.DisplayEnd.y=
-        PSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y + PreviousPSXDisplay.DisplayModeNew.y;
-      PreviousPSXDisplay.DisplayEnd.x=
-        PreviousPSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
-      PreviousPSXDisplay.DisplayEnd.y=
-        PreviousPSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y + PreviousPSXDisplay.DisplayModeNew.y;
+     PSXDisplay.DisplayPosition.x = (short)(gdata & 0x3ff);
+     PSXDisplay.DisplayEnd.x=
+      PSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
+     PSXDisplay.DisplayEnd.y=
+      PSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y + PreviousPSXDisplay.DisplayModeNew.y;
+     PreviousPSXDisplay.DisplayEnd.x=
+      PreviousPSXDisplay.DisplayPosition.x+ PSXDisplay.DisplayMode.x;
+     PreviousPSXDisplay.DisplayEnd.y=
+      PreviousPSXDisplay.DisplayPosition.y+ PSXDisplay.DisplayMode.y + PreviousPSXDisplay.DisplayModeNew.y;
+ 
+     bDoVSyncUpdate=TRUE;
 
-      bDoVSyncUpdate=TRUE;
-
-      if (!(PSXDisplay.Interlaced))                      // stupid frame skipping option
+     if (!(PSXDisplay.Interlaced))                      // stupid frame skipping option
       {
-        if(UseFrameSkip)  updateDisplay();
-        if(dwActFixes&64) bDoLazyUpdate=TRUE;
+       if(UseFrameSkip)  updateDisplay();
+       if(dwActFixes&64) bDoLazyUpdate=TRUE;
       }
-    }
+    }return;
+   //--------------------------------------------------//
+   // setting width
+   case 0x06:
+
+    PSXDisplay.Range.x0=(short)(gdata & 0x7ff);
+    PSXDisplay.Range.x1=(short)((gdata>>12) & 0xfff);
+
+    PSXDisplay.Range.x1-=PSXDisplay.Range.x0;
+
+    ChangeDispOffsetsX();
+
     return;
-    //--------------------------------------------------//
-    // setting width
-    case 0x06:
-
-      PSXDisplay.Range.x0=(short)(gdata & 0x7ff);
-      PSXDisplay.Range.x1=(short)((gdata>>12) & 0xfff);
-
-      PSXDisplay.Range.x1-=PSXDisplay.Range.x0;
-
-      ChangeDispOffsetsX();
-
-      return;
-    //--------------------------------------------------//
-    // setting height
-    case 0x07:
+   //--------------------------------------------------//
+   // setting height
+   case 0x07:
     {
 
-      PSXDisplay.Range.y0=(short)(gdata & 0x3ff);
-      PSXDisplay.Range.y1=(short)((gdata>>10) & 0x3ff);
+     PSXDisplay.Range.y0=(short)(gdata & 0x3ff);
+     PSXDisplay.Range.y1=(short)((gdata>>10) & 0x3ff);
+                                      
+     PreviousPSXDisplay.Height = PSXDisplay.Height;
 
-      PreviousPSXDisplay.Height = PSXDisplay.Height;
+     PSXDisplay.Height = PSXDisplay.Range.y1 - 
+                         PSXDisplay.Range.y0 +
+                         PreviousPSXDisplay.DisplayModeNew.y;
 
-      PSXDisplay.Height = PSXDisplay.Range.y1 -
-                          PSXDisplay.Range.y0 +
-                          PreviousPSXDisplay.DisplayModeNew.y;
-
-      if(PreviousPSXDisplay.Height!=PSXDisplay.Height)
+     if(PreviousPSXDisplay.Height!=PSXDisplay.Height)
       {
-        PSXDisplay.DisplayModeNew.y=PSXDisplay.Height*PSXDisplay.Double;
+       PSXDisplay.DisplayModeNew.y=PSXDisplay.Height*PSXDisplay.Double;
 
-        ChangeDispOffsetsY();
+       ChangeDispOffsetsY();
 
-        updateDisplayIfChanged();
+       updateDisplayIfChanged();
       }
-      return;
+     return;
     }
-    //--------------------------------------------------//
-    // setting display infos
-    case 0x08:
+   //--------------------------------------------------//
+   // setting display infos
+   case 0x08:
 
-      PSXDisplay.DisplayModeNew.x =
-        sDispWidths[(gdata & 0x03) | ((gdata & 0x40) >> 4)];
+    PSXDisplay.DisplayModeNew.x =
+     sDispWidths[(gdata & 0x03) | ((gdata & 0x40) >> 4)];
 
-      if (gdata&0x04) PSXDisplay.Double=2;
-      else            PSXDisplay.Double=1;
+    if (gdata&0x04) PSXDisplay.Double=2;
+    else            PSXDisplay.Double=1;
 
-      PSXDisplay.DisplayModeNew.y = PSXDisplay.Height*PSXDisplay.Double;
+    PSXDisplay.DisplayModeNew.y = PSXDisplay.Height*PSXDisplay.Double;
 
-      ChangeDispOffsetsY();
+    ChangeDispOffsetsY();
 
-      PSXDisplay.PAL           = (gdata & 0x08)?TRUE:FALSE; // if 1 - PAL mode, else NTSC
-      PSXDisplay.RGB24New      = (gdata & 0x10)?TRUE:FALSE; // if 1 - TrueColor
-      PSXDisplay.InterlacedNew = (gdata & 0x20)?TRUE:FALSE; // if 1 - Interlace
+    PSXDisplay.PAL           = (gdata & 0x08)?TRUE:FALSE; // if 1 - PAL mode, else NTSC
+    PSXDisplay.RGB24New      = (gdata & 0x10)?TRUE:FALSE; // if 1 - TrueColor
+    PSXDisplay.InterlacedNew = (gdata & 0x20)?TRUE:FALSE; // if 1 - Interlace
 
-      lGPUstatusRet&=~GPUSTATUS_WIDTHBITS;                   // Clear the width bits
-      lGPUstatusRet|=
-        (((gdata & 0x03) << 17) |
-         ((gdata & 0x40) << 10));                // Set the width bits
+    lGPUstatusRet&=~GPUSTATUS_WIDTHBITS;                   // Clear the width bits
+    lGPUstatusRet|=
+               (((gdata & 0x03) << 17) | 
+               ((gdata & 0x40) << 10));                // Set the width bits
 
-      if(PSXDisplay.InterlacedNew)
-      {
-        if(!PSXDisplay.Interlaced)
-        {
-          PreviousPSXDisplay.DisplayPosition.x = PSXDisplay.DisplayPosition.x;
-          PreviousPSXDisplay.DisplayPosition.y = PSXDisplay.DisplayPosition.y;
-        }
-        lGPUstatusRet|=GPUSTATUS_INTERLACED;
-      }
-      else lGPUstatusRet&=~GPUSTATUS_INTERLACED;
+    if(PSXDisplay.InterlacedNew)
+     {
+      if(!PSXDisplay.Interlaced)
+       {
+        PreviousPSXDisplay.DisplayPosition.x = PSXDisplay.DisplayPosition.x;
+        PreviousPSXDisplay.DisplayPosition.y = PSXDisplay.DisplayPosition.y;
+       }
+      lGPUstatusRet|=GPUSTATUS_INTERLACED;
+     }
+    else lGPUstatusRet&=~GPUSTATUS_INTERLACED;
 
-      if (PSXDisplay.PAL)
-        lGPUstatusRet|=GPUSTATUS_PAL;
-      else lGPUstatusRet&=~GPUSTATUS_PAL;
+    if (PSXDisplay.PAL)
+         lGPUstatusRet|=GPUSTATUS_PAL;
+    else lGPUstatusRet&=~GPUSTATUS_PAL;
 
-      if (PSXDisplay.Double==2)
-        lGPUstatusRet|=GPUSTATUS_DOUBLEHEIGHT;
-      else lGPUstatusRet&=~GPUSTATUS_DOUBLEHEIGHT;
+    if (PSXDisplay.Double==2)
+         lGPUstatusRet|=GPUSTATUS_DOUBLEHEIGHT;
+    else lGPUstatusRet&=~GPUSTATUS_DOUBLEHEIGHT;
 
-      if (PSXDisplay.RGB24New)
-        lGPUstatusRet|=GPUSTATUS_RGB24;
-      else lGPUstatusRet&=~GPUSTATUS_RGB24;
+    if (PSXDisplay.RGB24New)
+         lGPUstatusRet|=GPUSTATUS_RGB24;
+    else lGPUstatusRet&=~GPUSTATUS_RGB24;
 
-      updateDisplayIfChanged();
+    updateDisplayIfChanged();
 
-      return;
-    //--------------------------------------------------//
-    // ask about GPU version and other stuff
-    case 0x10:
+    return;
+   //--------------------------------------------------//
+   // ask about GPU version and other stuff
+   case 0x10: 
 
-      gdata&=0xff;
+    gdata&=0xff;
 
-      switch(gdata)
-      {
-        case 0x02:
-          lGPUdataRet=lGPUInfoVals[INFO_TW];              // tw infos
-          return;
-        case 0x03:
-          lGPUdataRet=lGPUInfoVals[INFO_DRAWSTART];       // draw start
-          return;
-        case 0x04:
-          lGPUdataRet=lGPUInfoVals[INFO_DRAWEND];         // draw end
-          return;
-        case 0x05:
-        case 0x06:
-          lGPUdataRet=lGPUInfoVals[INFO_DRAWOFF];         // draw offset
-          return;
-        case 0x07:
-          lGPUdataRet=0x02;                          // gpu type
-          return;
-        case 0x08:
-        case 0x0F:                                       // some bios addr?
-          lGPUdataRet=0xBFC03720;
-          return;
-      }
-      return;
-      //--------------------------------------------------//
-  }
+    switch(gdata) 
+     {
+      case 0x02:
+       lGPUdataRet=lGPUInfoVals[INFO_TW];              // tw infos
+       return;
+      case 0x03:
+       lGPUdataRet=lGPUInfoVals[INFO_DRAWSTART];       // draw start
+       return;
+      case 0x04:
+       lGPUdataRet=lGPUInfoVals[INFO_DRAWEND];         // draw end
+       return;
+      case 0x05:
+      case 0x06:
+       lGPUdataRet=lGPUInfoVals[INFO_DRAWOFF];         // draw offset
+       return;
+      case 0x07:
+		lGPUdataRet=0x02;                          // gpu type
+       return;
+      case 0x08:
+      case 0x0F:                                       // some bios addr?
+       lGPUdataRet=0xBFC03720;
+       return;
+     }
+    return;
+   //--------------------------------------------------//
+  }   
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -670,31 +658,31 @@ void CALLBACK GPU_writeStatus(uint32_t gdata)      // WRITE STATUS
 
 INLINE void FinishedVRAMWrite(void)
 {
-// Set register to NORMAL operation
-  DataWriteMode = DR_NORMAL;
-// Reset transfer values, to prevent mis-transfer of data
-  VRAMWrite.x = 0;
-  VRAMWrite.y = 0;
-  VRAMWrite.Width = 0;
-  VRAMWrite.Height = 0;
-  VRAMWrite.ColsRemaining = 0;
-  VRAMWrite.RowsRemaining = 0;
+ // Set register to NORMAL operation
+ DataWriteMode = DR_NORMAL;
+ // Reset transfer values, to prevent mis-transfer of data
+ VRAMWrite.x = 0;
+ VRAMWrite.y = 0;
+ VRAMWrite.Width = 0;
+ VRAMWrite.Height = 0;
+ VRAMWrite.ColsRemaining = 0;
+ VRAMWrite.RowsRemaining = 0;
 }
 
 INLINE void FinishedVRAMRead(void)
 {
-// Set register to NORMAL operation
-  DataReadMode = DR_NORMAL;
-// Reset transfer values, to prevent mis-transfer of data
-  VRAMRead.x = 0;
-  VRAMRead.y = 0;
-  VRAMRead.Width = 0;
-  VRAMRead.Height = 0;
-  VRAMRead.ColsRemaining = 0;
-  VRAMRead.RowsRemaining = 0;
+ // Set register to NORMAL operation
+ DataReadMode = DR_NORMAL;
+ // Reset transfer values, to prevent mis-transfer of data
+ VRAMRead.x = 0;
+ VRAMRead.y = 0;
+ VRAMRead.Width = 0;
+ VRAMRead.Height = 0;
+ VRAMRead.ColsRemaining = 0;
+ VRAMRead.RowsRemaining = 0;
 
-// Indicate GPU is no longer ready for VRAM data in the STATUS REGISTER
-  lGPUstatusRet&=~GPUSTATUS_READYFORVRAM;
+ // Indicate GPU is no longer ready for VRAM data in the STATUS REGISTER
+ lGPUstatusRet&=~GPUSTATUS_READYFORVRAM;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -703,74 +691,63 @@ INLINE void FinishedVRAMRead(void)
 
 void CALLBACK GPU_readDataMem(uint32_t * pMem, int iSize)
 {
-  int i;
+ int i;
 
-  if(DataReadMode!=DR_VRAMTRANSFER) return;
+ if(DataReadMode!=DR_VRAMTRANSFER) return;
 
-  GPUIsBusy;
+ GPUIsBusy;
 
-// adjust read ptr, if necessary
-  while(VRAMRead.ImagePtr>=psxVuw_eom)
-    VRAMRead.ImagePtr-=512*1024;
-  while(VRAMRead.ImagePtr<psxVuw)
-    VRAMRead.ImagePtr+=512*1024;
+ // adjust read ptr, if necessary
+ while(VRAMRead.ImagePtr>=psxVuw_eom)
+  VRAMRead.ImagePtr-=512*1024;
+ while(VRAMRead.ImagePtr<psxVuw)
+  VRAMRead.ImagePtr+=512*1024;
 
-  for(i=0; i<iSize; i++)
+ for(i=0;i<iSize;i++)
   {
-    // do 2 seperate 16bit reads for compatibility (wrap issues)
-    if ((VRAMRead.ColsRemaining > 0) && (VRAMRead.RowsRemaining > 0))
+   // do 2 seperate 16bit reads for compatibility (wrap issues)
+   if ((VRAMRead.ColsRemaining > 0) && (VRAMRead.RowsRemaining > 0))
     {
-      // lower 16 bit
-      lGPUdataRet=(uint32_t)GETLE16(VRAMRead.ImagePtr);
+     // lower 16 bit
+     lGPUdataRet=(uint32_t)GETLE16(VRAMRead.ImagePtr);
 
-      VRAMRead.ImagePtr++;
-      if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
-      VRAMRead.RowsRemaining --;
+     VRAMRead.ImagePtr++;
+     if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
+     VRAMRead.RowsRemaining --;
 
-      if(VRAMRead.RowsRemaining<=0)
+     if(VRAMRead.RowsRemaining<=0)
       {
-        VRAMRead.RowsRemaining = VRAMRead.Width;
-        VRAMRead.ColsRemaining--;
-        VRAMRead.ImagePtr += 1024 - VRAMRead.Width;
-        if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
+       VRAMRead.RowsRemaining = VRAMRead.Width;
+       VRAMRead.ColsRemaining--;
+       VRAMRead.ImagePtr += 1024 - VRAMRead.Width;
+       if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
       }
 
-      // higher 16 bit (always, even if it's an odd width)
-      lGPUdataRet|=(uint32_t)GETLE16(VRAMRead.ImagePtr)<<16;
-      PUTLE32(pMem, lGPUdataRet);
-      pMem++;
+     // higher 16 bit (always, even if it's an odd width)
+     lGPUdataRet|=(uint32_t)GETLE16(VRAMRead.ImagePtr)<<16;
+     PUTLE32(pMem, lGPUdataRet); pMem++;
 
-      if(VRAMRead.ColsRemaining <= 0)
-      {
-        FinishedVRAMRead();
-        goto ENDREAD;
-      }
+     if(VRAMRead.ColsRemaining <= 0)
+      {FinishedVRAMRead();goto ENDREAD;}
 
-      VRAMRead.ImagePtr++;
-      if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
-      VRAMRead.RowsRemaining--;
-      if(VRAMRead.RowsRemaining<=0)
+     VRAMRead.ImagePtr++;
+     if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
+     VRAMRead.RowsRemaining--;
+     if(VRAMRead.RowsRemaining<=0)
       {
-        VRAMRead.RowsRemaining = VRAMRead.Width;
-        VRAMRead.ColsRemaining--;
-        VRAMRead.ImagePtr += 1024 - VRAMRead.Width;
-        if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
+       VRAMRead.RowsRemaining = VRAMRead.Width;
+       VRAMRead.ColsRemaining--;
+       VRAMRead.ImagePtr += 1024 - VRAMRead.Width;
+       if(VRAMRead.ImagePtr>=psxVuw_eom) VRAMRead.ImagePtr-=512*1024;
       }
-      if(VRAMRead.ColsRemaining <= 0)
-      {
-        FinishedVRAMRead();
-        goto ENDREAD;
-      }
+     if(VRAMRead.ColsRemaining <= 0)
+      {FinishedVRAMRead();goto ENDREAD;}
     }
-    else
-    {
-      FinishedVRAMRead();
-      goto ENDREAD;
-    }
+   else {FinishedVRAMRead();goto ENDREAD;}
   }
 
 ENDREAD:
-  GPUIsIdle;
+ GPUIsIdle;
 }
 
 
@@ -778,9 +755,9 @@ ENDREAD:
 
 uint32_t CALLBACK GPU_readData(void)
 {
-  uint32_t l;
-  GPU_readDataMem(&l,1);
-  return lGPUdataRet;
+ uint32_t l;
+ GPU_readDataMem(&l,1);
+ return lGPUdataRet;
 }
 
 // Software drawing function
@@ -796,209 +773,201 @@ uint32_t CALLBACK GPU_readData(void)
 
 const unsigned char primTableCX[256] =
 {
-  // 00
-  0,0,3,0,0,0,0,0,
-  // 08
-  0,0,0,0,0,0,0,0,
-  // 10
-  0,0,0,0,0,0,0,0,
-  // 18
-  0,0,0,0,0,0,0,0,
-  // 20
-  4,4,4,4,7,7,7,7,
-  // 28
-  5,5,5,5,9,9,9,9,
-  // 30
-  6,6,6,6,9,9,9,9,
-  // 38
-  8,8,8,8,12,12,12,12,
-  // 40
-  3,3,3,3,0,0,0,0,
-  // 48
+    // 00
+    0,0,3,0,0,0,0,0,
+    // 08
+    0,0,0,0,0,0,0,0,
+    // 10
+    0,0,0,0,0,0,0,0,
+    // 18
+    0,0,0,0,0,0,0,0,
+    // 20
+    4,4,4,4,7,7,7,7,
+    // 28
+    5,5,5,5,9,9,9,9,
+    // 30
+    6,6,6,6,9,9,9,9,
+    // 38
+    8,8,8,8,12,12,12,12,
+    // 40
+    3,3,3,3,0,0,0,0,
+    // 48
 //  5,5,5,5,6,6,6,6,    // FLINE
-  254,254,254,254,254,254,254,254,
-  // 50
-  4,4,4,4,0,0,0,0,
-  // 58
+    254,254,254,254,254,254,254,254,
+    // 50
+    4,4,4,4,0,0,0,0,
+    // 58
 //  7,7,7,7,9,9,9,9,    // GLINE
-  255,255,255,255,255,255,255,255,
-  // 60
-  3,3,3,3,4,4,4,4,
-  // 68
-  2,2,2,2,3,3,3,3,    // 3=SPRITE1???
-  // 70
-  2,2,2,2,3,3,3,3,
-  // 78
-  2,2,2,2,3,3,3,3,
-  // 80
-  4,0,0,0,0,0,0,0,
-  // 88
-  0,0,0,0,0,0,0,0,
-  // 90
-  0,0,0,0,0,0,0,0,
-  // 98
-  0,0,0,0,0,0,0,0,
-  // a0
-  3,0,0,0,0,0,0,0,
-  // a8
-  0,0,0,0,0,0,0,0,
-  // b0
-  0,0,0,0,0,0,0,0,
-  // b8
-  0,0,0,0,0,0,0,0,
-  // c0
-  3,0,0,0,0,0,0,0,
-  // c8
-  0,0,0,0,0,0,0,0,
-  // d0
-  0,0,0,0,0,0,0,0,
-  // d8
-  0,0,0,0,0,0,0,0,
-  // e0
-  0,1,1,1,1,1,1,0,
-  // e8
-  0,0,0,0,0,0,0,0,
-  // f0
-  0,0,0,0,0,0,0,0,
-  // f8
-  0,0,0,0,0,0,0,0
+    255,255,255,255,255,255,255,255,
+    // 60
+    3,3,3,3,4,4,4,4,    
+    // 68
+    2,2,2,2,3,3,3,3,    // 3=SPRITE1???
+    // 70
+    2,2,2,2,3,3,3,3,
+    // 78
+    2,2,2,2,3,3,3,3,
+    // 80
+    4,0,0,0,0,0,0,0,
+    // 88
+    0,0,0,0,0,0,0,0,
+    // 90
+    0,0,0,0,0,0,0,0,
+    // 98
+    0,0,0,0,0,0,0,0,
+    // a0
+    3,0,0,0,0,0,0,0,
+    // a8
+    0,0,0,0,0,0,0,0,
+    // b0
+    0,0,0,0,0,0,0,0,
+    // b8
+    0,0,0,0,0,0,0,0,
+    // c0
+    3,0,0,0,0,0,0,0,
+    // c8
+    0,0,0,0,0,0,0,0,
+    // d0
+    0,0,0,0,0,0,0,0,
+    // d8
+    0,0,0,0,0,0,0,0,
+    // e0
+    0,1,1,1,1,1,1,0,
+    // e8
+    0,0,0,0,0,0,0,0,
+    // f0
+    0,0,0,0,0,0,0,0,
+    // f8
+    0,0,0,0,0,0,0,0
 };
 
 void CALLBACK GPU_writeDataMem(uint32_t * pMem, int iSize)
 {
-  unsigned char command;
-  uint32_t gdata=0;
-  int i=0;
-  GPUIsBusy;
-  GPUIsNotReadyForCommands;
+ unsigned char command;
+ uint32_t gdata=0;
+ int i=0;
+ GPUIsBusy;
+ GPUIsNotReadyForCommands;
 
 STARTVRAM:
 
-  if(DataWriteMode==DR_VRAMTRANSFER)
+ if(DataWriteMode==DR_VRAMTRANSFER)
   {
-    BOOL bFinished=FALSE;
+   BOOL bFinished=FALSE;
 
-    // make sure we are in vram
-    while(VRAMWrite.ImagePtr>=psxVuw_eom)
-      VRAMWrite.ImagePtr-=512*1024;
-    while(VRAMWrite.ImagePtr<psxVuw)
-      VRAMWrite.ImagePtr+=512*1024;
+   // make sure we are in vram
+   while(VRAMWrite.ImagePtr>=psxVuw_eom)
+    VRAMWrite.ImagePtr-=512*1024;
+   while(VRAMWrite.ImagePtr<psxVuw)
+    VRAMWrite.ImagePtr+=512*1024;
 
-    // now do the loop
-    while(VRAMWrite.ColsRemaining>0)
+   // now do the loop
+   while(VRAMWrite.ColsRemaining>0)
     {
-      while(VRAMWrite.RowsRemaining>0)
+     while(VRAMWrite.RowsRemaining>0)
       {
-        if(i>=iSize)
+       if(i>=iSize) {goto ENDVRAM;}
+       i++;
+
+       gdata=GETLE32(pMem); pMem++;
+
+       PUTLE16(VRAMWrite.ImagePtr, (unsigned short)gdata); VRAMWrite.ImagePtr++;
+       if(VRAMWrite.ImagePtr>=psxVuw_eom) VRAMWrite.ImagePtr-=512*1024;
+       VRAMWrite.RowsRemaining --;
+
+       if(VRAMWrite.RowsRemaining <= 0)
         {
-          goto ENDVRAM;
-        }
-        i++;
-
-        gdata=GETLE32(pMem);
-        pMem++;
-
-        PUTLE16(VRAMWrite.ImagePtr, (unsigned short)gdata);
-        VRAMWrite.ImagePtr++;
-        if(VRAMWrite.ImagePtr>=psxVuw_eom) VRAMWrite.ImagePtr-=512*1024;
-        VRAMWrite.RowsRemaining --;
-
-        if(VRAMWrite.RowsRemaining <= 0)
-        {
-          VRAMWrite.ColsRemaining--;
-          if (VRAMWrite.ColsRemaining <= 0)             // last pixel is odd width
+         VRAMWrite.ColsRemaining--;
+         if (VRAMWrite.ColsRemaining <= 0)             // last pixel is odd width
           {
-            gdata=(gdata&0xFFFF)|(((uint32_t)GETLE16(VRAMWrite.ImagePtr))<<16);
-            FinishedVRAMWrite();
-            bDoVSyncUpdate=TRUE;
-            goto ENDVRAM;
+           gdata=(gdata&0xFFFF)|(((uint32_t)GETLE16(VRAMWrite.ImagePtr))<<16);
+           FinishedVRAMWrite();
+           bDoVSyncUpdate=TRUE;
+           goto ENDVRAM;
           }
-          VRAMWrite.RowsRemaining = VRAMWrite.Width;
-          VRAMWrite.ImagePtr += 1024 - VRAMWrite.Width;
+         VRAMWrite.RowsRemaining = VRAMWrite.Width;
+         VRAMWrite.ImagePtr += 1024 - VRAMWrite.Width;
         }
 
-        PUTLE16(VRAMWrite.ImagePtr, (unsigned short)(gdata>>16));
-        VRAMWrite.ImagePtr++;
-        if(VRAMWrite.ImagePtr>=psxVuw_eom) VRAMWrite.ImagePtr-=512*1024;
-        VRAMWrite.RowsRemaining --;
+       PUTLE16(VRAMWrite.ImagePtr, (unsigned short)(gdata>>16)); VRAMWrite.ImagePtr++;
+       if(VRAMWrite.ImagePtr>=psxVuw_eom) VRAMWrite.ImagePtr-=512*1024;
+       VRAMWrite.RowsRemaining --;
       }
 
-      VRAMWrite.RowsRemaining = VRAMWrite.Width;
-      VRAMWrite.ColsRemaining--;
-      VRAMWrite.ImagePtr += 1024 - VRAMWrite.Width;
-      bFinished=TRUE;
+     VRAMWrite.RowsRemaining = VRAMWrite.Width;
+     VRAMWrite.ColsRemaining--;
+     VRAMWrite.ImagePtr += 1024 - VRAMWrite.Width;
+     bFinished=TRUE;
     }
 
-    FinishedVRAMWrite();
-    if(bFinished) bDoVSyncUpdate=TRUE;
+   FinishedVRAMWrite();
+   if(bFinished) bDoVSyncUpdate=TRUE;
   }
 
 ENDVRAM:
 
-  if(DataWriteMode==DR_NORMAL)
+ if(DataWriteMode==DR_NORMAL)
   {
-    void (* *primFunc)(unsigned char *);
-    if(bSkipNextFrame) primFunc=primTableSkip;
-    else               primFunc=primTableJ;
+   void (* *primFunc)(unsigned char *);
+   if(bSkipNextFrame) primFunc=primTableSkip;
+   else               primFunc=primTableJ;
 
-    for(; i<iSize;)
+   for(;i<iSize;)
     {
-      if(DataWriteMode==DR_VRAMTRANSFER) goto STARTVRAM;
+     if(DataWriteMode==DR_VRAMTRANSFER) goto STARTVRAM;
 
-      gdata=GETLE32(pMem);
-      pMem++;
-      i++;
-
-      if(gpuDataC == 0)
+     gdata=GETLE32(pMem); pMem++; i++;
+ 
+     if(gpuDataC == 0)
       {
-        command = (unsigned char)((gdata>>24) & 0xff);
-
+       command = (unsigned char)((gdata>>24) & 0xff);
+ 
 //if(command>=0xb0 && command<0xc0) auxprintf("b0 %x!!!!!!!!!\n",command);
 
-        if(primTableCX[command])
+       if(primTableCX[command])
         {
-          gpuDataC = primTableCX[command];
-          gpuCommand = command;
-          PUTLE32(&gpuDataM[0], gdata);
-          gpuDataP = 1;
+         gpuDataC = primTableCX[command];
+         gpuCommand = command;
+         PUTLE32(&gpuDataM[0], gdata);
+         gpuDataP = 1;
         }
-        else continue;
+       else continue;
       }
-      else
+     else
       {
-        PUTLE32(&gpuDataM[gpuDataP], gdata);
-        if(gpuDataC>128)
+       PUTLE32(&gpuDataM[gpuDataP], gdata);
+       if(gpuDataC>128)
         {
-          if((gpuDataC==254 && gpuDataP>=3) ||
-              (gpuDataC==255 && gpuDataP>=4 && !(gpuDataP&1)))
+         if((gpuDataC==254 && gpuDataP>=3) ||
+            (gpuDataC==255 && gpuDataP>=4 && !(gpuDataP&1)))
           {
-            if((gpuDataM[gpuDataP] & 0xF000F000) == 0x50005000)
-              gpuDataP=gpuDataC-1;
+           if((gpuDataM[gpuDataP] & 0xF000F000) == 0x50005000)
+            gpuDataP=gpuDataC-1;
           }
         }
-        gpuDataP++;
+       gpuDataP++;
       }
-
-      if(gpuDataP == gpuDataC)
+ 
+     if(gpuDataP == gpuDataC)
       {
-        gpuDataC=gpuDataP=0;
-        primFunc[gpuCommand]((unsigned char *)gpuDataM);
+       gpuDataC=gpuDataP=0;
+       primFunc[gpuCommand]((unsigned char *)gpuDataM);
       }
-    }
+    } 
   }
 
-  lGPUdataRet=gdata;
+ lGPUdataRet=gdata;
 
-  GPUIsReadyForCommands;
-  GPUIsIdle;
+ GPUIsReadyForCommands;
+ GPUIsIdle;                
 }
 
 ////////////////////////////////////////////////////////////////////////
 
 void CALLBACK GPU_writeData(uint32_t gdata)
 {
-  PUTLE32(&gdata, gdata);
-  GPU_writeDataMem(&gdata,1);
+ PUTLE32(&gdata, gdata);
+ GPU_writeDataMem(&gdata,1);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1009,47 +978,46 @@ unsigned long lUsedAddr[3];
 
 INLINE BOOL CheckForEndlessLoop(unsigned long laddr)
 {
-  if(laddr==lUsedAddr[1]) return TRUE;
-  if(laddr==lUsedAddr[2]) return TRUE;
+ if(laddr==lUsedAddr[1]) return TRUE;
+ if(laddr==lUsedAddr[2]) return TRUE;
 
-  if(laddr<lUsedAddr[0]) lUsedAddr[1]=laddr;
-  else                   lUsedAddr[2]=laddr;
-  lUsedAddr[0]=laddr;
-  return FALSE;
+ if(laddr<lUsedAddr[0]) lUsedAddr[1]=laddr;
+ else                   lUsedAddr[2]=laddr;
+ lUsedAddr[0]=laddr;
+ return FALSE;
 }
 
 long CALLBACK GPU_dmaChain(uint32_t * baseAddrL, uint32_t addr)
 {
-  uint32_t dmaMem;
-  unsigned char * baseAddrB;
-  short count;
-  unsigned int DMACommandCounter = 0;
+ uint32_t dmaMem;
+ unsigned char * baseAddrB;
+ short count;unsigned int DMACommandCounter = 0;
 
-  GPUIsBusy;
+ GPUIsBusy;
 
-  lUsedAddr[0]=lUsedAddr[1]=lUsedAddr[2]=0xffffff;
+ lUsedAddr[0]=lUsedAddr[1]=lUsedAddr[2]=0xffffff;
 
-  baseAddrB = (unsigned char*) baseAddrL;
+ baseAddrB = (unsigned char*) baseAddrL;
 
-  do
+ do
   {
-    addr&=0x1FFFFC;
-    if(DMACommandCounter++ > 2000000) break;
-    if(CheckForEndlessLoop(addr)) break;
+   addr&=0x1FFFFC;
+   if(DMACommandCounter++ > 2000000) break;
+   if(CheckForEndlessLoop(addr)) break;
 
-    count = baseAddrB[addr+3];
+   count = baseAddrB[addr+3];
 
-    dmaMem=addr+4;
+   dmaMem=addr+4;
 
-    if(count>0) GPU_writeDataMem(&baseAddrL[dmaMem>>2],count);
+   if(count>0) GPU_writeDataMem(&baseAddrL[dmaMem>>2],count);
 
-    addr = GETLE32(&baseAddrL[addr>>2])&0xffffff;
+   addr = GETLE32(&baseAddrL[addr>>2])&0xffffff;
   }
-  while (addr != 0xffffff);
+ while (addr != 0xffffff);
 
-  GPUIsIdle;
+ GPUIsIdle;
 
-  return 0;
+ return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1058,55 +1026,55 @@ long CALLBACK GPU_dmaChain(uint32_t * baseAddrL, uint32_t addr)
 
 typedef struct
 {
-  uint32_t ulFreezeVersion;      // should be always 1 for now (set by main emu)
-  uint32_t ulStatus;             // current gpu status
-  uint32_t ulControl[256];       // latest control register values
-  unsigned char psxVRam[1024*512*2]; // current VRam image (full 2 MB for ZN)
+ uint32_t ulFreezeVersion;      // should be always 1 for now (set by main emu)
+ uint32_t ulStatus;             // current gpu status
+ uint32_t ulControl[256];       // latest control register values
+ unsigned char psxVRam[1024*512*2]; // current VRam image (full 2 MB for ZN)
 } GPUFreeze_t;
 
 ////////////////////////////////////////////////////////////////////////
 
 long CALLBACK GPU_freeze(uint32_t ulGetFreezeData,GPUFreeze_t * pF)
 {
-//----------------------------------------------------//
-  if(ulGetFreezeData==2)                                // 2: info, which save slot is selected? (just for display)
+ //----------------------------------------------------//
+ if(ulGetFreezeData==2)                                // 2: info, which save slot is selected? (just for display)
   {
-    long lSlotNum=*((long *)pF);
-    if(lSlotNum<0) return 0;
-    if(lSlotNum>8) return 0;
-    lSelectedSlot=lSlotNum+1;
-    return 1;
+   long lSlotNum=*((long *)pF);
+   if(lSlotNum<0) return 0;
+   if(lSlotNum>8) return 0;
+   lSelectedSlot=lSlotNum+1;
+   return 1;
   }
-//----------------------------------------------------//
-  if(!pF)                    return 0;                  // some checks
-  if(pF->ulFreezeVersion!=1) return 0;
+ //----------------------------------------------------//
+ if(!pF)                    return 0;                  // some checks
+ if(pF->ulFreezeVersion!=1) return 0;
 
-  if(ulGetFreezeData==1)                                // 1: get data
+ if(ulGetFreezeData==1)                                // 1: get data
   {
-    pF->ulStatus=lGPUstatusRet;
-    memcpy(pF->ulControl,ulStatusControl,256*sizeof(uint32_t));
-    memcpy(pF->psxVRam,  psxVub,         1024*512*2);
+   pF->ulStatus=lGPUstatusRet;
+   memcpy(pF->ulControl,ulStatusControl,256*sizeof(uint32_t));
+   memcpy(pF->psxVRam,  psxVub,         1024*512*2);
 
-    return 1;
+   return 1;
   }
 
-  if(ulGetFreezeData!=0) return 0;                      // 0: set data
+ if(ulGetFreezeData!=0) return 0;                      // 0: set data
 
-  lGPUstatusRet=pF->ulStatus;
-  memcpy(ulStatusControl,pF->ulControl,256*sizeof(uint32_t));
-  memcpy(psxVub,         pF->psxVRam,  1024*512*2);
+ lGPUstatusRet=pF->ulStatus;
+ memcpy(ulStatusControl,pF->ulControl,256*sizeof(uint32_t));
+ memcpy(psxVub,         pF->psxVRam,  1024*512*2);
 
 // RESET TEXTURE STORE HERE, IF YOU USE SOMETHING LIKE THAT
 
-  GPU_writeStatus(ulStatusControl[0]);
-  GPU_writeStatus(ulStatusControl[1]);
-  GPU_writeStatus(ulStatusControl[2]);
-  GPU_writeStatus(ulStatusControl[3]);
-  GPU_writeStatus(ulStatusControl[8]);                   // try to repair things
-  GPU_writeStatus(ulStatusControl[6]);
-  GPU_writeStatus(ulStatusControl[7]);
-  GPU_writeStatus(ulStatusControl[5]);
-  GPU_writeStatus(ulStatusControl[4]);
+ GPU_writeStatus(ulStatusControl[0]);
+ GPU_writeStatus(ulStatusControl[1]);
+ GPU_writeStatus(ulStatusControl[2]);
+ GPU_writeStatus(ulStatusControl[3]);
+ GPU_writeStatus(ulStatusControl[8]);                   // try to repair things
+ GPU_writeStatus(ulStatusControl[6]);
+ GPU_writeStatus(ulStatusControl[7]);
+ GPU_writeStatus(ulStatusControl[5]);
+ GPU_writeStatus(ulStatusControl[4]);
 
-  return 1;
+ return 1;
 }

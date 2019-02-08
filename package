@@ -1,0 +1,48 @@
+#!/bin/sh
+
+mkdir -p ipkg/home/retrofw/emus/pcsx4all
+mkdir -p ipkg/home/retrofw/apps/gmenu2x/sections/emulators
+cp pcsx4all ipkg/home/retrofw/emus/pcsx4all/pcsx4all
+cp pcsx4all.png ipkg/home/retrofw/emus/pcsx4all/pcsx4all.png
+
+cd ipkg
+
+# https://unix.stackexchange.com/questions/219268/how-to-add-new-lines-when-using-echo
+print()
+	case    ${IFS- } in
+	(\ *)   printf  %b\\n "$*";;
+	(*)     IFS=\ $IFS
+	printf  %b\\n "$*"
+	IFS=${IFS#?}
+esac
+
+# Create GmenuNx entry file plus other things
+
+print 'Package: pcsx4all
+Version: 20190203
+Description: PS1 emulator
+Section: emus
+Priority: optional
+Maintainer: senquack
+Architecture: mipsel
+Homepage: https://github.com/gameblabla/pcsx4all
+Depends:
+Source: https://github.com/gameblabla/pcsx4all' > control
+
+print '2.0' > debian-binary
+
+print 'title=pcsx4all
+description=PS1 Emulator
+exec=/home/retrofw/emus/pcsx4all/pcsx4all
+clock=600
+params=-iso $f
+selectordir=/home/retrofw/roms
+selectorfilter=.bin,.img,.mdf,.iso,.cue,.pbp,.cbn
+' > home/retrofw/apps/gmenu2x/sections/emulators/pcsx4all
+
+tar -czvf control.tar.gz control
+tar -czvf data.tar.gz home
+ar rv ../pcsx4all.ipk control.tar.gz data.tar.gz debian-binary
+
+cd ..
+rm -r ipkg

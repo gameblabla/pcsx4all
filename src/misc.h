@@ -28,37 +28,35 @@
 
 #undef s_addr
 
-typedef struct
-{
-  unsigned char id[8];
-  u32 text;
-  u32 data;
-  u32 pc0;
-  u32 gp0;
-  u32 t_addr;
-  u32 t_size;
-  u32 d_addr;
-  u32 d_size;
-  u32 b_addr;
-  u32 b_size;
-  u32 s_addr;
-  u32 s_size;
-  u32 SavedSP;
-  u32 SavedFP;
-  u32 SavedGP;
-  u32 SavedRA;
-  u32 SavedS0;
+typedef struct {
+	unsigned char id[8];
+    u32 text;                   
+    u32 data;                    
+    u32 pc0;
+    u32 gp0;                     
+    u32 t_addr;
+    u32 t_size;
+    u32 d_addr;                  
+    u32 d_size;                  
+    u32 b_addr;                  
+    u32 b_size;                  
+    u32 s_addr;
+    u32 s_size;
+    u32 SavedSP;
+    u32 SavedFP;
+    u32 SavedGP;
+    u32 SavedRA;
+    u32 SavedS0;
 } EXE_HEADER;
 
-struct external_filehdr
-{
-  unsigned short f_magic;		/* magic number			*/
-  unsigned short f_nscns;		/* number of sections		*/
-  unsigned int f_timdat;	/* time & date stamp		*/
-  unsigned int f_symptr;	/* file pointer to symtab	*/
-  unsigned int f_nsyms;		/* number of symtab entries	*/
-  unsigned short f_opthdr;	/* sizeof(optional hdr)		*/
-  unsigned short f_flags;		/* flags			*/
+struct external_filehdr {
+	unsigned short f_magic;		/* magic number			*/
+	unsigned short f_nscns;		/* number of sections		*/
+	unsigned int f_timdat;	/* time & date stamp		*/
+	unsigned int f_symptr;	/* file pointer to symtab	*/
+	unsigned int f_nsyms;		/* number of symtab entries	*/
+	unsigned short f_opthdr;	/* sizeof(optional hdr)		*/
+	unsigned short f_flags;		/* flags			*/
 };
 
 #define	FILHDR	struct external_filehdr
@@ -75,14 +73,13 @@ int SaveState(const char *file);
 int LoadState(const char *file);
 int CheckState(const char *file, bool *uses_hle, bool get_sshot, u16 *sshot_image);
 
-enum
-{
-  CHECKSTATE_SUCCESS        = 0,
-  CHECKSTATE_ERR_OPEN       = -1,
-  CHECKSTATE_ERR_HEADER     = -2,
-  CHECKSTATE_ERR_VERSION    = -3,
-  CHECKSTATE_ERR_NO_SSHOT   = -4,
-  CHECKSTATE_ERR_READ       = -5
+enum {
+	CHECKSTATE_SUCCESS        = 0,
+	CHECKSTATE_ERR_OPEN       = -1,
+	CHECKSTATE_ERR_HEADER     = -2,
+	CHECKSTATE_ERR_VERSION    = -3,
+	CHECKSTATE_ERR_NO_SSHOT   = -4,
+	CHECKSTATE_ERR_READ       = -5
 };
 
 bool FileExists(const char* filename);

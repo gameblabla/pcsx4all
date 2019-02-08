@@ -80,42 +80,47 @@ static void pcsx4all_exit(void)
   config_save();
 }
 
-static char *home = NULL;
-static char homedir[PATH_MAX] =		"./.pcsx4all";
-static char memcardsdir[PATH_MAX] =	"./.pcsx4all/memcards";
-static char biosdir[PATH_MAX] =		"./.pcsx4all/bios";
-static char patchesdir[PATH_MAX] =	"./.pcsx4all/patches";
-char sstatesdir[PATH_MAX] = "./.pcsx4all/sstates";
+static char homedir[PATH_MAX/2];
+static char memcardsdir[PATH_MAX];
+static char biosdir[PATH_MAX];
+static char patchesdir[PATH_MAX];
+char sstatesdir[PATH_MAX];
 
 #ifdef __WIN32__
-  #define MKDIR(A) mkdir(A)
+	#define MKDIR(A) mkdir(A)
 #else
-  #define MKDIR(A) mkdir(A, 0777)
+	#define MKDIR(A) mkdir(A, 0777)
 #endif
 
 static void setup_paths()
 {
 #ifndef __WIN32__
-  home = getenv("HOME");
+	snprintf(homedir, sizeof(homedir), "%s/.pcsx4all", getenv("HOME"));
 #else
-  char buf[PATH_MAX];
-  home = getcwd(buf, PATH_MAX);
+	char buf[PATH_MAX];
+	snprintf(homedir, sizeof(homedir), "%s/.oswan", getcwd(buf, PATH_MAX));
 #endif
-  if (home)
-  {
-    sprintf(homedir, "%s/.pcsx4all", home);
-    sprintf(sstatesdir, "%s/sstates", homedir);
-    sprintf(memcardsdir, "%s/memcards", homedir);
-    sprintf(biosdir, "%s/bios", homedir);
-    sprintf(patchesdir, "%s/patches", homedir);
-  }
+	
+	/* 
+	 * If folder does not exists then create it 
+	 * This can speeds up startup if the folder already exists
+	*/
 
-  MKDIR(homedir);
-  MKDIR(sstatesdir);
-  MKDIR(memcardsdir);
-  MKDIR(biosdir);
-  MKDIR(patchesdir);
+	if(access( homedir, F_OK ) != -1) 
+	{
+		snprintf(sstatesdir, sizeof(sstatesdir), "%s/sstates", homedir);
+		snprintf(memcardsdir, sizeof(memcardsdir), "%s/memcards", homedir);
+		snprintf(biosdir, sizeof(biosdir), "%s/bios", homedir);
+		snprintf(patchesdir, sizeof(patchesdir), "%s/patches", homedir);
+	}
+	
+	MKDIR(homedir);
+	MKDIR(sstatesdir);
+	MKDIR(memcardsdir);
+	MKDIR(biosdir);
+	MKDIR(patchesdir);
 }
+
 
 void probe_lastdir()
 {
@@ -128,7 +133,7 @@ void probe_lastdir()
   if (!dir)
   {
     // Fallback to home directory.
-    strncpy(Config.LastDir, home, MAXPATHLEN);
+    strncpy(Config.LastDir, homedir, MAXPATHLEN);
     Config.LastDir[MAXPATHLEN-1] = '\0';
   }
   else
@@ -144,14 +149,11 @@ void probe_lastdir()
 void config_load()
 {
   FILE *f;
-  char *config = (char *)malloc(strlen(homedir) + strlen("/pcsx4all.cfg") + 1);
+  char config[PATH_MAX];
   char line[strlen("LastDir ") + MAXPATHLEN + 1];
   int lineNum = 0;
 
-  if (!config)
-    return;
-
-  sprintf(config, "%s/pcsx4all.cfg", homedir);
+  snprintf(config, sizeof(config), "%s/pcsx4all.cfg", homedir);
 
   f = fopen(config, "r");
 
@@ -406,12 +408,9 @@ void config_load()
 void config_save()
 {
   FILE *f;
-  char *config = (char *)malloc(strlen(homedir) + strlen("/pcsx4all.cfg") + 1);
+  char config[PATH_MAX];
 
-  if (!config)
-    return;
-
-  sprintf(config, "%s/pcsx4all.cfg", homedir);
+  snprintf(config, sizeof(config), "%s/pcsx4all.cfg", homedir);
 
   f = fopen(config, "w");
 
@@ -865,7 +864,7 @@ int main (int argc, char **argv)
   Config.AnalogArrow = false;
 
   //zear - Added option to store the last visited directory.
-  strncpy(Config.LastDir, home, MAXPATHLEN); /* Defaults to home directory. */
+  strncpy(Config.LastDir, homedir, MAXPATHLEN); /* Defaults to home directory. */
   Config.LastDir[MAXPATHLEN-1] = '\0';
 
   // senquack - added spu_pcsxrearmed plugin:
@@ -1312,16 +1311,12 @@ int main (int argc, char **argv)
 
   atexit(pcsx4all_exit);
 
-#if defined(RS97)
-	int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
-#else
 	#ifdef SDL_TRIPLEBUF
 		int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
 	#else
 		int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
 	#endif
-#endif
-
+	
   screen = SDL_SetVideoMode(320, 240, 16, flags);
   if (!screen)
   {
@@ -1510,7 +1505,6 @@ void port_printf(int x, int y, const char *text)
   };
 
   int interval = 1;
-
   unsigned short *screen = (SCREEN + x + y * 320);
 
   for (int i = 0; i < strlen(text); i++)

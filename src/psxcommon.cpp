@@ -23,9 +23,14 @@
 
 void EmuUpdate()
 {
-  pl_frame_limit();
+	pl_frame_limit();
 
-  // Update controls
-  // NOTE: this is point of control transfer to frontend menu
-  pad_update();
+	// Update controls
+	// NOTE: This is point of control transfer to frontend menu..
+	//  Only allow re-entry to frontend when PS1 cache status is normal.
+	//  We don't want to allow creation of savestates when cache is isolated.
+	//  See cache control port comments in psxmem.cpp psxMemWrite32().
+	if (psxRegs.writeok) {
+		pad_update();
+	}
 }

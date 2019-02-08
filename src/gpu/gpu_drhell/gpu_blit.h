@@ -7,11 +7,10 @@ INLINE void GPU_BlitWW(const void* src, Uint16* dst16, Uint32 isRGB24)
   if(isRGB24 == 0)
   {
     uCount = 20;
-    const Uint32* src32 = (const Uint32*) src;
-    Uint32* dst32 = (      Uint32*) dst16;
-    do
-    {
-      //B                                 //G                          //R
+    const Uint32* src32 = (const Uint32*) src; 
+          Uint32* dst32 = (      Uint32*) dst16;
+    do{
+                            //B                                 //G                          //R
       dst32[0] = ((src32[0]&(0x1f001f<<10))>>10) | ((src32[0]&(0x1f001f<<5))<<1) | ((src32[0]&(0x1f001f<<0))<<11);
       dst32[1] = ((src32[1]&(0x1f001f<<10))>>10) | ((src32[1]&(0x1f001f<<5))<<1) | ((src32[1]&(0x1f001f<<0))<<11);
       dst32[2] = ((src32[2]&(0x1f001f<<10))>>10) | ((src32[2]&(0x1f001f<<5))<<1) | ((src32[2]&(0x1f001f<<0))<<11);
@@ -22,15 +21,13 @@ INLINE void GPU_BlitWW(const void* src, Uint16* dst16, Uint32 isRGB24)
       dst32[7] = ((src32[7]&(0x1f001f<<10))>>10) | ((src32[7]&(0x1f001f<<5))<<1) | ((src32[7]&(0x1f001f<<0))<<11);
       dst32 += 8;
       src32 += 8;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
-  else
+	else
   {
     uCount = 20;
     const Uint8* src8 = (const Uint8*)src;
-    do
-    {
+    do{
       dst16[ 0] = video_RGB_color16(src8[ 0], src8[ 1], src8[ 2] );
       dst16[ 1] = video_RGB_color16(src8[ 3], src8[ 4], src8[ 5] );
       dst16[ 2] = video_RGB_color16(src8[ 6], src8[ 7], src8[ 8] );
@@ -50,8 +47,7 @@ INLINE void GPU_BlitWW(const void* src, Uint16* dst16, Uint32 isRGB24)
       dst16[15] = video_RGB_color16(src8[45], src8[46], src8[47] );
       dst16 += 16;
       src8  += 48;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -61,10 +57,9 @@ INLINE void GPU_BlitWWSWWSWS(const void* src, Uint16* dst16, Uint32 isRGB24)
   if(isRGB24 == 0)
   {
     uCount = 32;
-    const Uint16* src16 = (const Uint16*) src;
-    do
-    {
-      //B                                 //G                          //R
+    const Uint16* src16 = (const Uint16*) src; 
+    do{
+                            //B                                 //G                          //R
       dst16[ 0] = ((src16[ 0]&(0x1f001f<<10))>>10) | ((src16[ 0]&(0x1f001f<<5))<<1) | ((src16[ 0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[ 1]&(0x1f001f<<10))>>10) | ((src16[ 1]&(0x1f001f<<5))<<1) | ((src16[ 1]&(0x1f001f<<0))<<11);
       dst16[ 2] = ((src16[ 3]&(0x1f001f<<10))>>10) | ((src16[ 3]&(0x1f001f<<5))<<1) | ((src16[ 3]&(0x1f001f<<0))<<11);
@@ -74,18 +69,16 @@ INLINE void GPU_BlitWWSWWSWS(const void* src, Uint16* dst16, Uint32 isRGB24)
       dst16[ 6] = ((src16[ 9]&(0x1f001f<<10))>>10) | ((src16[ 9]&(0x1f001f<<5))<<1) | ((src16[ 9]&(0x1f001f<<0))<<11);
       dst16[ 7] = ((src16[11]&(0x1f001f<<10))>>10) | ((src16[11]&(0x1f001f<<5))<<1) | ((src16[11]&(0x1f001f<<0))<<11);
       dst16[ 8] = ((src16[12]&(0x1f001f<<10))>>10) | ((src16[12]&(0x1f001f<<5))<<1) | ((src16[12]&(0x1f001f<<0))<<11);
-      dst16[ 9] = ((src16[14]&(0x1f001f<<10))>>10) | ((src16[14]&(0x1f001f<<5))<<1) | ((src16[14]&(0x1f001f<<0))<<11);
-      dst16 += 10;
+	    dst16[ 9] = ((src16[14]&(0x1f001f<<10))>>10) | ((src16[14]&(0x1f001f<<5))<<1) | ((src16[14]&(0x1f001f<<0))<<11);
+	    dst16 += 10;
       src16 += 16;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
-  else
+else
   {
     uCount = 32;
     const Uint8* src8 = (const Uint8*)src;
-    do
-    {
+    do{
       dst16[ 0] = video_RGB_color16(src8[ 0], src8[ 1], src8[ 2] );
       dst16[ 1] = video_RGB_color16(src8[ 3], src8[ 4], src8[ 5] );
       dst16[ 2] = video_RGB_color16(src8[ 9], src8[10], src8[11] );
@@ -100,8 +93,7 @@ INLINE void GPU_BlitWWSWWSWS(const void* src, Uint16* dst16, Uint32 isRGB24)
 
       dst16 += 10;
       src8  += 48;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -111,45 +103,41 @@ INLINE void GPU_BlitWWWWWS(const void* src, Uint16* dst16, Uint32 isRGB24)
   if(isRGB24 == 0)
   {
     uCount = 32;
-    const Uint16* src16 = (const Uint16*) src;
-    do
-    {
-      //B                                 //G                          //R
+    const Uint16* src16 = (const Uint16*) src; 
+    do{
+							//B                                 //G                          //R
       dst16[ 0] = ((src16[0]&(0x1f001f<<10))>>10) | ((src16[0]&(0x1f001f<<5))<<1) | ((src16[0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[1]&(0x1f001f<<10))>>10) | ((src16[1]&(0x1f001f<<5))<<1) | ((src16[1]&(0x1f001f<<0))<<11);
       dst16[ 2] = ((src16[2]&(0x1f001f<<10))>>10) | ((src16[2]&(0x1f001f<<5))<<1) | ((src16[2]&(0x1f001f<<0))<<11);
       dst16[ 3] = ((src16[3]&(0x1f001f<<10))>>10) | ((src16[3]&(0x1f001f<<5))<<1) | ((src16[3]&(0x1f001f<<0))<<11);
-      dst16[ 4] = ((src16[4]&(0x1f001f<<10))>>10) | ((src16[4]&(0x1f001f<<5))<<1) | ((src16[4]&(0x1f001f<<0))<<11);
+	    dst16[ 4] = ((src16[4]&(0x1f001f<<10))>>10) | ((src16[4]&(0x1f001f<<5))<<1) | ((src16[4]&(0x1f001f<<0))<<11);
       dst16[ 5] = ((src16[6]&(0x1f001f<<10))>>10) | ((src16[6]&(0x1f001f<<5))<<1) | ((src16[6]&(0x1f001f<<0))<<11);
       dst16[ 6] = ((src16[7]&(0x1f001f<<10))>>10) | ((src16[7]&(0x1f001f<<5))<<1) | ((src16[7]&(0x1f001f<<0))<<11);
       dst16[ 7] = ((src16[8]&(0x1f001f<<10))>>10) | ((src16[8]&(0x1f001f<<5))<<1) | ((src16[8]&(0x1f001f<<0))<<11);
       dst16[ 8] = ((src16[9]&(0x1f001f<<10))>>10) | ((src16[9]&(0x1f001f<<5))<<1) | ((src16[9]&(0x1f001f<<0))<<11);
-      dst16[ 9] = ((src16[10]&(0x1f001f<<10))>>10) | ((src16[10]&(0x1f001f<<5))<<1) | ((src16[10]&(0x1f001f<<0))<<11);
-      dst16 += 10;
+	    dst16[ 9] = ((src16[10]&(0x1f001f<<10))>>10) | ((src16[10]&(0x1f001f<<5))<<1) | ((src16[10]&(0x1f001f<<0))<<11);
+	    dst16 += 10;
       src16 += 12;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
   else
   {
     uCount = 32;
     const Uint8* src8 = (const Uint8*)src;
-    do
-    {
+    do{
       dst16[0] = video_RGB_color16(src8[ 0], src8[ 1], src8[ 2] );
       dst16[1] = video_RGB_color16(src8[ 3], src8[ 4], src8[ 5] );
       dst16[2] = video_RGB_color16(src8[ 6], src8[ 7], src8[ 8] );
       dst16[3] = video_RGB_color16(src8[ 9], src8[10], src8[11] );
-      dst16[4] = video_RGB_color16(src8[12], src8[13], src8[14] );
+	    dst16[4] = video_RGB_color16(src8[12], src8[13], src8[14] );
       dst16[5] = video_RGB_color16(src8[18], src8[19], src8[20] );
       dst16[6] = video_RGB_color16(src8[21], src8[22], src8[23] );
       dst16[7] = video_RGB_color16(src8[24], src8[25], src8[26] );
       dst16[8] = video_RGB_color16(src8[27], src8[28], src8[29] );
-      dst16[9] = video_RGB_color16(src8[30], src8[31], src8[32] );
+	    dst16[9] = video_RGB_color16(src8[30], src8[31], src8[32] );
       dst16 += 10;
       src8  += 36;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -159,37 +147,34 @@ INLINE void GPU_BlitWWWWWWWWS(const void* src, Uint16* dst16, Uint32 isRGB24, Ui
   if(isRGB24 == 0)
   {
     uCount = 20;
-    const Uint16* src16 = ((const Uint16*) src) + uClip_src;
-    do                          //B                                 //G                          //R
-    {
+    const Uint16* src16 = ((const Uint16*) src) + uClip_src; 
+    do{                         //B                                 //G                          //R
       dst16[ 0] = ((src16[ 0]&(0x1f001f<<10))>>10) | ((src16[ 0]&(0x1f001f<<5))<<1) | ((src16[ 0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[ 1]&(0x1f001f<<10))>>10) | ((src16[ 1]&(0x1f001f<<5))<<1) | ((src16[ 1]&(0x1f001f<<0))<<11);
       dst16[ 2] = ((src16[ 2]&(0x1f001f<<10))>>10) | ((src16[ 2]&(0x1f001f<<5))<<1) | ((src16[ 2]&(0x1f001f<<0))<<11);
       dst16[ 3] = ((src16[ 3]&(0x1f001f<<10))>>10) | ((src16[ 3]&(0x1f001f<<5))<<1) | ((src16[ 3]&(0x1f001f<<0))<<11);
-      dst16[ 4] = ((src16[ 4]&(0x1f001f<<10))>>10) | ((src16[ 4]&(0x1f001f<<5))<<1) | ((src16[ 4]&(0x1f001f<<0))<<11);
-      dst16[ 5] = ((src16[ 5]&(0x1f001f<<10))>>10) | ((src16[ 5]&(0x1f001f<<5))<<1) | ((src16[ 5]&(0x1f001f<<0))<<11);
-      dst16[ 6] = ((src16[ 6]&(0x1f001f<<10))>>10) | ((src16[ 6]&(0x1f001f<<5))<<1) | ((src16[ 6]&(0x1f001f<<0))<<11);
-      dst16[ 7] = ((src16[ 7]&(0x1f001f<<10))>>10) | ((src16[ 7]&(0x1f001f<<5))<<1) | ((src16[ 7]&(0x1f001f<<0))<<11);
+	    dst16[ 4] = ((src16[ 4]&(0x1f001f<<10))>>10) | ((src16[ 4]&(0x1f001f<<5))<<1) | ((src16[ 4]&(0x1f001f<<0))<<11);
+	    dst16[ 5] = ((src16[ 5]&(0x1f001f<<10))>>10) | ((src16[ 5]&(0x1f001f<<5))<<1) | ((src16[ 5]&(0x1f001f<<0))<<11);
+	    dst16[ 6] = ((src16[ 6]&(0x1f001f<<10))>>10) | ((src16[ 6]&(0x1f001f<<5))<<1) | ((src16[ 6]&(0x1f001f<<0))<<11);
+	    dst16[ 7] = ((src16[ 7]&(0x1f001f<<10))>>10) | ((src16[ 7]&(0x1f001f<<5))<<1) | ((src16[ 7]&(0x1f001f<<0))<<11);
 
       dst16[ 8] = ((src16[ 9]&(0x1f001f<<10))>>10) | ((src16[ 9]&(0x1f001f<<5))<<1) | ((src16[ 9]&(0x1f001f<<0))<<11);
       dst16[ 9] = ((src16[10]&(0x1f001f<<10))>>10) | ((src16[10]&(0x1f001f<<5))<<1) | ((src16[10]&(0x1f001f<<0))<<11);
       dst16[10] = ((src16[11]&(0x1f001f<<10))>>10) | ((src16[11]&(0x1f001f<<5))<<1) | ((src16[11]&(0x1f001f<<0))<<11);
       dst16[11] = ((src16[12]&(0x1f001f<<10))>>10) | ((src16[12]&(0x1f001f<<5))<<1) | ((src16[12]&(0x1f001f<<0))<<11);
-      dst16[12] = ((src16[13]&(0x1f001f<<10))>>10) | ((src16[13]&(0x1f001f<<5))<<1) | ((src16[13]&(0x1f001f<<0))<<11);
-      dst16[13] = ((src16[14]&(0x1f001f<<10))>>10) | ((src16[14]&(0x1f001f<<5))<<1) | ((src16[14]&(0x1f001f<<0))<<11);
-      dst16[14] = ((src16[15]&(0x1f001f<<10))>>10) | ((src16[15]&(0x1f001f<<5))<<1) | ((src16[15]&(0x1f001f<<0))<<11);
-      dst16[15] = ((src16[16]&(0x1f001f<<10))>>10) | ((src16[16]&(0x1f001f<<5))<<1) | ((src16[16]&(0x1f001f<<0))<<11);
-      dst16 += 16;
+	    dst16[12] = ((src16[13]&(0x1f001f<<10))>>10) | ((src16[13]&(0x1f001f<<5))<<1) | ((src16[13]&(0x1f001f<<0))<<11);
+	    dst16[13] = ((src16[14]&(0x1f001f<<10))>>10) | ((src16[14]&(0x1f001f<<5))<<1) | ((src16[14]&(0x1f001f<<0))<<11);
+	    dst16[14] = ((src16[15]&(0x1f001f<<10))>>10) | ((src16[15]&(0x1f001f<<5))<<1) | ((src16[15]&(0x1f001f<<0))<<11);
+	    dst16[15] = ((src16[16]&(0x1f001f<<10))>>10) | ((src16[16]&(0x1f001f<<5))<<1) | ((src16[16]&(0x1f001f<<0))<<11);
+	  	dst16 += 16;
       src16 += 18;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
   else
   {
     uCount = 20;
     const Uint8* src8 = (const Uint8*)src + (uClip_src<<1) + uClip_src;
-    do
-    {
+    do{
       dst16[ 0] = video_RGB_color16(src8[ 0], src8[ 1], src8[ 2] );
       dst16[ 1] = video_RGB_color16(src8[ 3], src8[ 4], src8[ 5] );
       dst16[ 2] = video_RGB_color16(src8[ 6], src8[ 7], src8[ 8] );
@@ -209,8 +194,7 @@ INLINE void GPU_BlitWWWWWWWWS(const void* src, Uint16* dst16, Uint32 isRGB24, Ui
       dst16[15] = video_RGB_color16(src8[48], src8[49], src8[50] );
       dst16 += 16;
       src8  += 54;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -220,9 +204,8 @@ INLINE void GPU_BlitWWDWW(const void* src, Uint16* dst16, Uint32 isRGB24)
   if(isRGB24 == 0)
   {
     uCount = 32;
-    const Uint16* src16 = (const Uint16*) src;
-    do                             //B                                 //G                          //R
-    {
+    const Uint16* src16 = (const Uint16*) src; 
+    do{                            //B                                 //G                          //R
       dst16[ 0] = ((src16[0]&(0x1f001f<<10))>>10) | ((src16[0]&(0x1f001f<<5))<<1) | ((src16[0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[1]&(0x1f001f<<10))>>10) | ((src16[1]&(0x1f001f<<5))<<1) | ((src16[1]&(0x1f001f<<0))<<11);
       dst16[ 2] = dst16[1];
@@ -235,30 +218,27 @@ INLINE void GPU_BlitWWDWW(const void* src, Uint16* dst16, Uint32 isRGB24)
       dst16[ 9] = ((src16[7]&(0x1f001f<<10))>>10) | ((src16[7]&(0x1f001f<<5))<<1) | ((src16[7]&(0x1f001f<<0))<<11);
       dst16 += 10;
       src16 +=  8;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
   else
   {
     uCount = 32;
     const Uint8* src8 = (const Uint8*)src;
-    do
-    {
+    do{
       dst16[ 0] = video_RGB_color16(src8[0], src8[ 1], src8[ 2] );
       dst16[ 1] = video_RGB_color16(src8[3], src8[ 4], src8[ 5] );
-      dst16[ 2] = dst16[1];
+	    dst16[ 2] = dst16[1];
       dst16[ 3] = video_RGB_color16(src8[6], src8[ 7], src8[ 8] );
       dst16[ 4] = video_RGB_color16(src8[9], src8[10], src8[11] );
 
       dst16[ 5] = video_RGB_color16(src8[12], src8[13], src8[14] );
       dst16[ 6] = video_RGB_color16(src8[15], src8[16], src8[17] );
-      dst16[ 7] = dst16[6];
+	    dst16[ 7] = dst16[6];
       dst16[ 8] = video_RGB_color16(src8[18], src8[19], src8[20] );
       dst16[ 9] = video_RGB_color16(src8[21], src8[22], src8[23] );
       dst16 += 10;
       src8  += 24;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -269,9 +249,8 @@ INLINE void GPU_BlitWS(const void* src, Uint16* dst16, Uint32 isRGB24)
   if(isRGB24 == 0)
   {
     uCount = 20;
-    const Uint16* src16 = (const Uint16*) src;
-    do                             //B                                 //G                          //R
-    {
+    const Uint16* src16 = (const Uint16*) src; 
+    do{                            //B                                 //G                          //R
       dst16[ 0] = ((src16[ 0]&(0x1f001f<<10))>>10) | ((src16[ 0]&(0x1f001f<<5))<<1) | ((src16[ 0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[ 2]&(0x1f001f<<10))>>10) | ((src16[ 2]&(0x1f001f<<5))<<1) | ((src16[ 2]&(0x1f001f<<0))<<11);
       dst16[ 2] = ((src16[ 4]&(0x1f001f<<10))>>10) | ((src16[ 4]&(0x1f001f<<5))<<1) | ((src16[ 4]&(0x1f001f<<0))<<11);
@@ -292,17 +271,15 @@ INLINE void GPU_BlitWS(const void* src, Uint16* dst16, Uint32 isRGB24)
       dst16[14] = ((src16[28]&(0x1f001f<<10))>>10) | ((src16[28]&(0x1f001f<<5))<<1) | ((src16[28]&(0x1f001f<<0))<<11);
       dst16[15] = ((src16[30]&(0x1f001f<<10))>>10) | ((src16[30]&(0x1f001f<<5))<<1) | ((src16[30]&(0x1f001f<<0))<<11);
 
-      dst16 += 16;
+	    dst16 += 16;
       src16 += 32;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
   else
   {
     uCount = 20;
-    const Uint8* src8 = (const Uint8*) src;
-    do
-    {
+    const Uint8* src8 = (const Uint8*) src; 
+    do{
       dst16[ 0] = video_RGB_color16(src8[ 0], src8[ 1], src8[ 2] );
       dst16[ 1] = video_RGB_color16(src8[ 6], src8[ 7], src8[ 8] );
       dst16[ 2] = video_RGB_color16(src8[12], src8[13], src8[14] );
@@ -325,8 +302,7 @@ INLINE void GPU_BlitWS(const void* src, Uint16* dst16, Uint32 isRGB24)
 
       dst16 += 16;
       src8  += 96;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 
@@ -337,15 +313,14 @@ INLINE void GPU_BlitWSSWSSWSSWSSWSSS(const void* src, Uint16* dst16, Uint32 isRG
   if(isRGB24 == 0)
   {
     uCount = 32;
-    const Uint16* src16 = (const Uint16*) src;
-    do                             //B                                 //G                          //R
-    {
+    const Uint16* src16 = (const Uint16*) src; 
+    do{                            //B                                 //G                          //R
       dst16[ 0] = ((src16[ 0]&(0x1f001f<<10))>>10) | ((src16[ 0]&(0x1f001f<<5))<<1) | ((src16[ 0]&(0x1f001f<<0))<<11);
       dst16[ 1] = ((src16[ 3]&(0x1f001f<<10))>>10) | ((src16[ 3]&(0x1f001f<<5))<<1) | ((src16[ 3]&(0x1f001f<<0))<<11);
       dst16[ 2] = ((src16[ 6]&(0x1f001f<<10))>>10) | ((src16[ 6]&(0x1f001f<<5))<<1) | ((src16[ 6]&(0x1f001f<<0))<<11);
       dst16[ 3] = ((src16[ 9]&(0x1f001f<<10))>>10) | ((src16[ 9]&(0x1f001f<<5))<<1) | ((src16[ 9]&(0x1f001f<<0))<<11);
       dst16[ 4] = ((src16[12]&(0x1f001f<<10))>>10) | ((src16[12]&(0x1f001f<<5))<<1) | ((src16[12]&(0x1f001f<<0))<<11);
-
+                                                                                              
       dst16[ 5] = ((src16[16]&(0x1f001f<<10))>>10) | ((src16[16]&(0x1f001f<<5))<<1) | ((src16[16]&(0x1f001f<<0))<<11);
       dst16[ 6] = ((src16[19]&(0x1f001f<<10))>>10) | ((src16[19]&(0x1f001f<<5))<<1) | ((src16[19]&(0x1f001f<<0))<<11);
       dst16[ 7] = ((src16[22]&(0x1f001f<<10))>>10) | ((src16[22]&(0x1f001f<<5))<<1) | ((src16[22]&(0x1f001f<<0))<<11);
@@ -354,8 +329,7 @@ INLINE void GPU_BlitWSSWSSWSSWSSWSSS(const void* src, Uint16* dst16, Uint32 isRG
 
       dst16 += 10;
       src16 += 32;
-    }
-    while(--uCount);
+    }while(--uCount);
   }
 }
 

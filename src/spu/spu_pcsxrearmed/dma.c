@@ -27,11 +27,11 @@
 
 unsigned short CALLBACK SPUreadDMA(void)
 {
-  unsigned short s = *(unsigned short *)(spu.spuMemC + spu.spuAddr);
-  spu.spuAddr += 2;
-  spu.spuAddr &= 0x7fffe;
+ unsigned short s = *(unsigned short *)(spu.spuMemC + spu.spuAddr);
+ spu.spuAddr += 2;
+ spu.spuAddr &= 0x7fffe;
 
-  return s;
+ return s;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -39,17 +39,17 @@ unsigned short CALLBACK SPUreadDMA(void)
 ////////////////////////////////////////////////////////////////////////
 
 void CALLBACK SPUreadDMAMem(unsigned short *pusPSXMem, int iSize,
-                            unsigned int cycles)
+ unsigned int cycles)
 {
-  int i;
+ int i;
 
-  do_samples_if_needed(cycles, 1);
+ do_samples_if_needed(cycles, 1);
 
-  for(i=0; i<iSize; i++)
+ for(i=0;i<iSize;i++)
   {
-    *pusPSXMem++ = *(unsigned short *)(spu.spuMemC + spu.spuAddr);
-    spu.spuAddr += 2;
-    spu.spuAddr &= 0x7fffe;
+   *pusPSXMem++ = *(unsigned short *)(spu.spuMemC + spu.spuAddr);
+   spu.spuAddr += 2;
+   spu.spuAddr &= 0x7fffe;
   }
 }
 
@@ -64,14 +64,14 @@ void CALLBACK SPUreadDMAMem(unsigned short *pusPSXMem, int iSize,
 ////////////////////////////////////////////////////////////////////////
 // WRITE DMA (one value)
 ////////////////////////////////////////////////////////////////////////
-
+  
 void CALLBACK SPUwriteDMA(unsigned short val)
 {
-  *(unsigned short *)(spu.spuMemC + spu.spuAddr) = val;
+ *(unsigned short *)(spu.spuMemC + spu.spuAddr) = val;
 
-  spu.spuAddr += 2;
-  spu.spuAddr &= 0x7fffe;
-  spu.bMemDirty = 1;
+ spu.spuAddr += 2;
+ spu.spuAddr &= 0x7fffe;
+ spu.bMemDirty = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -79,25 +79,25 @@ void CALLBACK SPUwriteDMA(unsigned short val)
 ////////////////////////////////////////////////////////////////////////
 
 void CALLBACK SPUwriteDMAMem(unsigned short *pusPSXMem, int iSize,
-                             unsigned int cycles)
+ unsigned int cycles)
 {
-  int i;
+ int i;
+ 
+ do_samples_if_needed(cycles, 1);
+ spu.bMemDirty = 1;
 
-  do_samples_if_needed(cycles, 1);
-  spu.bMemDirty = 1;
-
-  if(spu.spuAddr + iSize*2 < 0x80000)
+ if(spu.spuAddr + iSize*2 < 0x80000)
   {
-    memcpy(spu.spuMemC + spu.spuAddr, pusPSXMem, iSize*2);
-    spu.spuAddr += iSize*2;
-    return;
+   memcpy(spu.spuMemC + spu.spuAddr, pusPSXMem, iSize*2);
+   spu.spuAddr += iSize*2;
+   return;
   }
 
-  for(i=0; i<iSize; i++)
+ for(i=0;i<iSize;i++)
   {
-    *(unsigned short *)(spu.spuMemC + spu.spuAddr) = *pusPSXMem++;
-    spu.spuAddr += 2;
-    spu.spuAddr &= 0x7fffe;
+   *(unsigned short *)(spu.spuMemC + spu.spuAddr) = *pusPSXMem++;
+   spu.spuAddr += 2;
+   spu.spuAddr &= 0x7fffe;
   }
 }
 

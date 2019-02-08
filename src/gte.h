@@ -32,11 +32,11 @@ void gteLWC2(void);
 void gteSWC2(void);
 
 void gteRTPS(void);
-void gteOP(void);
+void gteOP(u32 gteop);
 void gteNCLIP(void);
-void gteDPCS(void);
-void gteINTPL(void);
-void gteMVMVA(void);
+void gteDPCS(u32 gteop);
+void gteINTPL(u32 gteop);
+void gteMVMVA(u32 gteop);
 void gteNCDS(void);
 void gteNCDT(void);
 void gteCDP(void);
@@ -44,14 +44,14 @@ void gteNCCS(void);
 void gteCC(void);
 void gteNCS(void);
 void gteNCT(void);
-void gteSQR(void);
-void gteDCPL(void);
+void gteSQR(u32 gteop);
+void gteDCPL(u32 gteop);
 void gteDPCT(void);
 void gteAVSZ3(void);
 void gteAVSZ4(void);
 void gteRTPT(void);
-void gteGPF(void);
-void gteGPL(void);
+void gteGPF(u32 gteop);
+void gteGPL(u32 gteop);
 void gteNCCT(void);
 
 // for the recompiler

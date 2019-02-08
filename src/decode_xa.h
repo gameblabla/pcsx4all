@@ -23,19 +23,17 @@
 
 #include "psxcommon.h"
 
-typedef struct
-{
-  s32	y0, y1;
+typedef struct {
+	s32	y0, y1;
 } ADPCM_Decode_t;
 
-typedef struct
-{
-  int				freq;
-  int				nbits;
-  int				stereo;
-  int				nsamples;
-  ADPCM_Decode_t	left, right;
-  short			pcm[16384];
+typedef struct {
+	int				freq;
+	int				nbits;
+	int				stereo;
+	int				nsamples;
+	ADPCM_Decode_t	left, right;
+	short			pcm[16384];
 } xa_decode_t;
 
 s32 xa_decode_sector( xa_decode_t *xdp,

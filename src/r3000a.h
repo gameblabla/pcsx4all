@@ -26,215 +26,173 @@
 #include "psxcounters.h"
 #include "psxbios.h"
 
-typedef struct
-{
-  int  (*Init)(void);
-  void (*Reset)(void);
-  void (*Execute)(void);
-  void (*ExecuteBlock)(unsigned target_pc);
-  void (*Clear)(u32 Addr, u32 Size);
-  void (*Shutdown)(void);
+typedef struct {
+	int  (*Init)(void);
+	void (*Reset)(void);
+	void (*Execute)(void);
+	void (*ExecuteBlock)(unsigned target_pc);
+	void (*Clear)(u32 Addr, u32 Size);
+	void (*Shutdown)(void);
 } R3000Acpu;
 
 extern R3000Acpu *psxCpu;
 extern R3000Acpu psxInt;
 #ifdef PSXREC
-  extern R3000Acpu psxRec;
+extern R3000Acpu psxRec;
 #endif
 
-typedef union
-{
+typedef union {
 #if defined(__BIGENDIAN__)
-  struct
-  {
-    u8 h3, h2, h, l;
-  } b;
-  struct
-  {
-    s8 h3, h2, h, l;
-  } sb;
-  struct
-  {
-    u16 h, l;
-  } w;
-  struct
-  {
-    s16 h, l;
-  } sw;
+	struct { u8 h3, h2, h, l; } b;
+	struct { s8 h3, h2, h, l; } sb;
+	struct { u16 h, l; } w;
+	struct { s16 h, l; } sw;
 #else
-  struct
-  {
-    u8 l, h, h2, h3;
-  } b;
-  struct
-  {
-    u16 l, h;
-  } w;
-  struct
-  {
-    s8 l, h, h2, h3;
-  } sb;
-  struct
-  {
-    s16 l, h;
-  } sw;
+	struct { u8 l, h, h2, h3; } b;
+	struct { u16 l, h; } w;
+	struct { s8 l, h, h2, h3; } sb;
+	struct { s16 l, h; } sw;
 #endif
 } PAIR;
 
-typedef union
-{
-  struct
-  {
-    u32	r0, at, v0, v1, a0, a1, a2, a3,
-        t0, t1, t2, t3, t4, t5, t6, t7,
-        s0, s1, s2, s3, s4, s5, s6, s7,
-        t8, t9, k0, k1, gp, sp, s8, ra, lo, hi;
-  } n;
-  u32 r[34]; /* Lo, Hi in r[32] and r[33] */
-  PAIR p[34];
+typedef union {
+	struct {
+		u32	r0, at, v0, v1, a0, a1, a2, a3,
+			t0, t1, t2, t3, t4, t5, t6, t7,
+			s0, s1, s2, s3, s4, s5, s6, s7,
+			t8, t9, k0, k1, gp, sp, s8, ra, lo, hi;
+	} n;
+	u32 r[34]; /* Lo, Hi in r[32] and r[33] */
+	PAIR p[34];
 } psxGPRRegs;
 
-typedef union
-{
-  struct
-  {
-    u32	Index,     Random,    EntryLo0,  EntryLo1,
-        Context,   PageMask,  Wired,     Reserved0,
-        BadVAddr,  Count,     EntryHi,   Compare,
-        Status,    Cause,     EPC,       PRid,
-        Config,    LLAddr,    WatchLO,   WatchHI,
-        XContext,  Reserved1, Reserved2, Reserved3,
-        Reserved4, Reserved5, ECC,       CacheErr,
-        TagLo,     TagHi,     ErrorEPC,  Reserved6;
-  } n;
-  u32 r[32];
-  PAIR p[32];
+typedef union {
+	struct {
+		u32	Index,     Random,    EntryLo0,  EntryLo1,
+			Context,   PageMask,  Wired,     Reserved0,
+			BadVAddr,  Count,     EntryHi,   Compare,
+			Status,    Cause,     EPC,       PRid,
+			Config,    LLAddr,    WatchLO,   WatchHI,
+			XContext,  Reserved1, Reserved2, Reserved3,
+			Reserved4, Reserved5, ECC,       CacheErr,
+			TagLo,     TagHi,     ErrorEPC,  Reserved6;
+	} n;
+	u32 r[32];
+	PAIR p[32];
 } psxCP0Regs;
 
-typedef struct
-{
-  short x, y;
+typedef struct {
+	short x, y;
 } SVector2D;
 
-typedef struct
-{
-  short z, pad;
+typedef struct {
+	short z, pad;
 } SVector2Dz;
 
-typedef struct
-{
-  short x, y, z, pad;
+typedef struct {
+	short x, y, z, pad;
 } SVector3D;
 
-typedef struct
-{
-  short x, y, z, pad;
+typedef struct {
+	short x, y, z, pad;
 } LVector3D;
 
-typedef struct
-{
-  unsigned char r, g, b, c;
+typedef struct {
+	unsigned char r, g, b, c;
 } CBGR;
 
-typedef struct
-{
-  short m11, m12, m13, m21, m22, m23, m31, m32, m33, pad;
+typedef struct {
+	short m11, m12, m13, m21, m22, m23, m31, m32, m33, pad;
 } SMatrix3D;
 
-typedef union
-{
-  struct
-  {
-    SVector3D     v0, v1, v2;
-    CBGR          rgb;
-    s32          otz;
-    s32          ir0, ir1, ir2, ir3;
-    SVector2D     sxy0, sxy1, sxy2, sxyp;
-    SVector2Dz    sz0, sz1, sz2, sz3;
-    CBGR          rgb0, rgb1, rgb2;
-    s32          reserved;
-    s32          mac0, mac1, mac2, mac3;
-    u32 irgb, orgb;
-    s32          lzcs, lzcr;
-  } n;
-  u32 r[32];
-  PAIR p[32];
+typedef union {
+	struct {
+		SVector3D     v0, v1, v2;
+		CBGR          rgb;
+		s32          otz;
+		s32          ir0, ir1, ir2, ir3;
+		SVector2D     sxy0, sxy1, sxy2, sxyp;
+		SVector2Dz    sz0, sz1, sz2, sz3;
+		CBGR          rgb0, rgb1, rgb2;
+		s32          reserved;
+		s32          mac0, mac1, mac2, mac3;
+		u32 irgb, orgb;
+		s32          lzcs, lzcr;
+	} n;
+	u32 r[32];
+	PAIR p[32];
 } psxCP2Data;
 
-typedef union
-{
-  struct
-  {
-    SMatrix3D rMatrix;
-    s32      trX, trY, trZ;
-    SMatrix3D lMatrix;
-    s32      rbk, gbk, bbk;
-    SMatrix3D cMatrix;
-    s32      rfc, gfc, bfc;
-    s32      ofx, ofy;
-    s32      h;
-    s32      dqa, dqb;
-    s32      zsf3, zsf4;
-    s32      flag;
-  } n;
-  u32 r[32];
-  PAIR p[32];
+typedef union {
+	struct {
+		SMatrix3D rMatrix;
+		s32      trX, trY, trZ;
+		SMatrix3D lMatrix;
+		s32      rbk, gbk, bbk;
+		SMatrix3D cMatrix;
+		s32      rfc, gfc, bfc;
+		s32      ofx, ofy;
+		s32      h;
+		s32      dqa, dqb;
+		s32      zsf3, zsf4;
+		s32      flag;
+	} n;
+	u32 r[32];
+	PAIR p[32];
 } psxCP2Ctrl;
 
 // Interrupt/event 'timestamp'
-struct intCycle_t
-{
-  u32 sCycle; // psxRegs.cycle value when event/interrupt was sheduled
-  u32 cycle;  // Number of cycles past sCycle above when event should occur
+struct intCycle_t {
+	u32 sCycle; // psxRegs.cycle value when event/interrupt was sheduled
+	u32 cycle;  // Number of cycles past sCycle above when event should occur
 };
 
-typedef struct
-{
-  psxGPRRegs GPR;		/* General Purpose Registers */
-  psxCP0Regs CP0;		/* Coprocessor0 Registers */
-  psxCP2Data CP2D; 	/* Cop2 data registers */
-  psxCP2Ctrl CP2C; 	/* Cop2 control registers */
-  u32 pc;			/* Program counter */
-  u32 code;		/* The instruction */
-  u32 cycle;
-  u32 interrupt;
+typedef struct {
+	psxGPRRegs GPR;		/* General Purpose Registers */
+	psxCP0Regs CP0;		/* Coprocessor0 Registers */
+	psxCP2Data CP2D; 	/* Cop2 data registers */
+	psxCP2Ctrl CP2C; 	/* Cop2 control registers */
+	u32 pc;			/* Program counter */
+	u32 code;		/* The instruction */
+	u32 cycle;
+	u32 interrupt;
 
-  intCycle_t intCycle[32];
+	intCycle_t intCycle[32];
 
-  u32 io_cycle_counter;
+	u32 io_cycle_counter;
 
-  s8 *psxM;
-  s8 *psxP;
-  s8 *psxR;
-  s8 *psxH;
+	s8 *psxM;
+	s8 *psxP;
+	s8 *psxR;
+	s8 *psxH;
 
-  void *reserved;
-  int writeok;
+	void *reserved;
+	int writeok;
 } psxRegisters;
 
 extern psxRegisters psxRegs;
 
 #if defined(__BIGENDIAN__)
 
-  #define _i32(x) *(s32 *)&x
-  #define _u32(x) x
+#define _i32(x) *(s32 *)&x
+#define _u32(x) x
 
-  #define _i16(x) (((short *)&x)[1])
-  #define _u16(x) (((unsigned short *)&x)[1])
+#define _i16(x) (((short *)&x)[1])
+#define _u16(x) (((unsigned short *)&x)[1])
 
-  #define _i8(x) (((char *)&x)[3])
-  #define _u8(x) (((unsigned char *)&x)[3])
+#define _i8(x) (((char *)&x)[3])
+#define _u8(x) (((unsigned char *)&x)[3])
 
 #else
 
-  #define _i32(x) *(s32 *)&x
-  #define _u32(x) x
+#define _i32(x) *(s32 *)&x
+#define _u32(x) x
 
-  #define _i16(x) *(short *)&x
-  #define _u16(x) *(unsigned short *)&x
+#define _i16(x) *(short *)&x
+#define _u16(x) *(unsigned short *)&x
 
-  #define _i8(x) *(char *)&x
-  #define _u8(x) *(unsigned char *)&x
+#define _i8(x) *(char *)&x
+#define _u8(x) *(unsigned char *)&x
 
 #endif
 

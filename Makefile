@@ -30,19 +30,9 @@ SDL_LIBS   := $(shell $(SDL_CONFIG) --libs)
 MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
-ifdef A320
-	C_ARCH = -mips32 -msoft-float -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\"
-endif
+C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DSHMEM_MIRRORING -DRS97 -I/opt/rs97_toolchain/os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL
 
-ifdef RS97
-  C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -I/opt/rs97_toolchain/os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL -fsingle-precision-constant -mplt
-endif
-
-ifdef GCW0
-	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
-endif
-
-CFLAGS = $(C_ARCH) -mno-shared -mplt -mno-mips16 -O3 -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -O3 -fdata-sections -ffunction-sections -funswitch-loops -fno-strict-aliasing -fprofile-use -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -60,8 +50,9 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-CFLAGS += -fdata-sections -ffunction-sections
-LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lrt -lz -lc -Wl,--as-needed -Wl,--gc-sections -flto -s
+CXXFLAGS = $(CFLAGS)
+
+LDFLAGS = $(SDL_LIBS) -lrt -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
@@ -83,7 +74,9 @@ OBJS = \
 ifdef RECOMPILER
 OBJS += \
 	obj/recompiler/mips/recompiler.o \
-	obj/recompiler/mips/mips_disasm.o
+	obj/recompiler/mips/mips_disasm.o \
+	obj/recompiler/mips/mem_mapping.o \
+	obj/recompiler/mips/mips_codegen.o
 endif
 
 ######################################################################
@@ -118,36 +111,14 @@ OBJS += obj/plugin_lib/perfmon.o
 #  to avoid audio dropouts. 0: once-per-frame (default)   5: 32-times-per-frame
 #
 #  On slower Dingoo A320, update 8 times per frame
-ifdef A320
 CFLAGS += -DSPU_UPDATE_FREQ_DEFAULT=3
-endif
-
-ifdef RS97
-CFLAGS += -DSPU_UPDATE_FREQ_DEFAULT=3
-endif
-
-ifdef GCW0
-#  On faster GCW Zero platform, update 4 times per frame
-CFLAGS += -DSPU_UPDATE_FREQ_DEFAULT=2
-endif
 ##########
 
 ##########
 # Similarly, set higher XA audio update frequency for slower devices
 #
 #  On slower Dingoo A320, force XA to update 8 times per frame (val 4)
-ifdef A320
 CFLAGS += -DFORCED_XA_UPDATES_DEFAULT=4
-endif
-
-ifdef RS97
-CFLAGS += -DFORCED_XA_UPDATES_DEFAULT=4
-endif
-
-ifdef GCW0
-#  On faster GCW Zero platform, use auto-update
-CFLAGS += -DFORCED_XA_UPDATES_DEFAULT=1
-endif
 ##########
 
 ifeq ($(SPU),spu_pcsxrearmed)

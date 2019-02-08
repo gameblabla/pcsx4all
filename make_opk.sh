@@ -9,7 +9,7 @@ cat > default.gcw0.desktop <<EOF
 [Desktop Entry]
 Name=Pcsx4all
 Comment=Sony PSX emulator
-Exec=pcsx4all -iso %f
+Exec=pcsx4all
 Terminal=false
 Type=Application
 StartupNotify=true
@@ -17,7 +17,6 @@ Icon=pcsxr-icon-small
 Categories=emulators;
 EOF
 
-#MimeType=application/x-pcsx4all-rom;application/x-pcsx4all-rom;application/bin;application/iso;
 # create opk
 FLIST="pcsx4all"
 FLIST="${FLIST} default.gcw0.desktop"

@@ -34,9 +34,9 @@ extern const u32 HSyncTotal[2];
 
 typedef struct Rcnt
 {
-  u16 mode, target;
-  u32 rate, irq, counterState, irqState;
-  u32 cycle, cycleStart;
+    u16 mode, target;
+    u32 rate, irq, counterState, irqState;
+    u32 cycle, cycleStart;
 } Rcnt;
 
 void psxRcntInit(void);

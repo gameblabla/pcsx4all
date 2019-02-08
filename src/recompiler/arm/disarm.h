@@ -102,8 +102,7 @@ typedef unsigned long addrdiff;
 declstruct(DisOptions);
 declstruct(Instruction);
 
-typedef enum
-{
+typedef enum {
   target_None,		/* instruction doesn't refer to an address */
   target_Data,		/* instruction refers to address of data */
   target_FloatS,	/* instruction refers to address of single-float */
@@ -114,8 +113,7 @@ typedef enum
   target_Unknown	/* instruction refers to address of *something* */
 } eTargetType;
 
-defstruct(Instruction)
-{
+defstruct(Instruction) {
   char text[128];	/* the disassembled instruction */
   int undefined;	/* non-0 iff it's an undefined instr */
   int badbits;		/* non-0 iff something reserved has the wrong value */
@@ -133,8 +131,7 @@ defstruct(Instruction)
 #define disopt_FIXS		4	/* bogus FIX syntax for ObjAsm */
 #define disopt_ReverseBytes	8	/* byte-reverse words first */
 
-defstruct(DisOptions)
-{
+defstruct(DisOptions) {
   word flags;
   char * * regnames;	/* pointer to 16 |char *|s: register names */
 };
@@ -158,7 +155,7 @@ static pInstruction instr_disassemble(word, address, pDisOptions);
 #define Ubit	(1<<23)	/* up, not down (data transfer) */
 #define Pbit	(1<<24)	/* pre-, not post-, indexed (data transfer) */
 #define Ibit	(1<<25)	/* non-immediate (data transfer) */
-/* immediate (data processing) */
+			/* immediate (data processing) */
 #define SPSRbit	(1<<22)	/* SPSR, not CPSR (MRS, MSR) */
 
 /* Some important 4-bit fields. */
@@ -178,16 +175,12 @@ static pInstruction instr_disassemble(word, address, pDisOptions);
  */
 #define BitsDiffer(a,b) ((instr^(instr>>(b-a)))&(1<<a))
 
-static void swiname(word w, char * s, size_t sz)
-{
-  return;
-}
+static void swiname(word w, char * s, size_t sz) { return; }
 
 /* op = append(op,ip) === op += sprintf(op,"%s",ip),
  * except that it's faster.
  */
-static char * append(char * op, const char *ip)
-{
+static char * append(char * op, const char *ip) {
   char c;
   while ((c=*ip++)!=0) *op++=c;
   return op;
@@ -195,8 +188,7 @@ static char * append(char * op, const char *ip)
 
 /* op = hex8(op,w) === op += sprintf(op,"&%08lX",w), but faster.
  */
-static char * hex8(char * op, word w)
-{
+static char * hex8(char * op, word w) {
   int i;
   *op++='&';
   for (i=28; i>=0; i-=4) *op++ = "0123456789ABCDEF"[(w>>i)&15];
@@ -205,16 +197,10 @@ static char * hex8(char * op, word w)
 
 /* op = reg(op,'x',n) === op += sprintf(op,"x%lu",n&15).
  */
-static char * reg(char * op, char c, word n)
-{
+static char * reg(char * op, char c, word n) {
   *op++=c;
   n&=15;
-  if (n>=10)
-  {
-    *op++='1';
-    n+='0'-10;
-  }
-  else n+='0';
+  if (n>=10) { *op++='1'; n+='0'-10; } else n+='0';
   *op++=(char)n;
   return op;
 }
@@ -222,28 +208,19 @@ static char * reg(char * op, char c, word n)
 /* op = num(op,n) appends n in decimal or &n in hex
  * depending on whether n<100. It's assumed that n>=0.
  */
-static char * num(char * op, word w)
-{
-  if (w>=100)
-  {
+static char * num(char * op, word w) {
+  if (w>=100) {
     int i;
     word t;
     *op++='&';
     for (i=28; (t=(w>>i)&15)==0; i-=4) ;
     for (; i>=0; i-=4) *op++ = "0123456789ABCDEF"[(w>>i)&15];
   }
-  else
-  {
+  else {
     /* divide by 10. You can prove this works by exhaustive search. :-) */
-    word t = w-(w>>2);
-    t=(t+(t>>4)) >> 3;
-    {
-      word u = w-10*t;
-      if (u==10)
-      {
-        u=0;
-        ++t;
-      }
+    word t = w-(w>>2); t=(t+(t>>4)) >> 3;
+    { word u = w-10*t;
+      if (u==10) { u=0; ++t; }
       if (t) *op++=(char)(t+'0');
       *op++=(char)(u+'0');
     }
@@ -335,8 +312,7 @@ static char * num(char * op, word w)
  */
 
 extern pInstruction
-instr_disassemble(word instr, address addr, pDisOptions opts)
-{
+instr_disassemble(word instr, address addr, pDisOptions opts) {
   static char         flagchars[4];
   static sInstruction result;
   const char * mnemonic  = 0;
@@ -350,8 +326,7 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 
   /* PHASE 0. Set up default values for |result|. */
 
-  if (opts->flags & disopt_ReverseBytes)
-  {
+  if (opts->flags & disopt_ReverseBytes) {
     instr = ((instr & 0xFF00FF00) >> 8) | ((instr & 0x00FF00FF) << 8);
     instr = (instr >> 16) | (instr << 16);
   }
@@ -359,38 +334,33 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
   fpn = ((instr>>15)&1) + ((instr>>21)&2);
 
   result.undefined =
-    result.badbits =
-      result.oddbits =
-        result.is_SWI = 0;
+  result.badbits =
+  result.oddbits =
+  result.is_SWI = 0;
   result.target_type = target_None;
   result.offset = 0x80000000;
   result.addrstart = 0;
 
   /* PHASE 1. Decode and classify instruction. */
 
-  switch ((instr>>24)&15)
-  {
+  switch ((instr>>24)&15) {
     case 0:
       /* multiply or data processing, or LDRH etc */
       if ((instr&(15<<4))!=(9<<4)) goto lMaybeLDRHetc;
       /* multiply */
-      if (instr&(1<<23))
-      {
+      if (instr&(1<<23)) {
         /* long multiply */
         mnemonic = "UMULL\0UMLAL\0SMULL\0SMLAL" + 6*((instr>>21)&3);
         format = "3,4,0,2";
       }
-      else
-      {
+      else {
         if (instr&(1<<22)) goto lUndefined;	/* "class C" */
         /* short multiply */
-        if (instr&(1<<21))
-        {
+        if (instr&(1<<21)) {
           mnemonic = "MLA";
           format   = "4,0,2,3";
         }
-        else
-        {
+        else {
           mnemonic = "MUL";
           format   = "4,0,2";
         }
@@ -400,30 +370,26 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
     case 1:
     case 3:
       /* SWP or MRS/MSR or data processing */
-      if ((instr&0x02B00FF0)==0x00000090)
-      {
+      if ((instr&0x02B00FF0)==0x00000090) {
         /* SWP */
         mnemonic = "SWP";
         format   = "3,0,[4]";
         if (instr&Bbit) *flagp++='B';
         break;
       }
-      else if ((instr&0x02BF0FFF)==0x000F0000)
-      {
+      else if ((instr&0x02BF0FFF)==0x000F0000) {
         /* MRS */
         mnemonic = "MRS";
         format   = (instr&SPSRbit) ? "3,SPSR" : "3,CPSR";
         break;
       }
-      else if ((instr&0x02BFFFF0)==0x0029F000)
-      {
+      else if ((instr&0x02BFFFF0)==0x0029F000) {
         /* MSR psr<P=0/1...>,Rs */
         mnemonic = "MSR";
         format   = (instr&SPSRbit) ? "SPSR,0" : "CPSR,0";
         break;
       }
-      else if ((instr&0x00BFF000)==0x0028F000)
-      {
+      else if ((instr&0x00BFF000)==0x0028F000) {
         /* MSR {C,S}PSR_flag,op2 */
         mnemonic = "MSR";
         format   = (instr&SPSRbit) ? "SPSR_flg,*" : "CPSR_flg,*";
@@ -436,11 +402,10 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
         break;
       }
       /* fall through here */
-    lMaybeLDRHetc:
+lMaybeLDRHetc:
 #ifdef INSTR_grok_v4
       if ((instr&(14<<24))==0
-          && ((instr&(9<<4))==(9<<4)))
-      {
+          && ((instr&(9<<4))==(9<<4))) {
         /* Might well be LDRH or similar. */
         if ((instr&(Wbit+Pbit))==Wbit) goto lUndefined;	/* "class E", case 1 */
         if ((instr&(Lbit+(1<<6)))==(1<<6)) goto lUndefined;	/* STRSH etc */
@@ -456,44 +421,39 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 #endif
     case 2:
       /* data processing */
-    {
-      word op21 = instr&(15<<21);
-      if ((op21==(2<<21) || (op21==(4<<21)))			/* ADD or SUB */
-          && ((instr&(RNbits+Ibit+Sbit))==RN(15)+Ibit)	/* imm, no S */
-          /*&& ((instr&(30<<7))==0 || (instr&3))*/)  		/* normal rot */
-      {
-        /* ADD ...,pc,#... or SUB ...,pc,#...: turn into ADR */
-        mnemonic = "ADR";
-        format   = "3,.";
-        if ((instr&(30<<7))!=0 && !(instr&3)) result.oddbits=1;
-        break;
-      }
-      mnemonic = "AND\0EOR\0SUB\0RSB\0ADD\0ADC\0SBC\0RSC\0"
-                 "TST\0TEQ\0CMP\0CMN\0ORR\0MOV\0BIC\0MVN" /* \0 */
-                 + (op21 >> 19);
-      /* Rd needed for all but TST,TEQ,CMP,CMN (8..11) */
-      /* Rn needed for all but MOV,MVN (13,15) */
-      if (op21 < ( 8<<21)) format = "3,4,*";
-      else if (op21 < (12<<21))
-      {
-        format = "4,*";
-        if (instr&RDbits)
-        {
-          if ((instr&Sbit) && RD_is(15))
-            *flagp++='P';
-          else result.oddbits=1;
+      { word op21 = instr&(15<<21);
+        if ((op21==(2<<21) || (op21==(4<<21)))			/* ADD or SUB */
+            && ((instr&(RNbits+Ibit+Sbit))==RN(15)+Ibit)	/* imm, no S */
+            /*&& ((instr&(30<<7))==0 || (instr&3))*/) {		/* normal rot */
+          /* ADD ...,pc,#... or SUB ...,pc,#...: turn into ADR */
+          mnemonic = "ADR";
+          format   = "3,.";
+          if ((instr&(30<<7))!=0 && !(instr&3)) result.oddbits=1;
+          break;
         }
-        if (!(instr&Sbit)) goto lUndefined;	/* CMP etc, no S bit */
+        mnemonic = "AND\0EOR\0SUB\0RSB\0ADD\0ADC\0SBC\0RSC\0"
+                   "TST\0TEQ\0CMP\0CMN\0ORR\0MOV\0BIC\0MVN" /* \0 */
+                   + (op21 >> 19);
+        /* Rd needed for all but TST,TEQ,CMP,CMN (8..11) */
+        /* Rn needed for all but MOV,MVN (13,15) */
+             if (op21 < ( 8<<21)) format = "3,4,*";
+        else if (op21 < (12<<21)) {
+          format = "4,*";
+          if (instr&RDbits) {
+            if ((instr&Sbit) && RD_is(15))
+              *flagp++='P';
+            else result.oddbits=1;
+          }
+          if (!(instr&Sbit)) goto lUndefined;	/* CMP etc, no S bit */
+        }
+        else if (op21 & (1<<21)) {
+          format = "3,*";
+          if (instr&RNbits) result.oddbits=1;
+        }
+        else format = "3,4,*";
+        if (instr&Sbit && (op21<(8<<21) || op21>=(12<<21))) *flagp++='S';
       }
-      else if (op21 & (1<<21))
-      {
-        format = "3,*";
-        if (instr&RNbits) result.oddbits=1;
-      }
-      else format = "3,4,*";
-      if (instr&Sbit && (op21<(8<<21) || op21>=(12<<21))) *flagp++='S';
-    }
-    break;
+      break;
     case 4:
     case 5:
     case 6:
@@ -510,19 +470,16 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
     case 9:
       /* STM/LDM */
       mnemonic = "STM\0LDM" + ((instr&Lbit) >> 18);
-      if (RN_is(13))
-      {
+      if (RN_is(13)) {
         /* r13, so treat as stack */
         word x = (instr&(3<<23)) >> 22;
         if (instr&Lbit) x^=6;
-        {
-          const char * foo = "EDEAFDFA"+x;
+        { const char * foo = "EDEAFDFA"+x;
           *flagp++ = *foo++;
           *flagp++ = *foo;
         }
       }
-      else
-      {
+      else {
         /* not r13, so don't treat as stack */
         *flagp++ = (instr&Ubit) ? 'I' : 'D';
         *flagp++ = (instr&Pbit) ? 'B' : 'A';
@@ -538,47 +495,38 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
     case 12:
     case 13:
       /* STC or LDC */
-      if (CP_is(1))
-      {
+      if (CP_is(1)) {
         /* copro 1: FPU. This is STF or LDF. */
         mnemonic = "STF\0LDF" + ((instr&Lbit) >> 18);
         format   = "8,/";
         *flagp++ = "SDEP"[fpn];
         poss_tt = (eTargetType)(target_FloatS+fpn);
       }
-      else if (CP_is(2))
-      {
+      else if (CP_is(2)) {
         /* copro 2: this is LFM or SFM. */
         mnemonic = "SFM\0LFM" + ((instr&Lbit) >> 18);
         if (!fpn) fpn=4;
-        if (RN_is(13) && BitsDiffer(23,24))
-        {
+        if (RN_is(13) && BitsDiffer(23,24)) {
           if ((instr&255)!=fpn) goto lNonStackLFM;
           /* r13 and U!=P, so treat as stack */
-          if (BitsDiffer(20,24))
-          {
+          if (BitsDiffer(20,24)) {
             /* L != P, so FD */
-            *flagp++ = 'F';
-            *flagp++ = 'D';
+            *flagp++ = 'F'; *flagp++ = 'D';
           }
-          else
-          {
+          else {
             /* L == P, so EA */
-            *flagp++ = 'E';
-            *flagp++ = 'A';
+            *flagp++ = 'E'; *flagp++ = 'A';
           }
           format = "8,(,[4]'";
         }
-        else
-        {
-        lNonStackLFM:
+        else {
+lNonStackLFM:
           /* not r13 or U=P or wrong offset, so don't treat as stack */
           format = "8,(,/";
           poss_tt = target_FloatE;
         }
       }
-      else
-      {
+      else {
         /* some other copro number: STC or LDC. */
         mnemonic = "STC\0LDC" + ((instr&Lbit) >> 18);
         format   = ";,\004,/";
@@ -588,14 +536,11 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
       break;
     case 14:
       /* CDP or MRC/MCR */
-      if (instr&(1<<4))
-      {
+      if (instr&(1<<4)) {
         /* MRC/MCR. */
-        if (CP_is(1))
-        {
+        if (CP_is(1)) {
           /* copro 1: FPU. */
-          if ((instr&Lbit) && RD_is(15))
-          {
+          if ((instr&Lbit) && RD_is(15)) {
             /* MCR in FPU with Rd=r15: comparison (ugh) */
             if (!(instr&(1<<23))) goto lUndefined;	/* unused operation */
             mnemonic = "CMF\0\0CNF\0\0CMFE\0CNFE" + (5*(instr&(3<<21)) >> 21);
@@ -603,30 +548,24 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
             if (instr&((1<<19)+(7<<5)))
               result.badbits=1;	/* size,rmode reseved */
           }
-          else
-          {
+          else {
             /* normal FPU MCR/MRC */
             word op20 = instr&(15<<20);
             if (op20>=6<<20) goto lUndefined;
             mnemonic = "FLT\0FIX\0WFS\0RFS\0WFC\0RFC" + (op20>>18);
-            if (op20==0)
-            {
+            if (op20==0) {
               /* FLT instruction */
               format = "9,3";
-              {
-                char c = "SDE*"[((instr>>7)&1) + ((instr>>18)&2)];
-                if (c=='*') goto lUndefined;
-                else *flagp++=c;
+              { char c = "SDE*"[((instr>>7)&1) + ((instr>>18)&2)];
+                if (c=='*') goto lUndefined; else *flagp++=c;
               }
               if (instr&15) result.oddbits=1;	/* Fm and const flag unused */
             }
-            else
-            {
+            else {
               /* not FLT instruction */
               if (instr&((1<<7)+(1<<19)))
                 result.badbits=1;	/* size bits reserved */
-              if (op20==1<<20)
-              {
+              if (op20==1<<20) {
                 /* FIX instruction */
                 format = "3,+";
                 if (opts->flags&disopt_FIXS)
@@ -635,8 +574,7 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
                 if (instr&(7<<15)) result.oddbits=1;	/* Fn unused */
                 if (instr&(1<<3)) result.badbits=1;	/* no immediate consts */
               }
-              else
-              {
+              else {
                 /* neither FLT nor FIX */
                 format = "3";
                 if (instr&(3<<5)) result.badbits=1;	/* rmode reserved */
@@ -645,8 +583,7 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
             }
           }
         }
-        else
-        {
+        else {
           /* some other copro number. Not FPU. */
           /* NB that ObjAsm documentation gets MCR and MRC the wrong way round!
            */
@@ -655,32 +592,29 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
           format = ";,:,3,\005,\001-";
         }
       }
-      else
-      {
+      else {
         /* CDP. */
-        if (CP_is(1))
-        {
+        if (CP_is(1)) {
           /* copro 1: FPU. */
           mnemonic = /* dyadics: */
-            "ADF\0MUF\0SUF\0RSF\0"
-            "DVF\0RDF\0POW\0RPW\0"
-            "RMF\0FML\0FDV\0FRD\0"
-            "POL\0***\0***\0***\0"
-            /* monadics: */
-            "MVF\0MNF\0ABS\0RND\0"
-            "SQT\0LOG\0LGN\0EXP\0"
-            "SIN\0COS\0TAN\0ASN\0"
-            "ACS\0ATN\0URD\0NRM\0"
-            + ((instr&(15<<20)) >> 18)	/* opcode   -> bits 5432 */
-            + ((instr&(1<<15)) >> 9);	/* monadicP -> bit 6 */
+                     "ADF\0MUF\0SUF\0RSF\0"
+                     "DVF\0RDF\0POW\0RPW\0"
+                     "RMF\0FML\0FDV\0FRD\0"
+                     "POL\0***\0***\0***\0"
+                     /* monadics: */
+                     "MVF\0MNF\0ABS\0RND\0"
+                     "SQT\0LOG\0LGN\0EXP\0"
+                     "SIN\0COS\0TAN\0ASN\0"
+                     "ACS\0ATN\0URD\0NRM\0"
+                     + ((instr&(15<<20)) >> 18)	/* opcode   -> bits 5432 */
+                     + ((instr&(1<<15)) >> 9);	/* monadicP -> bit 6 */
           format = (instr&(1<<15)) ? "8,+" : "8,9,+";
           *flagp++ = "SDE*"[((instr>>7)&1) + ((instr>>18)&2)];
           *flagp++ = "\0PMZ"[(instr&(3<<5))>>5];
           /* NB that foregoing relies on this being the last flag! */
           if (*mnemonic=='*' || *flagchars=='*') goto lUndefined;
         }
-        else
-        {
+        else {
           /* some other copro number. Not FPU. */
           mnemonic = "CDP";
           format   = ";,),\004,\005,\001-";
@@ -692,11 +626,11 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
       mnemonic = "SWI";
       format   = "$";
       break;
-      /* Nasty hack: this is code that won't be reached in the normal
-       * course of events, and after the last case of the switch is a
-       * convenient place for it.
-       */
-    lUndefined:
+/* Nasty hack: this is code that won't be reached in the normal
+ * course of events, and after the last case of the switch is a
+ * convenient place for it.
+ */
+lUndefined:
       strcpy(result.text, "Undefined instruction");
       result.undefined = 1;
       return &result;
@@ -705,8 +639,7 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 
   /* PHASE 2. Produce string. */
 
-  {
-    char * op = result.text;
+  { char * op = result.text;
 
     /* 2a. Mnemonic. */
 
@@ -714,10 +647,8 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 
     /* 2b. Condition code. */
 
-    {
-      word cond = instr>>28;
-      if (cond!=14)
-      {
+    { word cond = instr>>28;
+      if (cond!=14) {
         const char * ip = "EQNECSCCMIPLVSVCHILSGELTGTLEALNV"+2*cond;
         *op++ = *ip++;
         *op++ = *ip;
@@ -726,8 +657,7 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 
     /* 2c. Flags. */
 
-    {
-      const char * ip = flagchars;
+    { const char * ip = flagchars;
       while (*ip) *op++ = *ip++;
     }
 
@@ -737,23 +667,19 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
 
     /* 2e. Other stuff, determined by format string. */
 
-    {
-      const char * ip = format;
+    { const char * ip = format;
       char c;
 
       char * * regnames = opts->regnames;
       word     oflags   = opts->flags;
 
-      while ((c=*ip++) != 0)
-      {
-        switch(c)
-        {
+      while ((c=*ip++) != 0) {
+        switch(c) {
           case '$':
             result.is_SWI = 1;
             result.swinum = instr&0x00FFFFFF;
             result.addrstart = op;
-            if (oflags&disopt_SWInames)
-            {
+            if (oflags&disopt_SWInames) {
               swiname(result.swinum, op, 128-(op-result.text));
               op += strlen(op);
             }
@@ -762,24 +688,20 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
             break;
           case '%':
             *op++='{';
-            {
-              word w = instr&0xFFFF;
+            { word w = instr&0xFFFF;
               int i=0;
-              while (w)
-              {
+              while (w) {
                 int j;
                 while (!(w&(1ul<<i))) ++i;
                 for (j=i+1; w&(1ul<<j); ++j) ;
                 --j;
                 /* registers [i..j] */
                 op = append(op, regnames[i]);
-                if (j-i)
-                {
+                if (j-i) {
                   *op++ = (j-i>1) ? '-' : ',';
                   op = append(op, regnames[j]);
                 }
-                i=j;
-                w=(w>>(j+1))<<(j+1);
+                i=j; w=(w>>(j+1))<<(j+1);
                 if (w) *op++=',';
               }
             }
@@ -787,140 +709,107 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
             if (instr&(1<<22)) *op++='^';
             break;
           case '&':
-          {
-            address target = (addr+8 + ((((long)instr)<<8)>>6)) & 0x03FFFFFC;
-            result.addrstart = op;
-            op = hex8(op, target);
-            result.target_type = target_Code;
-            result.target      = target;
-          }
-          break;
+            { address target = (addr+8 + ((((long)instr)<<8)>>6)) & 0x03FFFFFC;
+              result.addrstart = op;
+              op = hex8(op, target);
+              result.target_type = target_Code;
+              result.target      = target;
+            }
+            break;
           case '\'':
-          lPling:
+lPling:
             if (instr&Wbit) *op++='!';
             break;
           case '(':
             *op++ = (char)('0'+fpn);
             break;
           case ')':
-          {
-            word w = (instr>>20)&15;
-            if (w>=10)
-            {
-              *op++='1';
-              *op++=(char)('0'-10+w);
+            { word w = (instr>>20)&15;
+              if (w>=10) { *op++='1'; *op++=(char)('0'-10+w); }
+              else *op++=(char)(w+'0');
             }
-            else *op++=(char)(w+'0');
-          }
-          break;
+            break;
           case '*':
           case '.':
-            if (instr&Ibit)
-            {
+            if (instr&Ibit) {
               /* immediate constant */
               word imm8 = (instr&255);
               word rot  = (instr>>7)&30;
-              if (rot && !(imm8&3) && c=='*')
-              {
+              if (rot && !(imm8&3) && c=='*') {
                 /* Funny immediate const. Guaranteed not '.', btw */
-                *op++='#';
-                *op++='&';
+                *op++='#'; *op++='&';
                 *op++="0123456789ABCDEF"[imm8>>4];
                 *op++="0123456789ABCDEF"[imm8&15];
                 *op++=',';
                 op = num(op, rot);
               }
-              else
-              {
+              else {
                 imm8 = (imm8>>rot) | (imm8<<(32-rot));
-                if (c=='*')
-                {
+                if (c=='*') {
                   *op++='#';
-                  if (imm8>256 && ((imm8&(imm8-1))==0))
-                  {
+                  if (imm8>256 && ((imm8&(imm8-1))==0)) {
                     /* only one bit set, and that later than bit 8.
                      * Represent as 1<<... .
                      */
                     op = append(op,"1<<");
-                    {
-                      int n=0;
-                      while (!(imm8&15))
-                      {
-                        n+=4;
-                        imm8=imm8>>4;
-                      }
+                    { int n=0;
+                      while (!(imm8&15)) { n+=4; imm8=imm8>>4; }
                       /* Now imm8 is 1, 2, 4 or 8. */
                       n += (0x30002010 >> 4*(imm8-1))&15;
                       op = num(op, n);
                     }
                   }
-                  else
-                  {
-                    if (((long)imm8)<0 && ((long)imm8)>-100)
-                    {
-                      *op++='-';
-                      imm8=-imm8;
+                  else {
+                    if (((long)imm8)<0 && ((long)imm8)>-100) {
+                      *op++='-'; imm8=-imm8;
                     }
                     op = num(op, imm8);
                   }
                 }
-                else
-                {
+                else {
                   address a = addr+8;
-                  if (instr&(1<<22)) a-=imm8;
-                  else a+=imm8;
+                  if (instr&(1<<22)) a-=imm8; else a+=imm8;
                   result.addrstart=op;
                   op = hex8(op, a);
-                  result.target=a;
-                  result.target_type=target_Unknown;
+                  result.target=a; result.target_type=target_Unknown;
                 }
               }
             }
-            else
-            {
+            else {
               /* rotated register */
               const char * rot = "LSL\0LSR\0ASR\0ROR" + ((instr&(3<<5)) >> 3);
               op = append(op, regnames[instr&15]);
-              if (instr&(1<<4))
-              {
+              if (instr&(1<<4)) {
                 /* register rotation */
                 if (instr&(1<<7)) goto lUndefined;
-                *op++=',';
-                if (oflags&disopt_CommaSpace) *op++=' ';
-                op = append(op,rot);
-                *op++=' ';
+                *op++=','; if (oflags&disopt_CommaSpace) *op++=' ';
+                op = append(op,rot); *op++=' ';
                 op = append(op,regnames[(instr&(15<<8))>>8]);
               }
-              else
-              {
+              else {
                 /* constant rotation */
                 word n = instr&(31<<7);
-                if (!n)
-                {
+                if (!n) {
                   if (!(instr&(3<<5))) break;
-                  else if ((instr&(3<<5))==(3<<5))
-                  {
+                  else if ((instr&(3<<5))==(3<<5)) {
                     op = append(op, ",RRX");
                     break;
                   }
                   else n=32<<7;
                 }
-                *op++ = ',';
-                if (oflags&disopt_CommaSpace) *op++=' ';
+                *op++ = ','; if (oflags&disopt_CommaSpace) *op++=' ';
                 op = num(append(append(op,rot)," #"),n>>7);
               }
             }
             break;
           case '+':
-            if (instr&(1<<3))
-            {
+            if (instr&(1<<3)) {
               word w = instr&7;
               *op++='#';
               if (w<6) *op++=(char)('0'+w);
               else op = append(op, w==6 ? "0.5" : "10");
             }
-            else
-            {
+            else {
               *op++='f';
               *op++=(char)('0'+(instr&7));
             }
@@ -930,26 +819,22 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
             if (oflags&disopt_CommaSpace) *op++=' ';
             break;
           case '-':
-          {
-            word w = instr&(7<<5);
-            if (w)
-            {
-              *op++=',';
-              if (oflags&disopt_CommaSpace) *op++=' ';
-              *op++ = (char)('0'+(w>>5));
+            { word w = instr&(7<<5);
+              if (w) {
+                *op++=',';
+                if (oflags&disopt_CommaSpace) *op++=' ';
+                *op++ = (char)('0'+(w>>5));
+              }
             }
-          }
-          break;
+            break;
           case '/':
             result.addrstart = op;
             *op++='[';
             op = append(op, regnames[(instr&RNbits)>>16]);
             if (!(instr&Pbit)) *op++=']';
-            *op++=',';
-            if (oflags&disopt_CommaSpace) *op++=' ';
+            *op++=','; if (oflags&disopt_CommaSpace) *op++=' ';
             /* For following, NB that bit 25 is always 0 for LDC, SFM etc */
-            if (instr&Ibit)
-            {
+            if (instr&Ibit) {
               /* shifted offset */
               if (!(instr&Ubit)) *op++='-';
               /* We're going to transfer to '*', basically. The stupid
@@ -957,11 +842,9 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
                * I don't know why the designers of the ARM did that.
                */
               instr ^= Ibit;
-              if (instr&(1<<4))
-              {
+              if (instr&(1<<4)) {
 #ifdef INSTR_grok_v4
-                if (is_v4 && !(instr&(15<<8)))
-                {
+                if (is_v4 && !(instr&(15<<8))) {
                   ip = (instr&Pbit) ? "0]" : "0";
                   break;
                 }
@@ -974,10 +857,8 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
                * except that FPU operations don't need the !. Bletch.
                */
               if (instr&Pbit) ip="*]'";
-              else if (instr&(1<<27))
-              {
-                if (CP_is(1) || CP_is(2))
-                {
+              else if (instr&(1<<27)) {
+                if (CP_is(1) || CP_is(2)) {
                   if (!(instr&Wbit)) goto lUndefined;
                   ip="*";
                 }
@@ -985,72 +866,52 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
               }
               else ip="*";
             }
-            else
-            {
+            else {
               /* immediate offset */
               word offset;
-              if (instr&(1<<27))
-              {
+              if (instr&(1<<27)) {
                 /* LDF or LFM or similar */
                 offset = (instr&255)<<2;
               }
 #ifdef INSTR_grok_v4
               else if (is_v4) offset = (instr&15) + ((instr&(15<<8))>>4);
 #endif
-              else
-              {
+              else {
                 /* LDR or STR */
                 offset = instr&0xFFF;
               }
               *op++='#';
-              if (!(instr&Ubit))
-              {
+              if (!(instr&Ubit)) {
                 if (offset) *op++='-';
                 else result.oddbits=1;
                 result.offset = -offset;
               }
               else result.offset = offset;
               op = num(op, offset);
-              if (RN_is(15) && (instr&Pbit))
-              {
+              if (RN_is(15) && (instr&Pbit)) {
                 /* Immediate, pre-indexed and PC-relative. Set target. */
                 result.target_type = poss_tt;
                 result.target      = (instr&Ubit) ? addr+8 + offset
-                                     : addr+8 - offset;
-                if (!(instr&Wbit))
-                {
+                                                  : addr+8 - offset;
+                if (!(instr&Wbit)) {
                   /* no writeback, either. Use friendly form. */
                   op = hex8(result.addrstart, result.target);
                   break;
                 }
               }
-              if (instr&Pbit)
-              {
-                *op++=']';
-                goto lPling;
-              }
-              else if (instr&(1<<27))
-              {
-                if (CP_is(1) || CP_is(2))
-                {
+              if (instr&Pbit) { *op++=']'; goto lPling; }
+              else if (instr&(1<<27)) {
+                if (CP_is(1) || CP_is(2)) {
                   if (!(instr&Wbit)) goto lUndefined;
                 }
                 else goto lPling;
               }
             }
             break;
-          case '0':
-          case '1':
-          case '2':
-          case '3':
-          case '4':
+          case '0': case '1': case '2': case '3': case '4':
             op = append(op, regnames[(instr>>(4*(c-'0')))&15]);
             break;
-          case '5':
-          case '6':
-          case '7':
-          case '8':
-          case '9':
+          case '5': case '6': case '7': case '8': case '9':
             *op++='f';
             *op++=(char)('0' + ((instr>>(4*(c-'5')))&7));
             break;
@@ -1075,40 +936,32 @@ instr_disassemble(word instr, address addr, pDisOptions opts)
   return &result;
 }
 
-static char * reg_names[16] =
-{
+static char * reg_names[16] = {
   "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
   "r8", "r9", "r10", "r11", "ip", "sp", "lr", "pc"
 };
 
-static sDisOptions options =
-{
+static sDisOptions options = {
   disopt_CommaSpace,
   reg_names
 };
 
-static void disarm(unsigned ptr, unsigned size)
-{
+static void disarm(unsigned ptr, unsigned size) {
   unsigned addr=ptr;
   size/=4;
-  while (size--)
-  {
+  while (size--) {
     word w=*((unsigned *)addr);
-    if (disarm_immediates)
-    {
-      printf("%.8lX",w);
-    }
-    else
-    {
-      pInstruction instr = instr_disassemble(w, addr, &options);
-      printf("%.8lX : %s", w, instr->text);
-      if (instr->undefined || instr->badbits || instr->oddbits)
-      {
-        printf("  ;");
-        if (instr->undefined) printf(" ILLEGAL [undefined instr]");
-        if (instr->badbits) printf(" ILLEGAL [illegal bits]");
-        if (instr->oddbits) printf(" ILLEGAL [unexpected bits]");
-      }
+    if (disarm_immediates) {
+	   printf("%.8lX",w);
+    } else {
+    	   pInstruction instr = instr_disassemble(w, addr, &options);
+ 	   printf("%.8lX : %s", w, instr->text);
+ 	   if (instr->undefined || instr->badbits || instr->oddbits) {
+		printf("  ;");
+		if (instr->undefined) printf(" ILLEGAL [undefined instr]");
+		if (instr->badbits) printf(" ILLEGAL [illegal bits]");
+		if (instr->oddbits) printf(" ILLEGAL [unexpected bits]");
+	  }
     }
     puts("");
 

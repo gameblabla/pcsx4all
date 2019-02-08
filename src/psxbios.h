@@ -28,9 +28,9 @@
 #include "sio.h"
 
 #ifdef PSXBIOS_LOG
-  extern char *biosA0n[256];
-  extern char *biosB0n[256];
-  extern char *biosC0n[256];
+extern char *biosA0n[256];
+extern char *biosB0n[256];
+extern char *biosC0n[256];
 #endif
 
 void psxBiosInit(void);

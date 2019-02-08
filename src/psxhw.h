@@ -59,17 +59,17 @@
 #define HW_DMA_ICR_IRQ_SENT      (1<<31)
 
 #define DMA_INTERRUPT(n) { \
-    u32 icr = SWAPu32(HW_DMA_ICR); \
-    if (icr & (1 << (16 + n))) { \
-      icr |= 1 << (24 + n); \
-      if (icr & HW_DMA_ICR_GLOBAL_ENABLE && !(icr & HW_DMA_ICR_IRQ_SENT)) { \
-        psxHu32ref(0x1070) |= SWAP32(8); \
-        icr |= HW_DMA_ICR_IRQ_SENT; \
-      } \
-      HW_DMA_ICR = SWAP32(icr); \
-      ResetIoCycle(); \
-    } \
-  }
+	u32 icr = SWAPu32(HW_DMA_ICR); \
+	if (icr & (1 << (16 + n))) { \
+		icr |= 1 << (24 + n); \
+		if (icr & HW_DMA_ICR_GLOBAL_ENABLE && !(icr & HW_DMA_ICR_IRQ_SENT)) { \
+			psxHu32ref(0x1070) |= SWAP32(8); \
+			icr |= HW_DMA_ICR_IRQ_SENT; \
+		} \
+		HW_DMA_ICR = SWAP32(icr); \
+		ResetIoCycle(); \
+	} \
+}
 
 void psxHwReset(void);
 u8   psxHwRead8 (u32 add);

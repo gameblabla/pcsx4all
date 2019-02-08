@@ -53,12 +53,12 @@ static unsigned immPtrValue[IMM_MAX];	// immediate pointer to value
 static unsigned immCount=0;		// Counts the number of immediate values
 
 #define write32(val) { \
-    if (rec_phase) { \
-      *armPtr = (val); \
-      disarm((unsigned)armPtr,4); \
-      armPtr++; \
-    } \
-  }
+	if (rec_phase) { \
+		*armPtr = (val); \
+		disarm((unsigned)armPtr,4); \
+		armPtr++; \
+	} \
+}
 
 typedef         double		Real64;
 typedef  unsigned char		Bit8u;
@@ -128,185 +128,175 @@ typedef signed int			Bits;
 
 #define MOV32MtoR_regs(reg,mem) write32( LDR_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV16MtoR_regs(reg,mem) { \
-    if (rec_phase) { \
-      if ((((u32)(mem))-((u32)&psxRegs))<256) { \
-        write32( LDRH_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs)))); \
-      } else { \
-        MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
-        write32( LDRH_REG((reg), 11, (temp2)) ); \
-      } \
-    } \
-  }
+	if (rec_phase) { \
+		if ((((u32)(mem))-((u32)&psxRegs))<256) { \
+			write32( LDRH_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs)))); \
+		} else { \
+			MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
+			write32( LDRH_REG((reg), 11, (temp2)) ); \
+		} \
+	} \
+}
 #define MOV16sMtoR_regs(reg,mem) { \
-    if (rec_phase) { \
-      if ((((u32)(mem))-((u32)&psxRegs))<256) { \
-        write32( LDRSH_IMM((reg),11, (((u32)(mem))-((u32)&psxRegs)))); \
-      }else{ \
-        MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
-        write32( LDRSH_REG((reg), 11, (temp2)) ); \
-      } \
-    } \
-  }
+	if (rec_phase) { \
+		if ((((u32)(mem))-((u32)&psxRegs))<256) { \
+			write32( LDRSH_IMM((reg),11, (((u32)(mem))-((u32)&psxRegs)))); \
+		}else{ \
+			MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
+			write32( LDRSH_REG((reg), 11, (temp2)) ); \
+		} \
+	} \
+}
 #define MOV8MtoR_regs(reg,mem) write32( LDRB_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV16sRtoR_regs(reg1,mem2) write32( LDRSH_REG((reg1), 11, (reg2)) )
 #define MOV32RtoM_regs(mem,reg) write32( STR_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV16RtoM_regs(mem,reg) { \
-    if (rec_phase) { \
-      if ((((u32)(mem))-((u32)&psxRegs))<256) { \
-        write32( STRH_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs)))); \
-      } else { \
-        MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
-        write32( STRH_REG((reg), 11, (temp2)) ); \
-      } \
-    } \
-  }
+	if (rec_phase) { \
+		if ((((u32)(mem))-((u32)&psxRegs))<256) { \
+			write32( STRH_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs)))); \
+		} else { \
+			MOV32ItoR(temp2,(((u32)(mem))-((u32)&psxRegs))); \
+			write32( STRH_REG((reg), 11, (temp2)) ); \
+		} \
+	} \
+}
 #define MOV8RtoM_regs(mem,reg) write32( STRB_IMM((reg), 11, (((u32)(mem))-((u32)&psxRegs))) )
 #define MOV32ItoM_regs(mem,value) MOV32ItoR(HOST_ip,value);MOV32RtoM_regs(mem,HOST_ip)
 #define MOV16ItoM_regs(mem,value) MOV32ItoR(temp1,value);MOV16RtoM_regs(mem,temp1)
 #define MOV8ItoM_regs(mem,value) MOV32ItoR(temp1,value);MOV8RtoM_regs(mem,temp1)
-
-INLINE void ADD8ItoM_regs(u32 dest,Bit8s imm)
-{
-  if(!imm || !rec_phase) return;
-  MOV32MtoR_regs(temp1,dest);
-  if (imm >= 0)
-  {
-    write32( ADD_IMM(temp1, temp1, (Bit32s)imm, 0) );      // add temp1, temp1, #(imm)
-  }
-  else
-  {
-    write32( SUB_IMM(temp1, temp1, -((Bit32s)imm), 0) );      // sub temp1, temp1, #(-imm)
-  }
-  MOV32RtoM_regs(dest,temp1);
+												
+INLINE void ADD8ItoM_regs(u32 dest,Bit8s imm) {
+	if(!imm || !rec_phase) return;
+	MOV32MtoR_regs(temp1,dest);
+	if (imm >= 0) {
+		write32( ADD_IMM(temp1, temp1, (Bit32s)imm, 0) );      // add temp1, temp1, #(imm)
+	} else {
+		write32( SUB_IMM(temp1, temp1, -((Bit32s)imm), 0) );      // sub temp1, temp1, #(-imm)
+	}
+	MOV32RtoM_regs(dest,temp1);
 }
 
-INLINE void ADD32ItoM_regs(u32 dest,Bit32u imm)
-{
-  if(!imm || !rec_phase) return;
-  if ( (imm<128) || (imm>=0xffffff80) )
-  {
-    ADD8ItoM_regs(dest,(Bit8s)imm);
-    return;
-  }
-  MOV32MtoR_regs(temp1,dest);
-  gen_mov_dword_to_reg_imm(temp2, imm);
-  write32( ADD_REG_LSL_IMM(temp1, temp1, temp2, 0) );      // add temp1, temp1, temp2
-  MOV32RtoM_regs(dest,temp1);
+INLINE void ADD32ItoM_regs(u32 dest,Bit32u imm) {
+	if(!imm || !rec_phase) return;
+	if ( (imm<128) || (imm>=0xffffff80) ) {
+		ADD8ItoM_regs(dest,(Bit8s)imm);
+		return;
+	}
+	MOV32MtoR_regs(temp1,dest);
+	gen_mov_dword_to_reg_imm(temp2, imm);
+	write32( ADD_REG_LSL_IMM(temp1, temp1, temp2, 0) );      // add temp1, temp1, temp2
+	MOV32RtoM_regs(dest,temp1);
 }
 
 // CHUI: Actualiza la tabla de immediates
-INLINE void UpdateImmediate(int forced)
-{
-  unsigned i,j,ptrBase=(unsigned)armPtr;
-  if (!rec_phase || (!forced && (((unsigned)armPtr)-immPtr[0] < REC_MAX_IMMEDIATE_LONG))) return;
+INLINE void UpdateImmediate(int forced) {
+	unsigned i,j,ptrBase=(unsigned)armPtr;
+	if (!rec_phase || (!forced && (((unsigned)armPtr)-immPtr[0] < REC_MAX_IMMEDIATE_LONG))) return;
 #ifdef DEBUG_CPU
-  unsigned optr=(unsigned)armPtr;
-  dbg("\t\t\tUpdateImmediate");
+	unsigned optr=(unsigned)armPtr;
+	dbg("\t\t\tUpdateImmediate");
 #endif
-  disarm_immediates=1;
-  for (i = 0; i < immCount; i++)
-  {
-    immPtrValue[i]=(unsigned)armPtr;
-    for (j=0; j<i; j++)
-      if (immData[i]==immData[j])
-        break;
-    unsigned value=immPtrValue[j]-immPtr[i]-8;
+	disarm_immediates=1;
+	for (i = 0; i < immCount; i++) {
+		immPtrValue[i]=(unsigned)armPtr;
+		for (j=0;j<i;j++)
+			if (immData[i]==immData[j])
+				break;
+		unsigned value=immPtrValue[j]-immPtr[i]-8;
 #ifdef DEBUG_CPU
-    if (value>4095)
-      dbgf("\t\t\t\tVALUE %i OVERFLOW!!!!\n",value);
+			if (value>4095)
+				dbgf("\t\t\t\tVALUE %i OVERFLOW!!!!\n",value);
 #endif
-    *(unsigned *)(immPtr[i])|=value;
-    if (j==i)
-      write32(immData[i])
-      else
-        immPtrValue[i]=immPtrValue[j];
+			*(unsigned *)(immPtr[i])|=value;
+			if (j==i)
+				write32(immData[i])
+			else
+				immPtrValue[i]=immPtrValue[j];
 //		}
-  }
+	}
 #ifdef DEBUG_CPU
-  immsize+=(((unsigned)armPtr)-optr);
-  dbgf("\t\t\t!UpdateImmediate %i\n",(((unsigned)armPtr)-optr));
+	immsize+=(((unsigned)armPtr)-optr);
+	dbgf("\t\t\t!UpdateImmediate %i\n",(((unsigned)armPtr)-optr));
 #endif
-  disarm_immediates=0;
-  immCount = 0;
+	disarm_immediates=0;
+	immCount = 0;
 }
 
-INLINE void GET_PTR(void)
-{
-  write32(0xe1a0c820); /*	mov     ip, r0, lsr #16 */
-  write32(0xe791210c); /*	ldr     r2, [r1, ip, lsl #2] */
-  write32(0xe1a01800); /*	mov     r1, r0, lsl #16 */
-  write32(0xe1a00821); /*	mov     r0, r1, lsr #16 */
-  write32(0xe0923000); /*	adds    r3, r2, r0 */
-  write32(0xe1a01003); /*	mov     r1, r3 */
-  write32(0x17921000); /*	ldrne   r1, [r2, r0] */
+INLINE void GET_PTR(void) {
+	write32(0xe1a0c820); /*	mov     ip, r0, lsr #16 */
+	write32(0xe791210c); /*	ldr     r2, [r1, ip, lsl #2] */
+	write32(0xe1a01800); /*	mov     r1, r0, lsl #16 */
+	write32(0xe1a00821); /*	mov     r0, r1, lsr #16 */
+	write32(0xe0923000); /*	adds    r3, r2, r0 */
+	write32(0xe1a01003); /*	mov     r1, r3 */
+	write32(0x17921000); /*	ldrne   r1, [r2, r0] */
 }
 
-INLINE void RET_NC(void)
-{
+INLINE void RET_NC(void) {
 #ifdef DEBUG_CPU
-  dbg("\t\t\tRET_NC");
+	dbg("\t\t\tRET_NC");
 #endif
-  write32(0xe8bd0ff0); /* ldmfd sp!, {r4-r11} */
-  write32(0xe8bd8000); /* ldmfd sp!, {pc} */
-  UpdateImmediate(0); // Creamos la tabla de inmediatos.
+	write32(0xe8bd0ff0); /* ldmfd sp!, {r4-r11} */
+	write32(0xe8bd8000); /* ldmfd sp!, {pc} */
+	UpdateImmediate(0); // Creamos la tabla de inmediatos.
 }
 
 #ifdef REC_USE_RETURN_FUNCS
 #define RET_RETURN() \
-  JUMPFunc(func_Return_ptr); \
-  UpdateImmediate(0)
+	JUMPFunc(func_Return_ptr); \
+	UpdateImmediate(0)
 #define RET_RETURN_with_HOST_r0() \
-  JUMPFunc(func_Return_ptr+4); \
-  UpdateImmediate(0)
+	JUMPFunc(func_Return_ptr+4); \
+	UpdateImmediate(0)
 #else
 #define RET_RETURN() \
-  recReturn(0)
+	recReturn(0)
 #define RET_RETURN_with_HOST_r0() \
-  recReturn(1)
+	recReturn(1)
 #endif
 
 #define RET() { \
-    if (block) \
-      RET_NC(); \
-    else  \
-    {  \
-      RET_RETURN(); \
-    } \
-  }
+	if (block) \
+		RET_NC(); \
+	else  \
+	{  \
+		RET_RETURN(); \
+	} \
+}
 
 #define RET_with_HOST_r0() { \
-    if (block) \
-      RET_NC(); \
-    else  \
-    {  \
-      RET_RETURN_with_HOST_r0(); \
-    } \
-  }
+	if (block) \
+		RET_NC(); \
+	else  \
+	{  \
+		RET_RETURN_with_HOST_r0(); \
+	} \
+}
 
 // CHUI: Sale del entorno de recompilacion cuando el PC ha cambiado.
 #ifdef REC_USE_RETURN_FUNCS
 #define ExitPChange() { \
-    MOV32MtoR_regs(HOST_r0,(u32)&psxRegs.pc); \
-    MOV32ItoR(HOST_r1,pc); \
-    write32(CMP_REGS(HOST_r0,HOST_r1)); \
-    JUMPFuncNE(func_Return_ptr+4); \
-  }
+	MOV32MtoR_regs(HOST_r0,(u32)&psxRegs.pc); \
+	MOV32ItoR(HOST_r1,pc); \
+	write32(CMP_REGS(HOST_r0,HOST_r1)); \
+	JUMPFuncNE(func_Return_ptr+4); \
+}
 #else
 #define ExitPChange() { \
-    MOV32MtoR_regs(HOST_r0,(u32)&psxRegs.pc); \
-    MOV32ItoR(HOST_r1,pc); \
-    write32(CMP_REGS(HOST_r0,HOST_r1)); \
-    j32Ptr[11]=armPtr; write32(BEQ_FWD(0)); \
-    RET_with_HOST_r0(); \
-    armSetJ32(j32Ptr[11]); \
-  }
+	MOV32MtoR_regs(HOST_r0,(u32)&psxRegs.pc); \
+	MOV32ItoR(HOST_r1,pc); \
+	write32(CMP_REGS(HOST_r0,HOST_r1)); \
+	j32Ptr[11]=armPtr; write32(BEQ_FWD(0)); \
+	RET_with_HOST_r0(); \
+	armSetJ32(j32Ptr[11]); \
+}
 #endif
 
 #define RET_cycles() { \
-    ADD32ItoM_regs((u32)&psxRegs.cycle, cycles_pending+(((pc - pcold) / 4) * BIAS)); \
-    cycles_pending=0; \
-    RET(); \
-  }
+	ADD32ItoM_regs((u32)&psxRegs.cycle, cycles_pending+(((pc - pcold) / 4) * BIAS)); \
+	cycles_pending=0; \
+	RET(); \
+}
 
 
 #endif

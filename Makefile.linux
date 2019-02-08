@@ -24,6 +24,8 @@ SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 
 CFLAGS = -ggdb3 -O2 -march=native -DGCW_ZERO \
+	-Wall -Wunused -Wpointer-arith \
+	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
 	-Isrc/port/$(PORT) \
 	-Isrc/plugin_lib \
@@ -92,9 +94,9 @@ SOUND_DRIVERS=sdl
 OBJS += obj/spu/spu_pcsxrearmed/dma.o obj/spu/spu_pcsxrearmed/freeze.o \
 	obj/spu/spu_pcsxrearmed/out.o obj/spu/spu_pcsxrearmed/nullsnd.o \
 	obj/spu/spu_pcsxrearmed/registers.o
-#ifeq "$(ARCH)" "arm"
-#OBJS += obj/spu/spu_pcsxrearmed/arm_utils.o
-#endif
+ifeq "$(ARCH)" "arm"
+OBJS += obj/spu/spu_pcsxrearmed/arm_utils.o
+endif
 ifeq "$(HAVE_C64_TOOLS)" "1"
 obj/spu/spu_pcsxrearmed/spu.o: CFLAGS += -DC64X_DSP
 obj/spu/spu_pcsxrearmed/spu.o: obj/spu/spu_pcsxrearmed/spu_c64x.c

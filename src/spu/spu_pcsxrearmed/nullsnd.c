@@ -24,9 +24,9 @@ static void none_feed(void *buf, int bytes)
 
 void out_register_none(struct out_driver *drv)
 {
-  drv->name = "none";
-  drv->init = none_init;
-  drv->finish = none_finish;
-  drv->busy = none_busy;
-  drv->feed = none_feed;
+	drv->name = "none";
+	drv->init = none_init;
+	drv->finish = none_finish;
+	drv->busy = none_busy;
+	drv->feed = none_feed;
 }

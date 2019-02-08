@@ -19,410 +19,330 @@
 ***************************************************************************/
 
 //REC_BRANCH(J);
-static void recJ()
-{
+static void recJ() {
 // j target
 
-  iJump(_Target_ * 4 + (pc & 0xf0000000));
+	iJump(_Target_ * 4 + (pc & 0xf0000000));
 }
 
 //REC_BRANCH(JR);
-static void recJR()
-{
+static void recJR() {
 // jr Rs
 
-  if (IsConst(_Rs_))
-  {
-    MOV32ItoM((u32)&target, iRegs[_Rs_].k);
-  }
-  else
-  {
-    u32 rs=ReadReg(_Rs_);
-    MOV32RtoM((u32)&target, rs);
-  }
+	if (IsConst(_Rs_)) {
+		MOV32ItoM((u32)&target, iRegs[_Rs_].k);
+	} else {
+		u32 rs=ReadReg(_Rs_);
+		MOV32RtoM((u32)&target, rs);
+	}
 
-  SetBranch();
+	SetBranch();
 }
 
 //REC_BRANCH(JAL);
-static void recJAL()
-{
+static void recJAL() {
 // jal target
 
-  MapConst(31, pc + 4);
+	MapConst(31, pc + 4);
 
-  iJump(_Target_ * 4 + (pc & 0xf0000000));
+	iJump(_Target_ * 4 + (pc & 0xf0000000));
 }
 
 //REC_BRANCH(JALR);
-static void recJALR()
-{
+static void recJALR() {
 // jalr Rs
 
-  if (IsConst(_Rs_))
-  {
-    MOV32ItoM((u32)&target, iRegs[_Rs_].k);
-  }
-  else
-  {
-    u32 rs=ReadReg(_Rs_);
-    MOV32RtoM((u32)&target, rs);
-  }
+	if (IsConst(_Rs_)) {
+		MOV32ItoM((u32)&target, iRegs[_Rs_].k);
+	} else {
+		u32 rs=ReadReg(_Rs_);
+		MOV32RtoM((u32)&target, rs);
+	}
 
-  if (_Rd_)
-  {
-    MapConst(_Rd_, pc + 4);
-  }
-
-  SetBranch();
+	if (_Rd_) {
+		MapConst(_Rd_, pc + 4);
+	}
+	
+	SetBranch();
 }
 
 //REC_BRANCH(BLTZ);
-static void recBLTZ()
-{
+static void recBLTZ() {
 // Branch if Rs < 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc+4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc+4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k < 0)
-    {
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k < 0) {
+			iJump(bpc);
+			return;
+		} else {
+			iJump(pc + 4);
+			return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JLTZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JLTZ32(rs);
 
-  iBranch(pc+4, 1);
+	iBranch(pc+4, 1);
 
-  armSetJ32(j32Ptr[4]);
+	armSetJ32(j32Ptr[4]);
 
-  iBranch(bpc, 0);
-  pc += 4;
+	iBranch(bpc, 0);
+	pc += 4;
 }
 
 
 //REC_BRANCH(BGTZ);
-static void recBGTZ()
-{
+static void recBGTZ() {
 // Branch if Rs > 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k > 0)
-    {
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k > 0) {
+			iJump(bpc);
+			return;
+		} else {
+			iJump(pc + 4);
+			return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JGTZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JGTZ32(rs);
 
-  iBranch(pc + 4, 1);
+	iBranch(pc + 4, 1);
 
-  armSetJ32(j32Ptr[4]);
+	armSetJ32(j32Ptr[4]);
 
-  iBranch(bpc, 0);
-  pc+=4;
+	iBranch(bpc, 0);
+	pc+=4;
 }
 
 //REC_BRANCH(BLTZAL);
-static void recBLTZAL()
-{
+static void recBLTZAL() {
 // Branch if Rs < 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k < 0)
-    {
-      u32 r31=WriteReg(31);
-      MOV32ItoR(r31, pc + 4);
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k < 0) {
+			u32 r31=WriteReg(31);
+			MOV32ItoR(r31, pc + 4);
+			iJump(bpc); return;
+		} else {
+			iJump(pc + 4); return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JLTZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JLTZ32(rs);
 
-  iBranch(pc + 4, 1);
+	iBranch(pc + 4, 1);
 
-  armSetJ32(j32Ptr[4]);
-
-  u32 r31=WriteReg(31);
-  MOV32ItoR(r31, pc + 4);
-  iBranch(bpc, 0);
-  pc += 4;
+	armSetJ32(j32Ptr[4]);
+	
+	u32 r31=WriteReg(31);
+	MOV32ItoR(r31, pc + 4);
+	iBranch(bpc, 0);
+	pc += 4;
 }
 
 //REC_BRANCH(BGEZAL);
-static void recBGEZAL()
-{
+static void recBGEZAL() {
 // Branch if Rs >= 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k >= 0)
-    {
-      u32 r31=WriteReg(31);
-      MOV32ItoR(r31, pc + 4);
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc+4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k >= 0) {
+			u32 r31=WriteReg(31);
+			MOV32ItoR(r31, pc + 4);
+			iJump(bpc); return;
+		} else {
+			iJump(pc+4); return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JGEZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JGEZ32(rs);
 
-  iBranch(pc+4, 1);
+	iBranch(pc+4, 1);
 
-  armSetJ32(j32Ptr[4]);
+	armSetJ32(j32Ptr[4]);
 
-  u32 r31=WriteReg(31);
-  MOV32ItoR(r31, pc + 4);
-  iBranch(bpc, 0);
-  pc+=4;
+	u32 r31=WriteReg(31);
+	MOV32ItoR(r31, pc + 4);
+	iBranch(bpc, 0);
+	pc+=4;
 }
 
 //REC_BRANCH(BNE);
-static void recBNE()
-{
+static void recBNE() {
 // Branch if Rs != Rt
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_) && IsConst(_Rt_))
-  {
-    if (iRegs[_Rs_].k != iRegs[_Rt_].k)
-    {
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_) && IsConst(_Rt_)) {
+		if (iRegs[_Rs_].k != iRegs[_Rt_].k) {
+			iJump(bpc);
+			return;
+		} else {
+			iJump(pc + 4);
+			return;
+		}
+	}
 
-  u32 rs,rt;
+	u32 rs,rt;
+	
+	if (IsConst(_Rs_)) {
+		MOV32ItoR(HOST_a1,iRegs[_Rs_].k);
+		rs=HOST_a1;
+	} else {
+		rs=ReadReg(_Rs_);
+	}
+	
+	if (IsConst(_Rt_)) {
+		MOV32ItoR(HOST_a2,iRegs[_Rt_].k);
+		rt=HOST_a2;
+	} else {
+		rt=ReadReg(_Rt_);
+	}
 
-  if (IsConst(_Rs_))
-  {
-    MOV32ItoR(HOST_a1,iRegs[_Rs_].k);
-    rs=HOST_a1;
-  }
-  else
-  {
-    rs=ReadReg(_Rs_);
-  }
+	write32(CMP_REGS(rs,rt));
+	j32Ptr[4] = armPtr; write32(BNE_FWD(0));
+	
+	iBranch(pc + 4, 1);
 
-  if (IsConst(_Rt_))
-  {
-    MOV32ItoR(HOST_a2,iRegs[_Rt_].k);
-    rt=HOST_a2;
-  }
-  else
-  {
-    rt=ReadReg(_Rt_);
-  }
+	armSetJ32(j32Ptr[4]);
 
-  write32(CMP_REGS(rs,rt));
-  j32Ptr[4] = armPtr;
-  write32(BNE_FWD(0));
-
-  iBranch(pc + 4, 1);
-
-  armSetJ32(j32Ptr[4]);
-
-  iBranch(bpc, 0);
-  pc += 4;
+	iBranch(bpc, 0);
+	pc += 4;
 }
 
 //REC_BRANCH(BEQ);
-static void recBEQ()
-{
+static void recBEQ() {
 // Branch if Rs == Rt
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (_Rs_ == _Rt_)
-  {
-    iJump(bpc);
-  }
-  else
-  {
-    if (IsConst(_Rs_) && IsConst(_Rt_))
-    {
-      if (iRegs[_Rs_].k == iRegs[_Rt_].k)
-      {
-        iJump(bpc);
-        return;
-      }
-      else
-      {
-        iJump(pc + 4);
-        return;
-      }
-    }
+	if (_Rs_ == _Rt_) {
+		iJump(bpc);
+	} else {
+		if (IsConst(_Rs_) && IsConst(_Rt_)) {
+			if (iRegs[_Rs_].k == iRegs[_Rt_].k) {
+				iJump(bpc);
+				return;
+			} else {
+				iJump(pc + 4);
+				return;
+			}
+		}
 
-    u32 rs,rt;
+		u32 rs,rt;
 
-    if (IsConst(_Rs_))
-    {
-      MOV32ItoR(HOST_a1,iRegs[_Rs_].k);
-      rs=HOST_a1;
-    }
-    else
-    {
-      rs=ReadReg(_Rs_);
-    }
+		if (IsConst(_Rs_)) {
+			MOV32ItoR(HOST_a1,iRegs[_Rs_].k);
+			rs=HOST_a1;
+		} else {
+			rs=ReadReg(_Rs_);
+		}
+		
+		if (IsConst(_Rt_)) {
+			MOV32ItoR(HOST_a2,iRegs[_Rt_].k);
+			rt=HOST_a2;
+		} else {
+			rt=ReadReg(_Rt_);
+		}
+		
+		write32(CMP_REGS(rs,rt));
+		j32Ptr[4] = armPtr; write32(BEQ_FWD(0));
 
-    if (IsConst(_Rt_))
-    {
-      MOV32ItoR(HOST_a2,iRegs[_Rt_].k);
-      rt=HOST_a2;
-    }
-    else
-    {
-      rt=ReadReg(_Rt_);
-    }
+		iBranch(pc + 4, 1);
 
-    write32(CMP_REGS(rs,rt));
-    j32Ptr[4] = armPtr;
-    write32(BEQ_FWD(0));
+		armSetJ32(j32Ptr[4]);
 
-    iBranch(pc + 4, 1);
-
-    armSetJ32(j32Ptr[4]);
-
-    iBranch(bpc, 0);
-    pc += 4;
-  }
+		iBranch(bpc, 0);
+		pc += 4;
+	}
 }
 
 //REC_BRANCH(BLEZ);
-static void recBLEZ()
-{
+static void recBLEZ() {
 // Branch if Rs <= 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k <= 0)
-    {
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k <= 0) {
+			iJump(bpc);
+			return;
+		} else {
+			iJump(pc + 4);
+			return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JLEZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JLEZ32(rs);
 
-  iBranch(pc + 4, 1);
+	iBranch(pc + 4, 1);
 
-  armSetJ32(j32Ptr[4]);
+	armSetJ32(j32Ptr[4]);
 
-  iBranch(bpc, 0);
-  pc += 4;
+	iBranch(bpc, 0);
+	pc += 4;
 }
 
 //REC_BRANCH(BGEZ);
-static void recBGEZ()
-{
+static void recBGEZ() {
 // Branch if Rs >= 0
-  u32 bpc = _Imm_ * 4 + pc;
+	u32 bpc = _Imm_ * 4 + pc;
 
-  if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0)
-  {
-    return;
-  }
+	if (bpc == pc + 4 && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+		return;
+	}
 
-  if (IsConst(_Rs_))
-  {
-    if ((s32)iRegs[_Rs_].k >= 0)
-    {
-      iJump(bpc);
-      return;
-    }
-    else
-    {
-      iJump(pc + 4);
-      return;
-    }
-  }
+	if (IsConst(_Rs_)) {
+		if ((s32)iRegs[_Rs_].k >= 0) {
+			iJump(bpc);
+			return;
+		} else {
+			iJump(pc + 4);
+			return;
+		}
+	}
 
-  u32 rs=ReadReg(_Rs_);
-  j32Ptr[4] = JGEZ32(rs);
+	u32 rs=ReadReg(_Rs_);
+	j32Ptr[4] = JGEZ32(rs);
 
-  iBranch(pc + 4, 1);
+	iBranch(pc + 4, 1);
 
-  armSetJ32(j32Ptr[4]);
+	armSetJ32(j32Ptr[4]);
 
-  iBranch(bpc, 0);
-  pc += 4;
+	iBranch(bpc, 0);
+	pc += 4;
 }

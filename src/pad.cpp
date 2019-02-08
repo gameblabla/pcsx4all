@@ -24,68 +24,60 @@
 
 typedef struct tagGlobalData
 {
-  uint8_t CurByte1;
-  uint8_t CmdLen1;
-  uint8_t CurByte2;
-  uint8_t CmdLen2;
+    uint8_t CurByte1;
+    uint8_t CmdLen1;
+    uint8_t CurByte2;
+    uint8_t CmdLen2;
 } GLOBALDATA;
 
-static GLOBALDATA g= {0,0,0,0};
+static GLOBALDATA g={0,0,0,0};
 
-unsigned char PAD1_startPoll(void)
-{
-  g.CurByte1 = 0;
-  return 0xFF;
+unsigned char PAD1_startPoll(void) {
+	g.CurByte1 = 0; return 0xFF;
 }
 
-unsigned char PAD2_startPoll(void)
-{
-  g.CurByte2 = 0;
-  return 0xFF;
+unsigned char PAD2_startPoll(void) {
+	g.CurByte2 = 0; return 0xFF;
 }
 
-unsigned char PAD1_poll(void)
-{
-  static uint8_t		buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
+unsigned char PAD1_poll(void) {
+	static uint8_t		buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
 
-  if (g.CurByte1 == 0)
-  {
-    uint16_t			n;
-    g.CurByte1++;
+	if (g.CurByte1 == 0) {
+		uint16_t			n;
+		g.CurByte1++;
 
-    n = pad_read(0);
+		n = pad_read(0);
 
-    buf[2] = n & 0xFF;
-    buf[3] = n >> 8;
+		buf[2] = n & 0xFF;
+		buf[3] = n >> 8;
 
-    g.CmdLen1 = 4;
+		g.CmdLen1 = 4;
 
-    return 0x41;
-  }
+		return 0x41;
+	}
 
-  if (g.CurByte1 >= g.CmdLen1) return 0xFF;
-  return buf[g.CurByte1++];
+	if (g.CurByte1 >= g.CmdLen1) return 0xFF;
+	return buf[g.CurByte1++];
 }
 
-unsigned char PAD2_poll(void)
-{
-  static uint8_t		buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
+unsigned char PAD2_poll(void) {
+	static uint8_t		buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
 
-  if (g.CurByte2 == 0)
-  {
-    uint16_t			n;
-    g.CurByte2++;
+	if (g.CurByte2 == 0) {
+		uint16_t			n;
+		g.CurByte2++;
 
-    n = pad_read(1);
+		n = pad_read(1);
 
-    buf[2] = n & 0xFF;
-    buf[3] = n >> 8;
+		buf[2] = n & 0xFF;
+		buf[3] = n >> 8;
 
-    g.CmdLen2 = 4;
+		g.CmdLen2 = 4;
 
-    return 0x41;
-  }
+		return 0x41;
+	}
 
-  if (g.CurByte2 >= g.CmdLen2) return 0xFF;
-  return buf[g.CurByte2++];
+	if (g.CurByte2 >= g.CmdLen2) return 0xFF;
+	return buf[g.CurByte2++];
 }

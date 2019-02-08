@@ -25,31 +25,25 @@
 
 #if defined(__BIGENDIAN__)
 
-  #define _SWAP16(b) ((((unsigned char*)&(b))[0]&0xff) | (((unsigned char*)&(b))[1]&0xff)<<8)
-  #define _SWAP32(b) ((((unsigned char*)&(b))[0]&0xff) | ((((unsigned char*)&(b))[1]&0xff)<<8) | ((((unsigned char*)&(b))[2]&0xff)<<16) | (((unsigned char*)&(b))[3]<<24))
+#define _SWAP16(b) ((((unsigned char*)&(b))[0]&0xff) | (((unsigned char*)&(b))[1]&0xff)<<8)
+#define _SWAP32(b) ((((unsigned char*)&(b))[0]&0xff) | ((((unsigned char*)&(b))[1]&0xff)<<8) | ((((unsigned char*)&(b))[2]&0xff)<<16) | (((unsigned char*)&(b))[3]<<24))
 
-  #define SWAP16(v) ((((v)&0xff00)>>8) +(((v)&0xff)<<8))
-  #define SWAP32(v) ((((v)&0xff000000ul)>>24) + (((v)&0xff0000ul)>>8) + (((v)&0xff00ul)<<8) +(((v)&0xfful)<<24))
-  #define SWAPu32(v) SWAP32((u32)(v))
-  #define SWAPs32(v) SWAP32((s32)(v))
+#define SWAP16(v) ((((v)&0xff00)>>8) +(((v)&0xff)<<8))
+#define SWAP32(v) ((((v)&0xff000000ul)>>24) + (((v)&0xff0000ul)>>8) + (((v)&0xff00ul)<<8) +(((v)&0xfful)<<24))
+#define SWAPu32(v) SWAP32((u32)(v))
+#define SWAPs32(v) SWAP32((s32)(v))
 
-  #define SWAPu16(v) SWAP16((u16)(v))
-  #define SWAPs16(v) SWAP16((s16)(v))
+#define SWAPu16(v) SWAP16((u16)(v))
+#define SWAPs16(v) SWAP16((s16)(v))
 
 #else
 
-  #define SWAP16(b) (b)
-  #define SWAP32(b) (b)
+#define SWAP16(b) (b)
+#define SWAP32(b) (b)
 
-  #define SWAPu16(b) (b)
-  #define SWAPu32(b) (b)
+#define SWAPu16(b) (b)
+#define SWAPu32(b) (b)
 
-#endif
-
-/* This is used for direct writes in mips recompiler */
-#if defined(PSXREC) && \
-  (defined(SHMEM_MIRRORING) || defined(TMPFS_MIRRORING))
-  extern bool psxM_mirrored;
 #endif
 
 extern s8 *psxM;
@@ -130,18 +124,19 @@ void psxMemReset(void);
 void psxMemShutdown(void);
 
 u8   psxMemRead8(u32 mem);
-u8   psxMemRead8_direct(u32 mem,void *regs);
 u16  psxMemRead16(u32 mem);
-u16  psxMemRead16_direct(u32 mem,void *regs);
 u32  psxMemRead32(u32 mem);
-u32  psxMemRead32_direct(u32 mem,void *regs);
 void psxMemWrite8(u32 mem, u8 value);
-void psxMemWrite8_direct(u32 mem, u8 value,void *regs);
 void psxMemWrite16(u32 mem, u16 value);
-void psxMemWrite16_direct(u32 mem, u16 value,void *regs);
 void psxMemWrite32(u32 mem, u32 value);
+
+void psxMemWrite32_CacheCtrlPort(u32 value);
+
+u8   psxMemRead8_direct(u32 mem,void *regs);
+u16  psxMemRead16_direct(u32 mem,void *regs);
+u32  psxMemRead32_direct(u32 mem,void *regs);
+void psxMemWrite8_direct(u32 mem, u8 value,void *regs);
+void psxMemWrite16_direct(u32 mem, u16 value,void *regs);
 void psxMemWrite32_direct(u32 mem, u32 value,void *regs);
-void *psxMemPointer(u32 mem);
 
 #endif /* __PSXMEMORY_H__ */
-

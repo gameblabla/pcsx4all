@@ -29,7 +29,7 @@ MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
 ifdef A320
-	C_ARCH = -mips32 -msoft-float -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\"
+	C_ARCH = -mips32 -msoft-float -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\"
 else
 	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 endif
@@ -74,6 +74,9 @@ OBJS = \
 ifdef RECOMPILER
 OBJS += \
 	obj/recompiler/mips/recompiler.o \
+	obj/recompiler/mips/host_asm.o \
+	obj/recompiler/mips/mem_mapping.o \
+	obj/recompiler/mips/mips_codegen.o \
 	obj/recompiler/mips/mips_disasm.o
 endif
 

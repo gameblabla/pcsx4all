@@ -38,76 +38,74 @@
 
 #define SUB_FRAMESIZE			96
 
-typedef struct
-{
-  unsigned char OCUP;
-  unsigned char Reg1Mode;
-  unsigned char Reg2;
-  unsigned char CmdProcess;
-  unsigned char Ctrl;
-  unsigned char Stat;
+typedef struct {
+	unsigned char OCUP;
+	unsigned char Reg1Mode;
+	unsigned char Reg2;
+	unsigned char CmdProcess;
+	unsigned char Ctrl;
+	unsigned char Stat;
 
-  unsigned char StatP;
+	unsigned char StatP;
 
-  unsigned char Transfer[DATA_SIZE];
-  struct
-  {
-    unsigned char Track;
-    unsigned char Index;
-    unsigned char Relative[3];
-    unsigned char Absolute[3];
-  } subq;
-  unsigned char TrackChanged;
-  unsigned char pad1[3];
-  unsigned int  freeze_ver;
+	unsigned char Transfer[DATA_SIZE];
+	struct {
+		unsigned char Track;
+		unsigned char Index;
+		unsigned char Relative[3];
+		unsigned char Absolute[3];
+	} subq;
+	unsigned char TrackChanged;
+	unsigned char pad1[3];
+	unsigned int  freeze_ver;
 
-  unsigned char Prev[4];
-  unsigned char Param[8];
-  unsigned char Result[16];
+	unsigned char Prev[4];
+	unsigned char Param[8];
+	unsigned char Result[16];
 
-  unsigned char ParamC;
-  unsigned char ParamP;
-  unsigned char ResultC;
-  unsigned char ResultP;
-  unsigned char ResultReady;
-  unsigned char Cmd;
-  unsigned char Readed;
-  unsigned char SetlocPending;
-  u32 Reading;
+	unsigned char ParamC;
+	unsigned char ParamP;
+	unsigned char ResultC;
+	unsigned char ResultP;
+	unsigned char ResultReady;
+	unsigned char Cmd;
+	unsigned char Readed;
+	unsigned char SetlocPending;
+	u32 Reading;
 
-  unsigned char ResultTN[6];
-  unsigned char ResultTD[4];
-  unsigned char SetSectorPlay[4];
-  unsigned char SetSectorEnd[4];
-  unsigned char SetSector[4];
-  unsigned char Track;
-  boolean Play, Muted;
-  int CurTrack;
-  int Mode, File, Channel;
-  int Reset;
-  int RErr;
-  int FirstSector;
+	unsigned char ResultTN[6];
+	unsigned char ResultTD[4];
+	unsigned char SetSectorPlay[4];
+	unsigned char SetSectorEnd[4];
+	unsigned char SetSector[4];
+	unsigned char Track;
+	boolean Play, Muted;
+	int CurTrack;
+	int Mode, File, Channel;
+	int Reset;
+	int RErr;
+	int FirstSector;
 
-  xa_decode_t Xa;
+	xa_decode_t Xa;
 
-  int Init;
+	int Init;
 
-  u16 Irq;
-  u8 IrqRepeated;
-  u32 eCycle;
+	u16 Irq;
+	u8 IrqRepeated;
+	u32 eCycle;
 
-  u8 Seeked;
-  u8 ReadRescheduled;
+	u8 Seeked;
+	u8 ReadRescheduled;
 
-  u8 DriveState;
-  u8 FastForward;
-  u8 FastBackward;
-  u8 pad;
+	u8 DriveState;
+	u8 FastForward;
+	u8 FastBackward;
+	u8 pad;
 
-  u8 AttenuatorLeftToLeft, AttenuatorLeftToRight;
-  u8 AttenuatorRightToRight, AttenuatorRightToLeft;
-  u8 AttenuatorLeftToLeftT, AttenuatorLeftToRightT;
-  u8 AttenuatorRightToRightT, AttenuatorRightToLeftT;
+	u8 AttenuatorLeftToLeft, AttenuatorLeftToRight;
+	u8 AttenuatorRightToRight, AttenuatorRightToLeft;
+	u8 AttenuatorLeftToLeftT, AttenuatorLeftToRightT;
+	u8 AttenuatorRightToRightT, AttenuatorRightToLeftT;
 } cdrStruct;
 
 extern cdrStruct cdr;

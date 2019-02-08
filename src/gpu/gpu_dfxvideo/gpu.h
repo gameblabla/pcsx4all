@@ -74,29 +74,29 @@
 
 #ifdef __BIG_ENDIAN__
 
-  // big endian config
-  #define HOST2LE32(x) SWAP32(x)
-  #define HOST2BE32(x) (x)
-  #define LE2HOST32(x) SWAP32(x)
-  #define BE2HOST32(x) (x)
+// big endian config
+#define HOST2LE32(x) SWAP32(x)
+#define HOST2BE32(x) (x)
+#define LE2HOST32(x) SWAP32(x)
+#define BE2HOST32(x) (x)
 
-  #define HOST2LE16(x) SWAP16(x)
-  #define HOST2BE16(x) (x)
-  #define LE2HOST16(x) SWAP16(x)
-  #define BE2HOST16(x) (x)
+#define HOST2LE16(x) SWAP16(x)
+#define HOST2BE16(x) (x)
+#define LE2HOST16(x) SWAP16(x)
+#define BE2HOST16(x) (x)
 
 #else
 
-  // little endian config
-  #define HOST2LE32(x) (x)
-  #define HOST2BE32(x) SWAP32(x)
-  #define LE2HOST32(x) (x)
-  #define BE2HOST32(x) SWAP32(x)
+// little endian config
+#define HOST2LE32(x) (x)
+#define HOST2BE32(x) SWAP32(x)
+#define LE2HOST32(x) (x)
+#define BE2HOST32(x) SWAP32(x)
 
-  #define HOST2LE16(x) (x)
-  #define HOST2BE16(x) SWAP16(x)
-  #define LE2HOST16(x) (x)
-  #define BE2HOST16(x) SWAP16(x)
+#define HOST2LE16(x) (x)
+#define HOST2BE16(x) SWAP16(x)
+#define LE2HOST16(x) (x)
+#define BE2HOST16(x) SWAP16(x)
 
 #endif
 
@@ -113,35 +113,35 @@
 
 typedef struct VRAMLOADTTAG
 {
-  short x;
-  short y;
-  short Width;
-  short Height;
-  short RowsRemaining;
-  short ColsRemaining;
-  unsigned short *ImagePtr;
+ short x;
+ short y;
+ short Width;
+ short Height;
+ short RowsRemaining;
+ short ColsRemaining;
+ unsigned short *ImagePtr;
 } VRAMLoad_t;
 
 /////////////////////////////////////////////////////////////////////////////
 
 typedef struct PSXPOINTTAG
 {
-  int32_t x;
-  int32_t y;
+ int32_t x;
+ int32_t y;
 } PSXPoint_t;
 
 typedef struct PSXSPOINTTAG
 {
-  short x;
-  short y;
+ short x;
+ short y;
 } PSXSPoint_t;
 
 typedef struct PSXRECTTAG
 {
-  short x0;
-  short x1;
-  short y0;
-  short y1;
+ short x0;
+ short x1;
+ short y0;
+ short y1;
 } PSXRect_t;
 
 // linux defines for some windows stuff
@@ -155,43 +155,43 @@ typedef struct PSXRECTTAG
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #define DWORD uint32_t
 #ifndef __int64
-  #define __int64 long long int
+#define __int64 long long int 
 #endif
 
 typedef struct RECTTAG
 {
-  int left;
-  int top;
-  int right;
-  int bottom;
-} RECT;
+ int left;
+ int top;
+ int right;
+ int bottom;
+}RECT;
 
 /////////////////////////////////////////////////////////////////////////////
 
 typedef struct TWINTAG
 {
-  PSXRect_t  Position;
+ PSXRect_t  Position;
 } TWin_t;
 
 /////////////////////////////////////////////////////////////////////////////
 
 typedef struct PSXDISPLAYTAG
 {
-  PSXPoint_t  DisplayModeNew;
-  PSXPoint_t  DisplayMode;
-  PSXPoint_t  DisplayPosition;
-  PSXPoint_t  DisplayEnd;
-
-  int32_t        Double;
-  int32_t        Height;
-  int32_t        PAL;
-  int32_t        InterlacedNew;
-  int32_t        Interlaced;
-  int32_t        RGB24New;
-  int32_t        RGB24;
-  PSXSPoint_t DrawOffset;
-  int32_t        Disabled;
-  PSXRect_t   Range;
+ PSXPoint_t  DisplayModeNew;
+ PSXPoint_t  DisplayMode;
+ PSXPoint_t  DisplayPosition;
+ PSXPoint_t  DisplayEnd;
+ 
+ int32_t        Double;
+ int32_t        Height;
+ int32_t        PAL;
+ int32_t        InterlacedNew;
+ int32_t        Interlaced;
+ int32_t        RGB24New;
+ int32_t        RGB24;
+ PSXSPoint_t DrawOffset;
+ int32_t        Disabled;
+ PSXRect_t   Range;
 
 } PSXDisplay_t;
 
@@ -244,21 +244,21 @@ extern int32_t           drawH;
 #define KEY_CHECKTHISOUT  256
 
 #if !defined(__BIG_ENDIAN__) || defined(__x86_64__) || defined(__i386__)
-  #ifndef __LITTLE_ENDIAN__
-    #define __LITTLE_ENDIAN__
-  #endif
+#ifndef __LITTLE_ENDIAN__
+#define __LITTLE_ENDIAN__
+#endif
 #endif
 
 #ifdef __LITTLE_ENDIAN__
-  #define RED(x) (x & 0xff)
-  #define BLUE(x) ((x>>16) & 0xff)
-  #define GREEN(x) ((x>>8) & 0xff)
-  #define COLOR(x) (x & 0xffffff)
+#define RED(x) (x & 0xff)
+#define BLUE(x) ((x>>16) & 0xff)
+#define GREEN(x) ((x>>8) & 0xff)
+#define COLOR(x) (x & 0xffffff)
 #elif defined __BIG_ENDIAN__
-  #define RED(x) ((x>>24) & 0xff)
-  #define BLUE(x) ((x>>8) & 0xff)
-  #define GREEN(x) ((x>>16) & 0xff)
-  #define COLOR(x) SWAP32(x & 0xffffff)
+#define RED(x) ((x>>24) & 0xff)
+#define BLUE(x) ((x>>8) & 0xff)
+#define GREEN(x) ((x>>16) & 0xff)
+#define COLOR(x) SWAP32(x & 0xffffff)
 #endif
 
 // gpu.c

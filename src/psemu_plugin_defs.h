@@ -43,10 +43,10 @@
 
 typedef struct
 {
-  uint32_t	flags;
-  uint32_t	status;
-  void*	window;
-  unsigned char reserved[100];
+	uint32_t	flags;
+	uint32_t	status;
+ 	void*	window;
+	unsigned char reserved[100];
 } gpuQueryS;
 
 // gpuQueryS.flags

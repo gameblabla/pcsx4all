@@ -31,12 +31,20 @@
 void sioInit(void);
 
 void sioWrite8(unsigned char value);
-void sioWriteStat16(unsigned short value);
+void sioWrite16(u16 value);
+void sioWrite32(u32 value);
+
+// Empty function, disabled for now -senquack
+//void sioWriteStat16(unsigned short value);
+
 void sioWriteMode16(unsigned short value);
 void sioWriteCtrl16(unsigned short value);
 void sioWriteBaud16(unsigned short value);
 
 unsigned char sioRead8(void);
+u16 sioRead16(void);
+u32 sioRead32(void);
+
 unsigned short sioReadStat16(void);
 unsigned short sioReadMode16(void);
 unsigned short sioReadCtrl16(void);
@@ -51,10 +59,9 @@ int sioFreeze(void* f, FreezeMode mode);
 
 #define MCD_SIZE	(1024 * 8 * 16)
 
-enum MemcardNum
-{
-  MCD1 = 0,
-  MCD2 = 1
+enum MemcardNum {
+	MCD1 = 0,
+	MCD2 = 1
 };
 
 /* High-level memcard operations
@@ -77,15 +84,14 @@ int CreateMcd(char *filename, bool overwrite_file);
 int LoadMcd(enum MemcardNum mcd_num, char* filename);
 int SaveMcd(enum MemcardNum mcd_num, uint32_t adr, int size);
 
-typedef struct
-{
-  char Title[48 + 1]; // Title in ASCII
-  char sTitle[48 * 2 + 1]; // Title in Shift-JIS
-  char ID[12 + 1];
-  char Name[16 + 1];
-  int IconCount;
-  short Icon[16*16*3];
-  unsigned char Flags;
+typedef struct {
+	char Title[48 + 1]; // Title in ASCII
+	char sTitle[48 * 2 + 1]; // Title in Shift-JIS
+	char ID[12 + 1];
+	char Name[16 + 1];
+	int IconCount;
+	short Icon[16*16*3];
+	unsigned char Flags;
 } McdBlock;
 
 void GetMcdBlockInfo(enum MemcardNum mcd_num, int block, McdBlock *Info);
