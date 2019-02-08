@@ -98,7 +98,7 @@ static void setup_paths()
 	snprintf(homedir, sizeof(homedir), "%s/.pcsx4all", getenv("HOME"));
 #else
 	char buf[PATH_MAX];
-	snprintf(homedir, sizeof(homedir), "%s/.oswan", getcwd(buf, PATH_MAX));
+	snprintf(homedir, sizeof(homedir), "%s/.pcsx4all", getcwd(buf, PATH_MAX));
 #endif
 	
 	/* 
@@ -160,7 +160,6 @@ void config_load()
   if (f == NULL)
   {
     printf("Failed to open config file: \"%s\" for reading.\n", config);
-    free(config);
     return;
   }
 
@@ -402,7 +401,6 @@ void config_load()
   }
 
   fclose(f);
-  free(config);
 }
 
 void config_save()
@@ -417,7 +415,6 @@ void config_save()
   if (f == NULL)
   {
     printf("Failed to open config file: \"%s\" for writing.\n", config);
-    free(config);
     return;
   }
 
@@ -487,7 +484,6 @@ void config_save()
   }
 
   fclose(f);
-  free(config);
 }
 
 // Returns 0: success, -1: failure
