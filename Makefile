@@ -30,9 +30,11 @@ SDL_LIBS   := $(shell $(SDL_CONFIG) --libs)
 MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
-C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DSHMEM_MIRRORING -DRS97 -I/opt/rs97_toolchain/os/usr/mipsel-buildroot-linux-uclibc/sysroot/usr/include/SDL
+C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DSHMEM_MIRRORING -DRS97
 
-CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -O3 -fdata-sections -ffunction-sections -funswitch-loops -fno-strict-aliasing -fprofile-use -DGCW_ZERO \
+OPTS = -Ofast -mno-fp-exceptions -mframe-header-opt -mno-mips16 -mno-interlink-compressed -msym32 -fno-caller-saves -mno-check-zero-division
+
+CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC $(OPTS) -fdata-sections -ffunction-sections -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -50,9 +52,9 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-CXXFLAGS = $(CFLAGS)
+CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -nostdinc++ 
 
-LDFLAGS = $(SDL_LIBS) -lrt -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
+LDFLAGS = $(SDL_LIBS) -lgcov -lrt -lz -Wl,--as-needed -Wl,--gc-sections -s -flto
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
@@ -202,5 +204,5 @@ $(sort $(OBJDIRS)):
 maketree: $(sort $(OBJDIRS))
 
 clean:
-	$(RM) -r obj
+	$(RM) -r obj/*.o obj/gpu/gpu_unai/*.o obj/gpu/gpulib/*.o obj/port/sdl/*.o obj/recompiler/mips/*.o obj/spu/spu_pcsxrearmed/*.o obj/plugin_lib/*.o
 	$(RM) $(TARGET)
