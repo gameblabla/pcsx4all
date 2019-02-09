@@ -382,12 +382,21 @@ void psxBios_strcat(void) { // 0x15
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %s, %s\n", biosA0n[0x15], Ra0, Ra1);
 #endif
-
+	if (a0 == 0 || a1 == 0)
+	{
+		v0 = 0;
+		pc0 = ra;
+		return;
+	}
+	
 	while (*p1++);
 	--p1;
 	while ((*p1++ = *p2++) != '\0');
 
-	v0 = a0; pc0 = ra;
+	v0 = a0;
+	/* Required for Digimon World otherwise it will just crash */
+	psxRegs.CP0.n.Status |= 0x401;
+	pc0 = ra;
 }
 
 void psxBios_strncat(void) { // 0x16
@@ -1656,7 +1665,17 @@ void psxBios_PAD_init(void) { // 15
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x15]);
 #endif
-
+	/* The function fails unless type is 20000000h or 20000001h (the type value has no other function).
+	 * Source : https://problemkaputt.de/psx-spx.htm (See B(15h) - OutdatedPadInitAndStart(type, button_dest, unused, unused))
+	 * Digimon World requires this behaviour to be implemented for proper input.
+	*/ 
+	if (!(a0 == 0x20000000 || a0 == 0x20000001))
+	{
+		psxRegs.CP0.n.Status |= 0x401;
+		pc0 = ra;
+		return;
+	}
+		
 	ResetIoCycle();
 	psxHwWrite16(0x1f801074, (u16)(psxHwRead16(0x1f801074) | 0x1));
 	pad_buf = (int*)Ra1;
