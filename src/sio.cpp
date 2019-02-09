@@ -254,10 +254,12 @@ void sioWrite8(unsigned char value) {
 				if (!sioMcdInserted(MCD2))
 					goto no_device;
 				memcpy(psxSio.buf, psxSio.cardh2, 4);
+				if (!Config.Mcd2[0]) psxSio.buf[3]=0; // is card 2 plugged?
 			} else {
 				if (!sioMcdInserted(MCD1))
 					goto no_device;
 				memcpy(psxSio.buf, psxSio.cardh1, 4);
+				if (!Config.Mcd1[0]) psxSio.buf[2]=0; // is card 1 plugged? (Codename Tenka)
 			}
 			psxSio.StatReg |= RX_RDY;
 			psxSio.parp = 0;

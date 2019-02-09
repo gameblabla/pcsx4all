@@ -228,7 +228,14 @@ int LoadCdrom() {
 		// read the SYSTEM.CNF
 		READTRACK();
 
-		sscanf((char *)buf + 12, "BOOT = cdrom:\\%255s", exename);
+		if (sscanf((char *)buf + 12, "BOOT = cdrom:\\%255s", exename) <= 0)
+		{
+			// Some games omit backslash (NFS4)
+			if (sscanf((char *)buf + 12, "BOOT = cdrom:%255s", exename) <= 0)
+			{
+				return -1;
+			}
+		}
 		if (GetCdromFile(mdir, time, exename) == -1) {
 			sscanf((char *)buf + 12, "BOOT = cdrom:%255s", exename);
 			if (GetCdromFile(mdir, time, exename) == -1) {
@@ -450,6 +457,20 @@ invalid:
 	return INVALID_EXE;
 }
 
+static void LoadLibPS() {
+	char buf[MAXPATHLEN+256];
+	FILE *f;
+	// Load Net Yaroze runtime library (if exists)
+	snprintf(buf, sizeof(buf), "%s/libps.exe", Config.BiosDir);
+	f = fopen(buf, "rb");
+
+	if (f != NULL) {
+		fseek(f, 0x800, SEEK_SET);
+		fread(psxM + 0x10000, 0x61000, 1, f);
+		fclose(f);
+	}
+}
+
 /* TODO Error handling - return integer for each error case below, defined in an enum. Pass variable on return */
 int Load(const char *ExePath) {
 	FILE *tmpFile;
@@ -468,6 +489,8 @@ int Load(const char *ExePath) {
 		printf("Error opening file: %s.\n", ExePath);
 		retval = -1;
 	} else {
+		LoadLibPS();
+		
 		type = PSXGetFileType(tmpFile);
 		switch (type) {
 			case PSX_EXE:
