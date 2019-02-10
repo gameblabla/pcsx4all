@@ -306,19 +306,19 @@ INLINE void LoadRegs(void) {
 void psxBios_todigit(void) // 0x0a
 {
 	int c = a0;
-    c &= 0xFF;
-    if (c >= 0x30 && c < 0x3A) {
-        c -= 0x30;
-    }
-    else if (c > 0x60 && c < 0x7B) {
-        c -= 0x20;
-    }
-    else if (c > 0x40 && c < 0x5B) {
-        c = c - 0x41 + 10;
-    }
-    else if (c >= 0x80) {
-        c = -1;
-    }
+	c &= 0xFF;
+	if (c >= 0x30 && c < 0x3A) {
+		c -= 0x30;
+	}
+	else if (c > 0x60 && c < 0x7B) {
+		c -= 0x20;
+	}
+	else if (c > 0x40 && c < 0x5B) {
+		c = c - 0x41 + 10;
+	}
+	else if (c >= 0x80) {
+		c = -1;
+	}
 	else
 	{
 		c = 0x0098967F;
@@ -1959,10 +1959,8 @@ void psxBios_PAD_dr(void) { // 16
 void psxBios_ReturnFromException(void) { // 17
 	LoadRegs();
 
-	v0 = Thread[CurThread].reg[1];
 	pc0 = psxRegs.CP0.n.EPC;
 	k0 = interrupt_r26;
-	ra = 0x8004E6EC;
 	if (psxRegs.CP0.n.Cause & 0x80000000) pc0+=4;
 
 	psxRegs.CP0.n.Status = (psxRegs.CP0.n.Status & 0xfffffff0) |
@@ -2428,7 +2426,6 @@ void psxBios_InitCARD(void) { // 4a
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %x\n", biosB0n[0x4a], a0);
 #endif
-	printf("CardInit %d\n", a0);
 	CardState = 1;
 	
 	/* The function may destroy kernel handlers according to doc */
@@ -2512,8 +2509,7 @@ void psxBios__card_read(void) { // 0x4f
 void psxBios__new_card(void) { // 0x50
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x50]);
-#endif
-	printf("Newcard %d\n", a0);
+#endif;
 	pc0 = ra;
 }
 
