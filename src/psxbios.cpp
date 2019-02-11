@@ -1435,14 +1435,8 @@ void psxBios_InitHeap(void) { // 39
 	size &= 0xfffffffc;
 	
 	heap_size = size;
-
 	heap_addr = (u32 *)Ra0;
 	heap_end = (u32 *)((u8 *)heap_addr + heap_size);
-	/* HACKFIX: Commenting out this line fixes GTA2 crash */
-	/* Line below makes some games crash unfortunately so maybe this could be put behind an optional hack for GTA 2
-	 * if problematic.
-	 * */
-	//heap_addr = SWAP32((u32 *)(size | 1));
 
 	//printf("InitHeap %x,%x : %x %x\n",a0,a1, (uptr)heap_addr-(uptr)psxM, heap_size);
 
@@ -1806,9 +1800,9 @@ void psxBios_SetMem(void) { // 9f
 
 
 /* Resets the CD-ROM drive, the kernel but does not reload SYSTEM.CNF file. (Could be used for multi-discs games) */
+/* FIXME TODO : Check against games that use it. */
 void psxBios__boot(void) // a0
 {
-	printf("FIXME : psxBios__boot (soft coldboot)\n");
 	if (Config.SpuIrq) psxHu32ref(0x1070) |= SWAP32(0x200);
 	memset(psxH, 0, 0x10000);
 	cdrReset();
@@ -1818,15 +1812,12 @@ void psxBios__boot(void) // a0
 	memset(psxR, 0, 0x80000);    // Bios memory
 }
 
-
+/* TODO FIXME : Not compliant */
 void psxBios_get_cd_status(void) //a6
 {
-	printf("FIXME : psxBios_get_cd_status\n");
 	v0 = -1;
 	pc0 = ra;
 }
-
-/* card_info and card_load don't seem to return a value */
 
 void psxBios__card_info(void) { // ab
 #ifdef PSXBIOS_LOG
@@ -2479,11 +2470,7 @@ void psxBios_firstfile(void) { // 42
 			bufile(2);
 		}
 	}
-
-	// firstfile() calls _card_read() internally, so deliver it's event
-	/* Apparently it does not do it according to this patch : https://github.com/iCatButler/pcsxr/commit/a6a7a00650de6d53dad63263db1c6bfb6d5c3088#diff-a9e87ac49b02da36fb238c42a381a18c */
-	//DeliverEvent(0x11, 0x2);
-
+	
 	pc0 = ra;
 }
 
