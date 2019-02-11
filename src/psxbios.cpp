@@ -367,48 +367,6 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	}
 }
 
-/*
-#define buopen(mcd) { \
-	int i; \
-	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
-	char *mcd_data = sioMcdDataPtr(mcd_num); \
-	strcpy(FDesc[1 + mcd].name, Ra0+5); \
-	FDesc[1 + mcd].offset = 0; \
-	FDesc[1 + mcd].mode   = a1; \
- \
-	for (i=1; i<16; i++) { \
-		const char *ptr = mcd_data + 128 * i; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		if (strcmp(FDesc[1 + mcd].name, ptr+0xa)) continue; \
-		FDesc[1 + mcd].mcfile = i; \
-		v0 = 1 + mcd; \
-		break; \
-	} \
-	if (a1 & 0x200 && v0 == -1) {\
-		for (i=1; i<16; i++) { \
-			int j, cxor = 0; \
- \
-			char *ptr = mcd_data + 128 * i; \
-			if ((*ptr & 0xF0) == 0x50) continue; \
-			ptr[0] = 0x50 | (u8)(a1 >> 16); \
-			ptr[4] = 0x00; \
-			ptr[5] = 0x20; \
-			ptr[6] = 0x00; \
-			ptr[7] = 0x00; \
-			ptr[8] = 'B'; \
-			ptr[9] = 'I'; \
-			strcpy(ptr+0xa, FDesc[1 + mcd].name); \
-			for (j=0; j<127; j++) cxor^= ptr[j]; \
-			ptr[127] = cxor; \
-			FDesc[1 + mcd].mcfile = i; \
-			v0 = 1 + mcd; \
-			sioMcdWrite(mcd_num, NULL, 128 * i, 128); \
-			break; \
-		} \
-	} \
-}
-*/
-
 #define buread(Ra1, mcd, length) { \
 	/*printf("read %d: %x,%x (%s)\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length, Mcd##mcd##Data + 128 * FDesc[1 + mcd].mcfile + 0xa);*/ \
 	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
@@ -418,8 +376,6 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
 	else v0 = length; \
 	FDesc[1 + mcd].offset += v0; \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
 }
 
 #define buwrite(Ra1, mcd, length) { \
@@ -431,8 +387,6 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	FDesc[1 + mcd].offset += length; \
 	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
 	else v0 = length; \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
 }
 
 #define bufile(mcd) { \
@@ -1061,6 +1015,7 @@ void psxBios_bzero(void) { // 0x28
 	
 	v0 = a0;
 	
+	/* Same as memset here (See memset below) */
 	if (a1 > 0x7FFFFFFF || a1 == 0)
 	{
 		v0 = 0;
@@ -1075,7 +1030,7 @@ void psxBios_bzero(void) { // 0x28
 	}
 	
 	while ((s32)a1-- > 0) *p++ = '\0';
-
+	a1 = 0;
 	pc0 = ra;
 }
 
@@ -1119,6 +1074,8 @@ void psxBios_memset() { // 0x2b
 	char *p = (char *)Ra0;
 	v0 = a0;
 	
+	/* Refuses to fill memory when dst=00000000h or when len>7FFFFFFFh. */
+	/* The return value is the incoming "dst" value (or zero, when len=0 or len>7FFFFFFFh). */
 	if (a1 > 0x7FFFFFFF || a1 == 0)
 	{
 		v0 = 0;
@@ -1482,7 +1439,10 @@ void psxBios_InitHeap(void) { // 39
 	heap_addr = (u32 *)Ra0;
 	heap_end = (u32 *)((u8 *)heap_addr + heap_size);
 	/* HACKFIX: Commenting out this line fixes GTA2 crash */
-	heap_addr = SWAP32((u32 *)(size | 1));
+	/* Line below makes some games crash unfortunately so maybe this could be put behind an optional hack for GTA 2
+	 * if problematic.
+	 * */
+	//heap_addr = SWAP32((u32 *)(size | 1));
 
 	//printf("InitHeap %x,%x : %x %x\n",a0,a1, (uptr)heap_addr-(uptr)psxM, heap_size);
 
@@ -2646,19 +2606,20 @@ void psxBios_StopCARD(void) { // 4c
 void psxBios__card_write(void) { // 0x4e
 	const char *pa2 = Ra2;
 	int port;
+	port = a0 >> 4;
 
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %x,%x,%x\n", biosB0n[0x4e], a0, a1, a2);
 #endif
+	/* Function also accepts sector 400h (a bug) */
 	if (!(a1 >= 0 && a1 <= 0x400))
 	{
+		/* Invalid sectors */
 		v0 = 0; pc0 = ra;
 		return;
 	}
 
 	card_active_chan = a0;
-	port = a0 >> 4;
-	u32 const sect = a1 % (MCD_SIZE/8); // roll on range 0...3FFF
 
 	if (pa2) {
 		sioMcdWrite(((port == 0) ? MCD1 : MCD2), pa2, a1 * 128, 128);
