@@ -304,9 +304,72 @@ INLINE void LoadRegs(void) {
 char ffile[64], *pfile;
 int nfile;
 
+static void buopen(int mcd, char *ptr, u8 cfg)
+{
+	int i;
+	char *fptr = ptr;
+
+	strcpy(FDesc[1 + mcd].name, Ra0+5);
+	FDesc[1 + mcd].offset = 0;
+	FDesc[1 + mcd].mode   = a1;
+
+	for (i=1; i<16; i++) {
+		fptr += 128;
+		if ((*fptr & 0xF0) != 0x50) continue;
+		if (strcmp(FDesc[1 + mcd].name, fptr+0xa)) continue;
+		FDesc[1 + mcd].mcfile = i;
+		v0 = 1 + mcd;
+		break;
+	}
+	if (a1 & 0x200 && v0 == -1) { /* FCREAT */
+		fptr = ptr;
+		for (i=1; i<16; i++) {
+			int j, xord, nblk = a1 >> 16;
+			char *pptr, *fptr2;
+
+			fptr += 128;
+			if ((*fptr & 0xF0) != 0xa0) continue;
+
+			FDesc[1 + mcd].mcfile = i;
+			fptr[0] = 0x51;
+			fptr[4] = 0x00;
+			fptr[5] = 0x20 * nblk;
+			fptr[6] = 0x00;
+			fptr[7] = 0x00;
+			strcpy(fptr+0xa, FDesc[1 + mcd].name);
+			pptr = fptr2 = fptr;
+			for(j=2; j<=nblk; j++) {
+				int k;
+				for(i++; i<16; i++) {
+					fptr2 += 128;
+
+					memset(fptr2, 0, 128);
+					fptr2[0] = j < nblk ? 0x52 : 0x53;
+					pptr[8] = i - 1;
+					pptr[9] = 0;
+					for (k=0, xord=0; k<127; k++) xord^= pptr[k];
+					pptr[127] = xord;
+					pptr = fptr2;
+					break;
+				}
+				/* shouldn't this return ENOSPC if i == 16? */
+			}
+			pptr[8] = pptr[9] = 0xff;
+			for (j=0, xord=0; j<127; j++) xord^= pptr[j];
+			pptr[127] = xord;
+			v0 = 1 + mcd;
+			/* just go ahead and resave them all */
+			enum MemcardNum mcd_num = (cfg == 0) ? MCD1 : MCD2;
+			sioMcdWrite(mcd_num, ptr, 128, 128 * 15);
+			break;
+		}
+		/* shouldn't this return ENOSPC if i == 16? */
+	}
+}
+
+/*
 #define buopen(mcd) { \
 	int i; \
-	int32_t res = v0; \
 	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
 	char *mcd_data = sioMcdDataPtr(mcd_num); \
 	strcpy(FDesc[1 + mcd].name, Ra0+5); \
@@ -318,12 +381,10 @@ int nfile;
 		if ((*ptr & 0xF0) != 0x50) continue; \
 		if (strcmp(FDesc[1 + mcd].name, ptr+0xa)) continue; \
 		FDesc[1 + mcd].mcfile = i; \
-		/*printf("open %s\n", ptr+0xa);*/ \
 		v0 = 1 + mcd; \
-		res = 1 + mcd; \
 		break; \
 	} \
-	if (a1 & 0x200 && res == -1) { /* FCREAT */ \
+	if (a1 & 0x200 && v0 == -1) {\
 		for (i=1; i<16; i++) { \
 			int j, cxor = 0; \
  \
@@ -340,13 +401,13 @@ int nfile;
 			for (j=0; j<127; j++) cxor^= ptr[j]; \
 			ptr[127] = cxor; \
 			FDesc[1 + mcd].mcfile = i; \
-			/*printf("openC %s\n", ptr);*/ \
 			v0 = 1 + mcd; \
 			sioMcdWrite(mcd_num, NULL, 128 * i, 128); \
 			break; \
 		} \
 	} \
 }
+*/
 
 #define buread(Ra1, mcd, length) { \
 	/*printf("read %d: %x,%x (%s)\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length, Mcd##mcd##Data + 128 * FDesc[1 + mcd].mcfile + 0xa);*/ \
@@ -398,7 +459,7 @@ int nfile;
 			match = 0; break; \
 		} \
 		/*printf("%d : %s = %s + %s (match=%d)\n", nfile, dir->name, pfile, ptr, match);*/ \
-		if (match == 0) continue; \
+		if (match == 0) { continue; } \
 		dir->size = 8192; \
 		v0 = _dir; \
 		break; \
@@ -1072,7 +1133,7 @@ void psxBios_memset() { // 0x2b
 	}
 	
 	while ((s32)a2-- > 0) *p++ = (char)a1;
-
+	a2 = 0;
 	v0 = a0; pc0 = ra;
 }
 
@@ -1811,11 +1872,31 @@ void psxBios__card_info(void) { // ab
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %x\n", biosA0n[0xab], a0);
 #endif
-
+	u32 ret;
 	card_active_chan = a0;
 
+	switch (card_active_chan) 
+	{
+	case 0x00: case 0x01: case 0x02: case 0x03:
+		ret = Config.Mcd1[0] ? 0x2 : 0x8;
+		break;
+	case 0x10: case 0x11: case 0x12: case 0x13:
+		ret = Config.Mcd2[0] ? 0x2 : 0x8;
+		break;
+	default:
+#ifdef PSXBIOS_LOG
+		PSXBIOS_LOG("psxBios_%s: UNKNOWN PORT 0x%x\n", biosA0n[0xab], card_active_chan);
+#endif
+		ret = 0x11;
+		break;
+	}
+
+	// COTS password option
+	/*if (Config.NoMemcard)
+		ret = 0x8;*/
+
 //	DeliverEvent(0x11, 0x2); // 0xf0000011, 0x0004
-	DeliverEvent(0x81, 0x2); // 0xf4000001, 0x0004
+	DeliverEvent(0x81, ret); // 0xf4000001, 0x0004
 
 	v0 = 1; pc0 = ra;
 }
@@ -2257,11 +2338,10 @@ void psxBios_open(void) { // 0x32
 	if (pa0) 
 	{
 		if (!strncmp(pa0, "bu00", 4)) {
-			buopen(1);
+			buopen(1, sioMcdDataPtr(MCD1), MCD1);
 		}
-
 		if (!strncmp(pa0, "bu10", 4)) {
-			buopen(2);
+			buopen(2, sioMcdDataPtr(MCD2), MCD2);
 		}
 	}
 
@@ -2432,14 +2512,17 @@ void psxBios_firstfile(void) { // 42
 		pfile = ffile+5;
 		nfile = 1;
 		if (!strncmp(pa0, "bu00", 4)) {
+			DeliverEvent(0x11, 0x2);
 			bufile(1);
 		} else if (!strncmp(pa0, "bu10", 4)) {
+			DeliverEvent(0x11, 0x2);
 			bufile(2);
 		}
 	}
 
 	// firstfile() calls _card_read() internally, so deliver it's event
-	DeliverEvent(0x11, 0x2);
+	/* Apparently it does not do it according to this patch : https://github.com/iCatButler/pcsxr/commit/a6a7a00650de6d53dad63263db1c6bfb6d5c3088#diff-a9e87ac49b02da36fb238c42a381a18c */
+	//DeliverEvent(0x11, 0x2);
 
 	pc0 = ra;
 }
@@ -2575,6 +2658,7 @@ void psxBios__card_write(void) { // 0x4e
 
 	card_active_chan = a0;
 	port = a0 >> 4;
+	u32 const sect = a1 % (MCD_SIZE/8); // roll on range 0...3FFF
 
 	if (pa2) {
 		sioMcdWrite(((port == 0) ? MCD1 : MCD2), pa2, a1 * 128, 128);

@@ -57,7 +57,7 @@ int sioFreeze(void* f, FreezeMode mode);
 // Memcard operations //
 ////////////////////////
 
-#define MCD_SIZE	(1024 * 8 * 16)
+#define MCD_SIZE	(1024 * (8 * 16))
 
 enum MemcardNum {
 	MCD1 = 0,
