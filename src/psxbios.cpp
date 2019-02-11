@@ -28,7 +28,7 @@
 #include <zlib.h>
 
 //We try to emulate bios :) HELP US :P
-
+//#define PSXBIOS_LOG printf
 #ifdef PSXBIOS_LOG
 
 char *biosA0n[256] = {
@@ -306,6 +306,7 @@ int nfile;
 
 #define buopen(mcd) { \
 	int i; \
+	int32_t res = v0; \
 	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
 	char *mcd_data = sioMcdDataPtr(mcd_num); \
 	strcpy(FDesc[1 + mcd].name, Ra0+5); \
@@ -319,9 +320,10 @@ int nfile;
 		FDesc[1 + mcd].mcfile = i; \
 		/*printf("open %s\n", ptr+0xa);*/ \
 		v0 = 1 + mcd; \
+		res = 1 + mcd; \
 		break; \
 	} \
-	if (a1 & 0x200 && v0 == -1) { /* FCREAT */ \
+	if (a1 & 0x200 && res == -1) { /* FCREAT */ \
 		for (i=1; i<16; i++) { \
 			int j, cxor = 0; \
  \
@@ -451,6 +453,9 @@ int nfile;
 void psxBios_getc(void) // 0x03, 0x35
 {
 	void *pa1 = Ra1;
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x03]);
+#endif
 	v0 = -1;
 
 	if (pa1) {
@@ -467,6 +472,9 @@ void psxBios_getc(void) // 0x03, 0x35
 void psxBios_putc(void) // 0x09, 0x3B
 {
 	void *pa1 = Ra1;
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x09]);
+#endif
 	v0 = -1;
 	if (!pa1) {
 		pc0 = ra;
@@ -495,6 +503,9 @@ void psxBios_putc(void) // 0x09, 0x3B
 void psxBios_todigit(void) // 0x0a
 {
 	int c = a0;
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x0a]);
+#endif
 	c &= 0xFF;
 	if (c >= 0x30 && c < 0x3A) {
 		c -= 0x30;
@@ -546,6 +557,9 @@ void psxBios_strtol(void) // 0x0d
 }
 
 void psxBios_abs(void) { // 0x0e
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x0e]);
+#endif
 	if ((s32)a0 < 0) v0 = -(s32)a0;
 	else v0 = a0;
 	pc0 = ra;
@@ -558,6 +572,9 @@ void psxBios_labs(void) { // 0x0f
 void psxBios_atoi(void) { // 0x10
 	s32 n = 0, f = 0;
 	char *p = (char *)Ra0;
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x10]);
+#endif
 
 	for (;;p++) {
 		switch (*p) {
@@ -759,7 +776,11 @@ void psxBios_strncmp(void) { // 0x18
 void psxBios_strcpy(void) { // 0x19
 	char *p1 = (char *)Ra0, *p2 = (char *)Ra1;
 	
-	if (a0 == 0 && a1 == 0)
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s: %s (%x), %s (%x), %d\n", biosA0n[0x19], Ra0, a0, Ra1, a1, a2);
+#endif
+	
+	if (a0 == 0 || a1 == 0)
 	{
 		v0 = 0;
 		pc0 = ra;
@@ -775,7 +796,11 @@ void psxBios_strncpy(void) { // 0x1a
 	char *p1 = (char *)Ra0, *p2 = (char *)Ra1;
 	s32 n = a2, i;
 	
-	if (a0 == 0 && a1 == 0)
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s: %s (%x), %s (%x), %d\n", biosA0n[0x1a], Ra0, a0, Ra1, a1, a2);
+#endif
+	
+	if (a0 == 0 || a1 == 0)
 	{
 		v0 = 0;
 		pc0 = ra;
@@ -798,6 +823,11 @@ void psxBios_strncpy(void) { // 0x1a
 void psxBios_strlen(void) { // 0x1b
 	char *p = (char *)Ra0;
 	v0 = 0;
+	
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x1b]);
+#endif
+	
 	if (a0 == 0)
 	{
 		pc0 = ra;
@@ -809,6 +839,10 @@ void psxBios_strlen(void) { // 0x1b
 
 void psxBios_index(void) { // 0x1c
 	char *p = (char *)Ra0;
+	
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x1c]);
+#endif
 
 	if (a0 == 0)
 	{
@@ -859,13 +893,6 @@ void psxBios_strrchr(void) { // 0x1f
 void psxBios_strpbrk(void) { // 0x20
 	char *p1 = (char *)Ra0, *p2 = (char *)Ra1, *scanp, c, sc;
 
-	if (a0 == 0)
-	{
-		v0 = 0;
-		pc0 = ra;
-		return;
-	}
-
 	while ((c = *p1++) != '\0') {
 		for (scanp = p2; (sc = *scanp++) != '\0';) {
 			if (sc == c) {
@@ -876,8 +903,13 @@ void psxBios_strpbrk(void) { // 0x20
 		}
 	}
 
-	// should return a0 instead of NULL if not found (???)
-	v0 = a0; pc0 = ra;
+	/* BUG: If there was no occurence, it returns 0 only if src[0]=00h, and otherwise returns the incoming "src" value */
+	/* (which is the SAME return value as when a occurence did occur on 1st character). */
+	if (p1[0] == 0x00)
+		v0 = 0;
+	else
+		v0 = a0;
+	pc0 = ra;
 }
 
 void psxBios_strspn(void) { // 0x21
@@ -1346,11 +1378,28 @@ void psxBios_realloc(void) { // 38
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x38]);
 #endif
-	printf("Realloc\n");
-	a0 = block;
-	psxBios_free();
-	a0 = size;
-	psxBios_malloc();
+	
+	/* If "old_buf" is zero, executes malloc(new_size), and returns r2=new_buf (or 0=failed). */
+	if (block == 0)
+	{
+		a0 = block;
+		psxBios_malloc();
+	}
+	/* Else, if "new_size" is zero, executes free(old_buf), and returns r2=garbage. */
+	else if (size == 0)
+	{
+		a0 = size;
+		psxBios_free();
+	}
+	/* Else, executes malloc(new_size), bcopy(old_buf,new_buf,new_size), and free(old_buf), and returns r2=new_buf (or 0=failed). */
+	/* Note that it is not quite implemented this way here. */
+	else
+	{
+		a0 = block;
+		psxBios_free();
+		a0 = size;
+		psxBios_malloc();
+	}
 }
 
 
@@ -1735,6 +1784,7 @@ void psxBios_SetMem(void) { // 9f
 #include "psxhw.h"
 
 
+/* Resets the CD-ROM drive, the kernel but does not reload SYSTEM.CNF file. (Could be used for multi-discs games) */
 void psxBios__boot(void) // a0
 {
 	printf("FIXME : psxBios__boot (soft coldboot)\n");
@@ -1761,18 +1811,13 @@ void psxBios__card_info(void) { // ab
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %x\n", biosA0n[0xab], a0);
 #endif
-	char *pa2 = Ra2;
-	int port;
 
-#ifdef PSXBIOS_LOG
-	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x4f]);
-#endif
 	card_active_chan = a0;
 
 //	DeliverEvent(0x11, 0x2); // 0xf0000011, 0x0004
 	DeliverEvent(0x81, 0x2); // 0xf4000001, 0x0004
 
-	pc0 = ra;
+	v0 = 1; pc0 = ra;
 }
 
 void psxBios__card_load(void) { // ac
@@ -1784,7 +1829,7 @@ void psxBios__card_load(void) { // ac
 //	DeliverEvent(0x11, 0x2); // 0xf0000011, 0x0004
 	DeliverEvent(0x81, 0x2); // 0xf4000001, 0x0004
 
-	pc0 = ra;
+	v0 = 1; pc0 = ra;
 }
 
 /* System calls B0 */
@@ -2007,10 +2052,12 @@ void psxBios_DisableEvent(void) { // 0d
  */
 
 void psxBios_OpenTh(void) { // 0e
-	int th;
-
-	for (th=1; th<8; th++)
+	uint32_t th = 8;
+	do
+	{
 		if (Thread[th].status == 0) break;
+		th--;
+	} while (th!=0);
 
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s: %x\n", biosB0n[0x0e], th);
@@ -2856,8 +2903,8 @@ void psxBiosInit(void) {
 	//biosA0[0x52] = psxBios_GetSysSp;
 	//biosA0[0x53] = psxBios_sys_a0_53;
 	biosA0[0x54] = psxBios__96_init;
-	//biosA0[0x55] = psxBios__bu_init_a55;
-	//biosA0[0x56] = psxBios__96_remove_a56;
+	biosA0[0x55] = psxBios__bu_init;
+	biosA0[0x56] = psxBios__96_remove;
 	//biosA0[0x57] = psxBios_sys_a0_57;
 	//biosA0[0x58] = psxBios_sys_a0_58;
 	//biosA0[0x59] = psxBios_sys_a0_59;
@@ -3014,6 +3061,7 @@ void psxBiosInit(void) {
 	biosB0[0x3a] = psxBios_getc;
 	biosB0[0x3b] = psxBios_putc;
 	biosB0[0x3c] = psxBios_getchar;
+	biosB0[0x3d] = psxBios_putchar;
 	//biosB0[0x3e] = psxBios_gets;
 	//biosB0[0x40] = psxBios_cd;
 	biosB0[0x41] = psxBios_format;
@@ -3034,7 +3082,7 @@ void psxBiosInit(void) {
 	biosB0[0x50] = psxBios__new_card;
 	biosB0[0x51] = psxBios_Krom2RawAdd;
 	//biosB0[0x52] = psxBios_sys_b0_52;
-	//biosB0[0x53] = psxBios_sys_b0_53;
+	biosB0[0x53] = psxBios_Krom2RawAdd; //This is a subfunction for B(51h) Krom2RawAdd(shiftjis_code).
 	//biosB0[0x54] = psxBios__get_errno;
 	biosB0[0x55] = psxBios__get_error;
 	biosB0[0x56] = psxBios_GetC0Table;
@@ -3235,7 +3283,7 @@ void biosInterrupt(void) {
 
 void psxBiosException(void) {
 	int i;
-	int remember;
+	uint32_t remember;
 	switch (psxRegs.CP0.n.Cause & 0x3c) {
 		case 0x00: // Interrupt
 			interrupt_r26=psxRegs.CP0.n.EPC;
