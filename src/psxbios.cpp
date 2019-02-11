@@ -249,8 +249,9 @@ static EvCB *RcEV; // 0xf2
 static EvCB *UeEV; // 0xf3
 static EvCB *SwEV; // 0xf4
 static EvCB *ThEV; // 0xff
-static u32 *heap_addr = NULL;
-static u32 *heap_end = NULL;
+static u32 *heap_addr = 0;
+static u32 *heap_end = 0;
+static u32 heap_size = 0;
 static u32 SysIntRP[8];
 static int CardState = -1;
 static TCB Thread[8];
@@ -298,10 +299,198 @@ INLINE void LoadRegs(void) {
 	psxRegs.GPR.n.hi = regs[33];
 }
 
+/* Bu functions calls */
+
+char ffile[64], *pfile;
+int nfile;
+
+#define buopen(mcd) { \
+	int i; \
+	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
+	char *mcd_data = sioMcdDataPtr(mcd_num); \
+	strcpy(FDesc[1 + mcd].name, Ra0+5); \
+	FDesc[1 + mcd].offset = 0; \
+	FDesc[1 + mcd].mode   = a1; \
+ \
+	for (i=1; i<16; i++) { \
+		const char *ptr = mcd_data + 128 * i; \
+		if ((*ptr & 0xF0) != 0x50) continue; \
+		if (strcmp(FDesc[1 + mcd].name, ptr+0xa)) continue; \
+		FDesc[1 + mcd].mcfile = i; \
+		/*printf("open %s\n", ptr+0xa);*/ \
+		v0 = 1 + mcd; \
+		break; \
+	} \
+	if (a1 & 0x200 && v0 == -1) { /* FCREAT */ \
+		for (i=1; i<16; i++) { \
+			int j, cxor = 0; \
+ \
+			char *ptr = mcd_data + 128 * i; \
+			if ((*ptr & 0xF0) == 0x50) continue; \
+			ptr[0] = 0x50 | (u8)(a1 >> 16); \
+			ptr[4] = 0x00; \
+			ptr[5] = 0x20; \
+			ptr[6] = 0x00; \
+			ptr[7] = 0x00; \
+			ptr[8] = 'B'; \
+			ptr[9] = 'I'; \
+			strcpy(ptr+0xa, FDesc[1 + mcd].name); \
+			for (j=0; j<127; j++) cxor^= ptr[j]; \
+			ptr[127] = cxor; \
+			FDesc[1 + mcd].mcfile = i; \
+			/*printf("openC %s\n", ptr);*/ \
+			v0 = 1 + mcd; \
+			sioMcdWrite(mcd_num, NULL, 128 * i, 128); \
+			break; \
+		} \
+	} \
+}
+
+#define buread(Ra1, mcd, length) { \
+	/*printf("read %d: %x,%x (%s)\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length, Mcd##mcd##Data + 128 * FDesc[1 + mcd].mcfile + 0xa);*/ \
+	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
+	sioMcdRead(((mcd == 1) ? MCD1 : MCD2), (char*)Ra1, offset, length); \
+	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
+	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
+	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
+	else v0 = length; \
+	FDesc[1 + mcd].offset += v0; \
+	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
+	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
+}
+
+#define buwrite(Ra1, mcd, length) { \
+	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
+	/*printf("write %d: %x,%x\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length);*/ \
+	sioMcdWrite((mcd==1) ? MCD1 : MCD2, (const char*)Ra1, offset, length); \
+	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
+	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
+	FDesc[1 + mcd].offset += length; \
+	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
+	else v0 = length; \
+	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
+	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
+}
+
+#define bufile(mcd) { \
+	int i; \
+	const char *mcd_data = sioMcdDataPtr((mcd==1) ? MCD1 : MCD2); \
+	while (nfile < 16) { \
+		int match=1; \
+ \
+		const char *ptr = mcd_data + 128 * nfile; \
+		nfile++; \
+		if ((*ptr & 0xF0) != 0x50) continue; \
+		ptr+= 0xa; \
+		if (pfile[0] == 0) { \
+			strncpy(dir->name, ptr, sizeof(dir->name)); \
+			dir->name[sizeof(dir->name) - 1] = '\0'; \
+		} else for (i=0; i<20; i++) { \
+			if (pfile[i] == ptr[i]) { \
+				dir->name[i] = ptr[i]; \
+				if (ptr[i] == 0) break; else continue; } \
+			if (pfile[i] == '?') { \
+				dir->name[i] = ptr[i]; continue; } \
+			if (pfile[i] == '*') { \
+				strcpy(dir->name+i, ptr+i); break; } \
+			match = 0; break; \
+		} \
+		/*printf("%d : %s = %s + %s (match=%d)\n", nfile, dir->name, pfile, ptr, match);*/ \
+		if (match == 0) continue; \
+		dir->size = 8192; \
+		v0 = _dir; \
+		break; \
+	} \
+}
+
+#define burename(mcd) { \
+	int i; \
+	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
+	char *mcd_data = sioMcdDataPtr(mcd_num); \
+	for (i=1; i<16; i++) { \
+		int namelen, j, cxor = 0; \
+		char *ptr = mcd_data + 128 * i; \
+		if ((*ptr & 0xF0) != 0x50) continue; \
+		if (strcmp(Ra0+5, ptr+0xa)) continue; \
+		namelen = strlen(Ra1+5); \
+		memcpy(ptr+0xa, Ra1+5, namelen); \
+		memset(ptr+0xa+namelen, 0, 0x75-namelen); \
+		for (j=0; j<127; j++) cxor^= ptr[j]; \
+		ptr[127] = cxor; \
+		sioMcdWrite(mcd_num, NULL, 128 * i + 0xa, 0x76); \
+		v0 = 1; \
+		break; \
+	} \
+}
+
+#define budelete(mcd) { \
+	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
+	char *mcd_data = sioMcdDataPtr(mcd_num); \
+	int i; \
+	for (i=1; i<16; i++) { \
+		char *ptr = mcd_data + 128 * i; \
+		if ((*ptr & 0xF0) != 0x50) continue; \
+		if (strcmp(Ra0+5, ptr+0xa)) continue; \
+		*ptr = (*ptr & 0xf) | 0xA0; \
+		sioMcdWrite(mcd_num, NULL, 128 * i, 1); \
+		/*printf("delete %s\n", ptr+0xa);*/ \
+		v0 = 1; \
+		break; \
+	} \
+}
+
 /*                                           *
 //                                           *
 //                                           *
 //               System calls A0             */
+
+/* Internally redirects to "FileRead(fd,tempbuf,1)".*/
+/* For some strange reason, the returned character is sign-expanded; */
+/* So if a return value of FFFFFFFFh could mean either character FFh, or error. */
+/* TODO FIX ME : Properly implement this behaviour */
+void psxBios_getc(void) // 0x03, 0x35
+{
+	void *pa1 = Ra1;
+	v0 = -1;
+
+	if (pa1) {
+		switch (a0) {
+			case 2: buread(pa1, 1, 1); break;
+			case 3: buread(pa1, 2, 1); break;
+		}
+	}
+
+	pc0 = ra;
+}
+
+/* Copy of psxBios_write, except size is 1. */
+void psxBios_putc(void) // 0x09, 0x3B
+{
+	void *pa1 = Ra1;
+	v0 = -1;
+	if (!pa1) {
+		pc0 = ra;
+		return;
+	}
+
+	if (a0 == 1) { // stdout
+		char *ptr = (char *)pa1;
+
+		v0 = a2;
+		while (a2 > 0) {
+			printf("%c", *ptr++); a2--;
+		}
+		pc0 = ra; return;
+	}
+
+	switch (a0) {
+		case 2: buwrite(pa1, 1, 1); break;
+		case 3: buwrite(pa1, 2, 1); break;
+	}
+  		
+	pc0 = ra;
+}
+
 
 void psxBios_todigit(void) // 0x0a
 {
@@ -761,12 +950,10 @@ void psxBios_tolower(void) { // 0x26
 void psxBios_bcopy(void) { // 0x27
 	char *p1 = (char *)Ra1, *p2 = (char *)Ra0;
 	
-	if (a0 == 0 || a2 > 0x7FFFFFFF || a2 == 0)
+	v0 = a0;
+	
+	if (a0 == 0 || a2 > 0x7FFFFFFF)
 	{
-		if (a2 > 0x7FFFFFFF || a2 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
 		pc0 = ra;
 		return;
 	}
@@ -779,12 +966,17 @@ void psxBios_bcopy(void) { // 0x27
 void psxBios_bzero(void) { // 0x28
 	char *p = (char *)Ra0;
 	
-	if (a0 == 0 || a1 > 0x7FFFFFFF || a1 == 0)
+	v0 = a0;
+	
+	if (a1 > 0x7FFFFFFF || a1 == 0)
 	{
-		if (a1 > 0x7FFFFFFF || a1 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
+		v0 = 0;
+		pc0 = ra;
+		return;
+	}
+	
+	if (a0 == 0)
+	{
 		pc0 = ra;
 		return;
 	}
@@ -813,12 +1005,11 @@ void psxBios_bcmp() { // 0x29
 void psxBios_memcpy() { // 0x2a
 	char *p1 = (char *)Ra0, *p2 = (char *)Ra1;
 	s32 n=0;
-	if (a0 == 0 || a2 > 0x7FFFFFFF || a2 == 0)
+	
+	v0 = a0;
+	
+	if (a0 == 0 || a2 > 0x7FFFFFFF)
 	{
-		if (a2 > 0x7FFFFFFF || a2 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
 		pc0 = ra;
 		return;
 	}
@@ -827,19 +1018,23 @@ void psxBios_memcpy() { // 0x2a
 		n++;
 		*p1++ = *p2++;
 	}
-
-	v0 = a0;
+	
 	pc0 = ra;
 }
 
 void psxBios_memset() { // 0x2b
 	char *p = (char *)Ra0;
-	if (a0 == 0 || a2 > 0x7FFFFFFF || a2 == 0)
+	v0 = a0;
+	
+	if (a1 > 0x7FFFFFFF || a1 == 0)
 	{
-		if (a2 > 0x7FFFFFFF || a2 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
+		v0 = 0;
+		pc0 = ra;
+		return;
+	}
+	
+	if (a0 == 0)
+	{
 		pc0 = ra;
 		return;
 	}
@@ -852,12 +1047,10 @@ void psxBios_memset() { // 0x2b
 void psxBios_memmove() { // 0x2c
 	char *p1 = (char *)Ra0, *p2 = (char *)Ra1;
 	
-	if (a0 == 0 || a2 > 0x7FFFFFFF || a2 == 0)
+	v0 = a0;
+	
+	if (a0 == 0 || a2 > 0x7FFFFFFF)
 	{
-		if (a2 > 0x7FFFFFFF || a2 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
 		pc0 = ra;
 		return;
 	}
@@ -871,7 +1064,7 @@ void psxBios_memmove() { // 0x2c
 		while ((s32)a2-- > 0) *p1++ = *p2++;
 	}
 
-	v0 = a0; pc0 = ra;
+	pc0 = ra;
 }
 
 void psxBios_memcmp() { // 0x2d
@@ -881,12 +1074,10 @@ void psxBios_memcmp() { // 0x2d
 void psxBios_memchr() { // 0x2e
 	char *p = (char *)Ra0;
 
-	if (a0 == 0 || a2 > 0x7FFFFFFF || a2 == 0)
+	v0 = 0;
+
+	if (a0 == 0 || a2 > 0x7FFFFFFF)
 	{
-		if (a2 > 0x7FFFFFFF || a2 == 0)
-			v0 = 0;
-		else
-			v0 = a0;
 		pc0 = ra;
 		return;
 	}
@@ -1026,7 +1217,7 @@ void psxBios_malloc(void) { // 33
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x33]);
 #endif
-	if (!a0) {
+	if (!a0 || (!heap_size || !heap_addr)) {
 		v0 = 0;
 		pc0 = ra;
 		return;
@@ -1155,7 +1346,7 @@ void psxBios_realloc(void) { // 38
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x38]);
 #endif
-
+	printf("Realloc\n");
 	a0 = block;
 	psxBios_free();
 	a0 = size;
@@ -1175,13 +1366,15 @@ void psxBios_InitHeap(void) { // 39
 	else size = a1;
 
 	size &= 0xfffffffc;
+	
+	heap_size = size;
 
 	heap_addr = (u32 *)Ra0;
-	heap_end = (u32 *)((u8 *)heap_addr + size);
+	heap_end = (u32 *)((u8 *)heap_addr + heap_size);
 	/* HACKFIX: Commenting out this line fixes GTA2 crash */
 	heap_addr = SWAP32((u32 *)(size | 1));
 
-	//printf("InitHeap %x,%x : %x %x\n",a0,a1, (uptr)heap_addr-(uptr)psxM, size);
+	//printf("InitHeap %x,%x : %x %x\n",a0,a1, (uptr)heap_addr-(uptr)psxM, heap_size);
 
 	pc0 = ra;
 }
@@ -1547,8 +1740,6 @@ void psxBios__boot(void) // a0
 	printf("FIXME : psxBios__boot (soft coldboot)\n");
 	if (Config.SpuIrq) psxHu32ref(0x1070) |= SWAP32(0x200);
 	memset(psxH, 0, 0x10000);
-	mdecInit(); //intialize mdec decoder
-	sioInit(); //initialize sio
 	cdrReset();
 	HW_GPU_STATUS = 0x14802000;
 	//memset(psxM, 0, 0x200000);
@@ -1560,9 +1751,11 @@ void psxBios__boot(void) // a0
 void psxBios_get_cd_status(void) //a6
 {
 	printf("FIXME : psxBios_get_cd_status\n");
-	v0 = 1;
+	v0 = -1;
 	pc0 = ra;
 }
+
+/* card_info and card_load don't seem to return a value */
 
 void psxBios__card_info(void) { // ab
 #ifdef PSXBIOS_LOG
@@ -1579,7 +1772,6 @@ void psxBios__card_info(void) { // ab
 //	DeliverEvent(0x11, 0x2); // 0xf0000011, 0x0004
 	DeliverEvent(0x81, 0x2); // 0xf4000001, 0x0004
 
-	v0 = 1;
 	pc0 = ra;
 }
 
@@ -1592,7 +1784,6 @@ void psxBios__card_load(void) { // ac
 //	DeliverEvent(0x11, 0x2); // 0xf0000011, 0x0004
 	DeliverEvent(0x81, 0x2); // 0xf4000001, 0x0004
 
-	v0 = 1;
 	pc0 = ra;
 }
 
@@ -2004,48 +2195,6 @@ void psxBios_UnDeliverEvent(void) { // 0x20
 	pc0 = ra;
 }
 
-#define buopen(mcd) { \
-	int i; \
-	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
-	char *mcd_data = sioMcdDataPtr(mcd_num); \
-	strcpy(FDesc[1 + mcd].name, Ra0+5); \
-	FDesc[1 + mcd].offset = 0; \
-	FDesc[1 + mcd].mode   = a1; \
- \
-	for (i=1; i<16; i++) { \
-		const char *ptr = mcd_data + 128 * i; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		if (strcmp(FDesc[1 + mcd].name, ptr+0xa)) continue; \
-		FDesc[1 + mcd].mcfile = i; \
-		/*printf("open %s\n", ptr+0xa);*/ \
-		v0 = 1 + mcd; \
-		break; \
-	} \
-	if (a1 & 0x200 && v0 == -1) { /* FCREAT */ \
-		for (i=1; i<16; i++) { \
-			int j, cxor = 0; \
- \
-			char *ptr = mcd_data + 128 * i; \
-			if ((*ptr & 0xF0) == 0x50) continue; \
-			ptr[0] = 0x50 | (u8)(a1 >> 16); \
-			ptr[4] = 0x00; \
-			ptr[5] = 0x20; \
-			ptr[6] = 0x00; \
-			ptr[7] = 0x00; \
-			ptr[8] = 'B'; \
-			ptr[9] = 'I'; \
-			strcpy(ptr+0xa, FDesc[1 + mcd].name); \
-			for (j=0; j<127; j++) cxor^= ptr[j]; \
-			ptr[127] = cxor; \
-			FDesc[1 + mcd].mcfile = i; \
-			/*printf("openC %s\n", ptr);*/ \
-			v0 = 1 + mcd; \
-			sioMcdWrite(mcd_num, NULL, 128 * i, 128); \
-			break; \
-		} \
-	} \
-}
-
 /*
  *	int open(char *name , int mode);
  */
@@ -2058,8 +2207,8 @@ void psxBios_open(void) { // 0x32
 #endif
 
 	v0 = -1;
-
-	if (pa0) {
+	if (pa0) 
+	{
 		if (!strncmp(pa0, "bu00", 4)) {
 			buopen(1);
 		}
@@ -2098,19 +2247,6 @@ void psxBios_lseek(void) { // 0x33
 	pc0 = ra;
 }
 
-#define buread(Ra1, mcd) { \
-	/*printf("read %d: %x,%x (%s)\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, a2, Mcd##mcd##Data + 128 * FDesc[1 + mcd].mcfile + 0xa);*/ \
-	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
-	sioMcdRead(((mcd == 1) ? MCD1 : MCD2), (char*)Ra1, offset, a2); \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
-	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
-	else v0 = a2; \
-	FDesc[1 + mcd].offset += v0; \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
-}
-
 /*
  *	int read(int fd , void *buf , int nbytes);
  */
@@ -2126,25 +2262,12 @@ void psxBios_read(void) { // 0x34
 
 	if (pa1) {
 		switch (a0) {
-			case 2: buread(pa1, 1); break;
-			case 3: buread(pa1, 2); break;
+			case 2: buread(pa1, 1, a2); break;
+			case 3: buread(pa1, 2, a2); break;
 		}
 	}
 
 	pc0 = ra;
-}
-
-#define buwrite(Ra1, mcd) { \
-	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
-	/*printf("write %d: %x,%x\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, a2);*/ \
-	sioMcdWrite((mcd==1) ? MCD1 : MCD2, (const char*)Ra1, offset, a2); \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
-	FDesc[1 + mcd].offset += a2; \
-	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
-	else v0 = a2; \
-	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
-	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
 }
 
 /*
@@ -2175,8 +2298,8 @@ void psxBios_write(void) { // 0x35/0x03
 	}
 
 	switch (a0) {
-		case 2: buwrite(pa1, 1); break;
-		case 3: buwrite(pa1, 2); break;
+		case 2: buwrite(pa1, 1, a2); break;
+		case 3: buwrite(pa1, 2, a2); break;
 	}
   		
 	pc0 = ra;
@@ -2242,44 +2365,10 @@ void psxBios_putchar(void) { // 3d
 	psxBios_puts();
 }
 
-char ffile[64], *pfile;
-int nfile;
-
-#define bufile(mcd) { \
-	int i; \
-	const char *mcd_data = sioMcdDataPtr((mcd==1) ? MCD1 : MCD2); \
-	while (nfile < 16) { \
-		int match=1; \
- \
-		const char *ptr = mcd_data + 128 * nfile; \
-		nfile++; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		ptr+= 0xa; \
-		if (pfile[0] == 0) { \
-			strncpy(dir->name, ptr, sizeof(dir->name)); \
-			dir->name[sizeof(dir->name) - 1] = '\0'; \
-		} else for (i=0; i<20; i++) { \
-			if (pfile[i] == ptr[i]) { \
-				dir->name[i] = ptr[i]; \
-				if (ptr[i] == 0) break; else continue; } \
-			if (pfile[i] == '?') { \
-				dir->name[i] = ptr[i]; continue; } \
-			if (pfile[i] == '*') { \
-				strcpy(dir->name+i, ptr+i); break; } \
-			match = 0; break; \
-		} \
-		/*printf("%d : %s = %s + %s (match=%d)\n", nfile, dir->name, pfile, ptr, match);*/ \
-		if (match == 0) continue; \
-		dir->size = 8192; \
-		v0 = _dir; \
-		break; \
-	} \
-}
-
 /*
  *	struct DIRENTRY* firstfile(char *name,struct DIRENTRY *dir);
  */
- 
+/* Honestly this does not come close to the PSX's behaviour. A number of bugs don't seem to be implemented. */
 void psxBios_firstfile(void) { // 42
 	struct DIRENTRY *dir = (struct DIRENTRY *)Ra1;
 	const char *pa0 = Ra0;
@@ -2312,6 +2401,9 @@ void psxBios_firstfile(void) { // 42
  *	struct DIRENTRY* nextfile(struct DIRENTRY *dir);
  */
 
+/* Returns r2=direntry (or r2=0 if no more matching files).
+Uses the settings of a previous firstfile/nextfile command.*/
+
 void psxBios_nextfile(void) { // 43
 	struct DIRENTRY *dir = (struct DIRENTRY *)Ra0;
 	u32 _dir = a0;
@@ -2320,37 +2412,20 @@ void psxBios_nextfile(void) { // 43
 	PSXBIOS_LOG("psxBios_%s: %s\n", biosB0n[0x43], dir->name);
 #endif
 
+	/* Returns r2=direntry if file is found. If no, returns 0 */
 	v0 = 0;
 
 	if (!strncmp(ffile, "bu00", 4)) {
 		bufile(1);
+		v0 = a0;
 	}
 
 	if (!strncmp(ffile, "bu10", 4)) {
 		bufile(2);
+		v0 = a0;
 	}
 
 	pc0 = ra;
-}
-
-#define burename(mcd) { \
-	int i; \
-	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
-	char *mcd_data = sioMcdDataPtr(mcd_num); \
-	for (i=1; i<16; i++) { \
-		int namelen, j, cxor = 0; \
-		char *ptr = mcd_data + 128 * i; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		if (strcmp(Ra0+5, ptr+0xa)) continue; \
-		namelen = strlen(Ra1+5); \
-		memcpy(ptr+0xa, Ra1+5, namelen); \
-		memset(ptr+0xa+namelen, 0, 0x75-namelen); \
-		for (j=0; j<127; j++) cxor^= ptr[j]; \
-		ptr[127] = cxor; \
-		sioMcdWrite(mcd_num, NULL, 128 * i + 0xa, 0x76); \
-		v0 = 1; \
-		break; \
-	} \
 }
 
 /*
@@ -2378,22 +2453,6 @@ void psxBios_rename(void) { // 44
 	}
 
 	pc0 = ra;
-}
-
-#define budelete(mcd) { \
-	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
-	char *mcd_data = sioMcdDataPtr(mcd_num); \
-	int i; \
-	for (i=1; i<16; i++) { \
-		char *ptr = mcd_data + 128 * i; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		if (strcmp(Ra0+5, ptr+0xa)) continue; \
-		*ptr = (*ptr & 0xf) | 0xA0; \
-		sioMcdWrite(mcd_num, NULL, 128 * i, 1); \
-		/*printf("delete %s\n", ptr+0xa);*/ \
-		v0 = 1; \
-		break; \
-	} \
 }
 
 /*
@@ -2509,7 +2568,7 @@ void psxBios__card_read(void) { // 0x4f
 void psxBios__new_card(void) { // 0x50
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x50]);
-#endif;
+#endif
 	pc0 = ra;
 }
 
@@ -2588,6 +2647,17 @@ void psxBios__card_chan(void) { // 0x58
 #endif
 
 	v0 = card_active_chan;
+	pc0 = ra;
+}
+
+/* Checks the devicename, and if it's accepted, calls a device specific function. 
+ * For the existing devices (cdrom,bu,tty) that specific function simply returns without doing anything.
+ * Maybe other devices (like printers or modems) would do something more interesting. */
+void psxBios_test_device(void) { // 5d
+#ifdef PSXBIOS_LOG
+	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x5d]);
+#endif
+
 	pc0 = ra;
 }
 
@@ -2711,8 +2781,8 @@ void psxBiosInit(void) {
 	//biosA0[0x05] = psxBios_ioctl;
 	//biosA0[0x06] = psxBios_exit;
 	//biosA0[0x07] = psxBios_sys_a0_07;
-	//biosA0[0x08] = psxBios_getc;
-	//biosA0[0x09] = psxBios_putc;
+	biosA0[0x08] = psxBios_getc;
+	biosA0[0x09] = psxBios_putc;
 	biosA0[0x0a] = psxBios_todigit;
 	//biosA0[0x0b] = psxBios_atof;
 	biosA0[0x0c] = psxBios_strtoul;
@@ -2785,7 +2855,7 @@ void psxBiosInit(void) {
 	biosA0[0x51] = psxBios_LoadExec;
 	//biosA0[0x52] = psxBios_GetSysSp;
 	//biosA0[0x53] = psxBios_sys_a0_53;
-	//biosA0[0x54] = psxBios__96_init_a54;
+	biosA0[0x54] = psxBios__96_init;
 	//biosA0[0x55] = psxBios__bu_init_a55;
 	//biosA0[0x56] = psxBios__96_remove_a56;
 	//biosA0[0x57] = psxBios_sys_a0_57;
@@ -2850,7 +2920,7 @@ void psxBiosInit(void) {
 	//biosA0[0x92] = psxBios_sys_a0_92;
 	//biosA0[0x93] = psxBios_sys_a0_93;
 	//biosA0[0x94] = psxBios_sys_a0_94;
-	//biosA0[0x95] = psxBios_sys_a0_95;
+	biosA0[0x95] = psxBios__96_init; //Subfunction of CDInit
 	//biosA0[0x96] = psxBios_AddCDROMDevice;
 	//biosA0[0x97] = psxBios_AddMemCardDevide;
 	//biosA0[0x98] = psxBios_DisableKernelIORedirection;
@@ -2941,8 +3011,8 @@ void psxBiosInit(void) {
 	//biosB0[0x37] = psxBios_ioctl;
 	//biosB0[0x38] = psxBios_exit;
 	//biosB0[0x39] = psxBios_sys_b0_39;
-	//biosB0[0x3a] = psxBios_getc;
-	//biosB0[0x3b] = psxBios_putc;
+	biosB0[0x3a] = psxBios_getc;
+	biosB0[0x3b] = psxBios_putc;
 	biosB0[0x3c] = psxBios_getchar;
 	//biosB0[0x3e] = psxBios_gets;
 	//biosB0[0x40] = psxBios_cd;
@@ -2958,7 +3028,7 @@ void psxBiosInit(void) {
 	biosB0[0x4a] = psxBios_InitCARD;
 	biosB0[0x4b] = psxBios_StartCARD;
 	biosB0[0x4c] = psxBios_StopCARD;
-	//biosB0[0x4d] = psxBios_sys_b0_4d;
+	biosB0[0x4d] = psxBios__card_info; // _card_info_subfunc, but it's a subfunction of psxBios__card_info
 	biosB0[0x4e] = psxBios__card_write;
 	biosB0[0x4f] = psxBios__card_read;
 	biosB0[0x50] = psxBios__new_card;
@@ -2970,7 +3040,7 @@ void psxBiosInit(void) {
 	biosB0[0x56] = psxBios_GetC0Table;
 	biosB0[0x57] = psxBios_GetB0Table;
 	biosB0[0x58] = psxBios__card_chan;
-	//biosB0[0x59] = psxBios_sys_b0_59;
+	biosB0[0x59] = psxBios_test_device;
 	//biosB0[0x5a] = psxBios_sys_b0_5a;
 	biosB0[0x5b] = psxBios_ChangeClearPad;
 	biosB0[0x5c] = psxBios__card_status;
@@ -2980,7 +3050,7 @@ void psxBiosInit(void) {
 	//biosC0[0x01] = psxBios_InitException;
 	biosC0[0x02] = psxBios_SysEnqIntRP;
 	biosC0[0x03] = psxBios_SysDeqIntRP;
-	//biosC0[0x04] = psxBios_get_free_EvCB_slot;
+	biosC0[0x04] = psxBios_OpenEvent; // get_free_EvCB_slot(), a subfunction for OpenEvent.
 	//biosC0[0x05] = psxBios_get_free_TCB_slot;
 	//biosC0[0x06] = psxBios_ExceptionHandler;
 	//biosC0[0x07] = psxBios_InstallExeptionHandler;
@@ -3035,6 +3105,7 @@ void psxBiosInit(void) {
 	pad_buf1len = pad_buf2len = 0;
 	heap_addr = NULL;
 	heap_end = NULL;
+	heap_size = 0;
 	CardState = -1;
 	CurThread = 0;
 	memset(FDesc, 0, sizeof(FDesc));
