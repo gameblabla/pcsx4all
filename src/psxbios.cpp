@@ -3397,10 +3397,15 @@ void psxBiosException(void) {
 				break;
 				/*SYS(04h..FFFFFFFFh) - calls DeliverEvent(F0000010h,4000h)*/
 				default:
-					/* These are syscalls with invalid function number in R4.
-					 * For whatever reason that is handled by issuing DeliverEvent(F0000010h,4000h).
-					 * Thereafter, the syscall returns to the main program (ie. it doesn't cause a SystemError). */
-					DeliverEvent(0xf0000010,0x4000);
+					/* Documentation says this about invalid SYS calls :
+					* "These are syscalls with invalid function number in R4.
+					* For whatever reason that is handled by issuing DeliverEvent(F0000010h,4000h).
+					* Thereafter, the syscall returns to the main program (ie. it doesn't cause a SystemError)."
+					* 
+					* This can actually make PCSX4ALL crash when that happens. 
+					* Given that this function does nothing but return to the main program, 
+					* i fail to see how it is useful here. Let's disable it for now but keep it here for documentation purposes.*/
+					/* DeliverEvent(0xf0000010,0x4000); */
 				break;
 			}
 			ResetIoCycle();
