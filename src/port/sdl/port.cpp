@@ -89,6 +89,18 @@ const char CNTfix_table[19][10]=
 	{"SLES02558"}
 };
 
+const char MemorycardHack[8][10] =
+{
+	/* Lifeforce Tenka, also known as Codename Tenka */
+	{"SLES00613"},
+	{"SLED00690"},
+	{"SLES00614"},
+	{"SLES00615"},
+	{"SLES00616"},
+	{"SLES00617"},
+	{"SCUS94409"}
+};
+
 /* Function for automatic patching according to GameID.
  * It's possible that some of these games have no IDs, like some japanese games i encountered.
  * I need to check whenever this matters or not for our games.
@@ -99,6 +111,7 @@ void CheckforCDROMid_applyhacks()
 {
 	uint8_t i;
 	
+#ifdef GPU_UNAI
 	/* Fixes Grandia JP. Need to check if the hack needs to be applied against PAL/US versions too. */
 	extern bool use_clip_368;
 	use_clip_368 = gpu_unai_config_ext.clip_368;
@@ -107,12 +120,22 @@ void CheckforCDROMid_applyhacks()
 		use_clip_368 = 1;
 		return;
 	}
+#endif
 	
 	/* Apply hack battle fix for Inuyasha - Sengoku Otogi Kassen */
 	if (strncmp(CdromId, "SLPS03503", 9) == 0)
 	{
 		Config.VSyncWA = 1;
 		return;
+	}
+	
+	/* Apply Memory card hack for Codename Tenka for going past the screen asking to remove MC */
+	for(i=0;i<sizeof(MemorycardHack);i++)
+	{
+		if (strncmp(CdromId, MemorycardHack[i], 9) == 0)
+		{
+			Config.MemoryCardHack = 1;
+		}
 	}
 	
 	/* Apply hackfix for Parasite Eve 2, Vandal Hearts I/II */
@@ -902,6 +925,7 @@ int main (int argc, char **argv)
   Config.RCntFix=0; /* 1=Parasite Eve 2, Vandal Hearts 1/2 Fix */
   Config.VSyncWA=0; /* 1=InuYasha Sengoku Battle Fix */
   Config.SpuIrq=0; /* 1=SPU IRQ always on, fixes some games */
+  Config.MemoryCardHack=0; /* Hack for Codename Tenka, only enabled for the game */
 
   Config.SyncAudio=0;	/* 1=emu waits if audio output buffer is full
 	                       (happens seldom with new auto frame limit) */

@@ -158,6 +158,15 @@ typedef struct {
 	boolean FrameLimit;  // Limit to NTSC/PAL framerate
 
 	s8      FrameSkip;	// -1: AUTO  0: OFF  1-3: FIXED
+	
+	/* CodeName Takeda requires the player to remove one of the memory cards.
+	 * However, the use of such hack for going around this can actually break the behaviour of some games
+	 * like Digimon World. (which thinks a save is available, when it's in fact not)
+	 * But since this game does need it, let's add a setting for it.
+	 * In the future, we could simply allow the user to remove it themselves but an auto-hack
+	 * more preferable in this case. (Because it would be less conveniant)
+	*/
+	s8      MemoryCardHack; 
 
 	// Options for performance monitor
 	boolean PerfmonConsoleOutput;
