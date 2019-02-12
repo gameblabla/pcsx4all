@@ -60,8 +60,8 @@ enum psxEventNum {
 
 void psxEvqueueInit(void);
 void psxEvqueueInitFromFreeze(void);
-void psxEvqueueAdd(psxEventNum ev, u32 cycles_after);
-void psxEvqueueRemove(psxEventNum ev);
+void psxEvqueueAdd(enum psxEventNum ev, u32 cycles_after);
+void psxEvqueueRemove(enum psxEventNum ev);
 void psxEvqueueDispatchAndRemoveFront(psxRegisters *pr);
 
 // Should be called when Config.PsxType changes

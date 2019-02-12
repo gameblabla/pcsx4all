@@ -71,7 +71,7 @@ int Load(const char *ExePath);
 
 int SaveState(const char *file);
 int LoadState(const char *file);
-int CheckState(const char *file, bool *uses_hle, bool get_sshot, u16 *sshot_image);
+int CheckState(const char *file, uint8_t *uses_hle, uint8_t get_sshot, u16 *sshot_image);
 
 enum {
 	CHECKSTATE_SUCCESS        = 0,
@@ -82,6 +82,6 @@ enum {
 	CHECKSTATE_ERR_READ       = -5
 };
 
-bool FileExists(const char* filename);
+uint8_t FileExists(const char* filename);
 int FileDate(const char* filename, char *date_str, time_t *m_time);
 #endif /* __MISC_H__ */

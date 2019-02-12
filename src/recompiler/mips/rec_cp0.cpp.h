@@ -67,7 +67,7 @@ static void emitTestSWInts()
 	LI16(MIPSREG_A1, (branch == 1 ? 1 : 0)); // <BD slot>
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath = false;
+	uint8_t use_fastpath = 0;
 
 	rec_recompile_end_part1();
 

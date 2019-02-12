@@ -40,7 +40,7 @@ void pl_screenshot_160x120_rgb565(uint16_t *dst)
   int h = pl_data.sinfo.h;
   int hres = pl_data.sinfo.hres;
   int vres = pl_data.sinfo.vres;
-  bool depth24 = pl_data.sinfo.depth24;
+  uint8_t depth24 = pl_data.sinfo.depth24;
   uint16_t *src = (uint16_t*)pl_data.sinfo.vram;
   const int vram_h = 512;
 

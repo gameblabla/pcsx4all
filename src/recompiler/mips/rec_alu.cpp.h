@@ -35,7 +35,7 @@ static void recADDIU()
 {
 	// rt = rs + (s32)imm
 
-	const bool set_const = IsConst(_Rs_);
+	const uint8_t set_const = IsConst(_Rs_);
 
 	/* Catch ADDIU reg, $0, imm */
 	/* Exit if const already loaded */
@@ -53,7 +53,7 @@ static void recSLTI()
 {
 	// rt = (s32)rs < (s32)imm
 
-	const bool set_const = IsConst(_Rs_);
+	const uint8_t set_const = IsConst(_Rs_);
 
 	REC_ITYPE_RT_RS_I16(SLTI, _Rt_, _Rs_, _Imm_);
 
@@ -66,7 +66,7 @@ static void recSLTIU()
 	// rt = (u32)rs < (u32)((s32)imm)
 	// NOTE: SLTIU sign-extends its immediate before the unsigned comparison
 
-	const bool set_const = IsConst(_Rs_);
+	const uint8_t set_const = IsConst(_Rs_);
 
 	REC_ITYPE_RT_RS_I16(SLTIU, _Rt_, _Rs_, _Imm_);
 
@@ -100,7 +100,7 @@ static void recANDI()
 {
 	// rt = rs & (u32)imm
 
-	const bool set_const = IsConst(_Rs_);
+	const uint8_t set_const = IsConst(_Rs_);
 
 	REC_ITYPE_RT_RS_U16(ANDI, _Rt_, _Rs_, _ImmU_);
 
@@ -112,7 +112,7 @@ static void recORI()
 {
 	// rt = rs | (u32)imm
 
-	bool set_const = IsConst(_Rs_);
+	uint8_t set_const = IsConst(_Rs_);
 
 	/* Catch ORI reg, $0, imm */
 	/* Exit if const already loaded */
@@ -129,7 +129,7 @@ static void recXORI()
 {
 	// rt = rs ^ (u32)imm
 
-	const bool set_const = IsConst(_Rs_);
+	const uint8_t set_const = IsConst(_Rs_);
 
 	REC_ITYPE_RT_RS_U16(XORI, _Rt_, _Rs_, _ImmU_);
 
@@ -195,7 +195,7 @@ static void recADDU()
 {
 	// rd = rs + rt
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(ADDU, _Rd_, _Rs_, _Rt_);
 
@@ -208,7 +208,7 @@ static void recSUBU()
 {
 	// rd = rs - rt
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(SUBU, _Rd_, _Rs_, _Rt_);
 
@@ -221,7 +221,7 @@ static void recAND()
 {
 	// rd = rs & rt
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(AND, _Rd_, _Rs_, _Rt_);
 
@@ -233,7 +233,7 @@ static void recOR()
 {
 	// rd = rs | rt
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(OR,  _Rd_, _Rs_, _Rt_);
 
@@ -245,7 +245,7 @@ static void recXOR()
 {
 	// rd = rs ^ rt
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(XOR, _Rd_, _Rs_, _Rt_);
 
@@ -257,7 +257,7 @@ static void recNOR()
 {
 	// rd = ~(rs | rt)
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(NOR, _Rd_, _Rs_, _Rt_);
 
@@ -269,7 +269,7 @@ static void recSLT()
 {
 	// rd = rs < rt (SIGNED)
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(SLT,  _Rd_, _Rs_, _Rt_);
 
@@ -281,7 +281,7 @@ static void recSLTU()
 {
 	// rd = rs < rt (UNSIGNED)
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RS_RT(SLTU, _Rd_, _Rs_, _Rt_);
 
@@ -316,7 +316,7 @@ static void recSLL()
 {
 	// rd = rt << sa
 
-	const bool set_const = IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rt_);
 
 #ifdef USE_MIPS32R2_ALU_OPCODE_CONVERSION
 	if (!branch)
@@ -425,7 +425,7 @@ static void recSRL()
 {
 	// rd = rt >> sa
 
-	const bool set_const = IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rt_);
 
 #ifdef USE_MIPS32R2_ALU_OPCODE_CONVERSION
 	if (!branch)
@@ -544,7 +544,7 @@ static void recSRA()
 {
 	// rd = (s32)rt >> sa
 
-	const bool set_const = IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rt_);
 
 #ifdef USE_MIPS32R2_ALU_OPCODE_CONVERSION
 	if (!branch)
@@ -637,7 +637,7 @@ static void recSLLV()
 {
 	// rd = rt << rs
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RT_RS(SLLV, _Rd_, _Rt_, _Rs_);
 
@@ -649,7 +649,7 @@ static void recSRLV()
 {
 	// rd = (u32)rt >> rs
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RT_RS(SRLV, _Rd_, _Rt_, _Rs_);
 
@@ -661,7 +661,7 @@ static void recSRAV()
 {
 	// rd = (s32)rt >> rs
 
-	const bool set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
 
 	REC_RTYPE_RD_RT_RS(SRAV, _Rd_, _Rt_, _Rs_);
 

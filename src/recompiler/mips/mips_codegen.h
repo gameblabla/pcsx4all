@@ -301,7 +301,7 @@ do { \
 #define JAL(func) \
 do { \
     /* JAL and/or C code overwrites $ra block return addr */                      \
-    block_ra_loaded = false;                                                      \
+    block_ra_loaded = 0;                                                      \
     write32(0x0c000000 | (((u32)(func) & 0x0fffffff) >> 2));                      \
 } while (0)
 
@@ -453,19 +453,19 @@ do { \
 
 
 
-static inline bool opcodeIsStore(const u32 opcode)
+static inline uint8_t opcodeIsStore(const u32 opcode)
 {
 	return (_fOp_(opcode) >= 0x28 && _fOp_(opcode) <= 0x2b) // SB,SH,SWL,SW
 	       ||
 	       _fOp_(opcode) == 0x2e;                           // SWR
 }
 
-static inline bool opcodeIsLoad(const u32 opcode)
+static inline uint8_t opcodeIsLoad(const u32 opcode)
 {
 	return _fOp_(opcode) >= 0x20 && _fOp_(opcode) <= 0x26; // LB,LH,LWL,LW,LBU,LHU,LWR
 }
 
-static inline bool opcodeIsBranch(const u32 opcode)
+static inline uint8_t opcodeIsBranch(const u32 opcode)
 {
 	return (_fOp_(opcode) == 0x01 && (_fRt_(opcode) == 0x00 || // BLTZ
 	                                  _fRt_(opcode) == 0x01 || // BGEZ
@@ -475,7 +475,7 @@ static inline bool opcodeIsBranch(const u32 opcode)
 	       (_fOp_(opcode) >= 0x04 && _fOp_(opcode) <= 0x07);   // BEQ,BNE,BLEZ,BGTZ
 }
 
-static inline bool opcodeIsJump(const u32 opcode)
+static inline uint8_t opcodeIsJump(const u32 opcode)
 {
 	return (_fOp_(opcode) == 0x00 && (_fFunct_(opcode) == 0x08 || // JR
 	                                  _fFunct_(opcode) == 0x09))  // JALR
@@ -483,7 +483,7 @@ static inline bool opcodeIsJump(const u32 opcode)
 	       (_fOp_(opcode) >= 0x02 && _fOp_(opcode) <= 0x03);      // J,JAL
 }
 
-static inline bool opcodeIsBranchOrJump(const u32 opcode)
+static inline uint8_t opcodeIsBranchOrJump(const u32 opcode)
 {
 	return opcodeIsBranch(opcode) || opcodeIsJump(opcode);
 }
@@ -491,15 +491,15 @@ static inline bool opcodeIsBranchOrJump(const u32 opcode)
 
 /* Defined in mips_codegen.cpp */
 
-void emitAddressConversion(u32 dst_reg, u32 src_reg, u32 tmp_reg, bool psx_mem_mapped);
+void emitAddressConversion(u32 dst_reg, u32 src_reg, u32 tmp_reg, uint8_t psx_mem_mapped);
 
 /* Opcode analysis functions */
 struct ALUOpInfo {
-	bool writes_rt;
-	bool reads_rs;
-	bool reads_rt;
+	uint8_t writes_rt;
+	uint8_t reads_rs;
+	uint8_t reads_rt;
 };
-bool opcodeIsALU(const u32 opcode, struct ALUOpInfo *info);
+uint8_t opcodeIsALU(const u32 opcode, struct ALUOpInfo *info);
 u64 opcodeGetReads(const u32 op);
 u64 opcodeGetWrites(const u32 op);
 

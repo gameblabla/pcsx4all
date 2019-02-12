@@ -57,8 +57,8 @@ enum
 static SDL_Surface *screen;
 unsigned short *SCREEN;
 
-static bool pcsx4all_initted = false;
-static bool emu_running = false;
+static uint8_t pcsx4all_initted = 0;
+static uint8_t emu_running = 0;
 
 void config_load();
 void config_save();
@@ -113,7 +113,7 @@ void CheckforCDROMid_applyhacks()
 	
 #ifdef GPU_UNAI
 	/* Fixes Grandia JP. Need to check if the hack needs to be applied against PAL/US versions too. */
-	extern bool use_clip_368;
+	extern uint8_t use_clip_368;
 	use_clip_368 = gpu_unai_config_ext.clip_368;
 	if (strncmp(CdromId, "SLPS02124", 9) == 0)
 	{
@@ -155,7 +155,7 @@ static void pcsx4all_exit(void)
 
   SDL_Quit();
 
-  if (pcsx4all_initted == true)
+  if (pcsx4all_initted == 1)
   {
     ReleasePlugins();
     psxShutdown();
@@ -636,7 +636,7 @@ static unsigned short pad2 = 0xffff;
 static unsigned short analog1 = 0;
 static int menu_check = 0;
 static int select_count = 0;
-boolean use_speedup = false;
+uint8_t use_speedup = 0;
 SDL_Joystick * sdl_joy;
 #define joy_commit_range    3276
 enum
@@ -747,9 +747,9 @@ void pad_update(void)
     else
     {
       // START + SELECT
-      if (use_speedup == false && ++select_count == 70)
+      if (use_speedup == 0 && ++select_count == 70)
       {
-        use_speedup = true;
+        use_speedup = 1;
       }
     }
   }
@@ -766,7 +766,7 @@ void pad_update(void)
     }
     else if (select_count == 0)
     {
-      use_speedup = false;
+      use_speedup = 0;
     }
   }
   
@@ -818,11 +818,11 @@ void pad_update(void)
     // automatically, displaying message that write is in progress.
     sioSyncMcds();
 
-    emu_running = false;
+    emu_running = 0;
     pl_pause();    // Tell plugin_lib we're pausing emu
     GameMenu();
-    emu_running = true;
-    use_speedup = false;
+    emu_running = 1;
+    use_speedup = 0;
     menu_check = 0;
     analog1 = 0;
     pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
@@ -941,9 +941,9 @@ int main (int argc, char **argv)
   Config.ForcedXAUpdates = FORCED_XA_UPDATES_DEFAULT;
 
   Config.ShowFps=0;    // 0=don't show FPS
-  Config.FrameLimit = true;
+  Config.FrameLimit = 1;
   Config.FrameSkip = FRAMESKIP_OFF;
-  Config.AnalogArrow = false;
+  Config.AnalogArrow = 0;
 
   //zear - Added option to store the last visited directory.
   strncpy(Config.LastDir, homedir, MAXPATHLEN); /* Defaults to home directory. */
@@ -1046,7 +1046,7 @@ int main (int argc, char **argv)
   probe_lastdir();
 
   // command line options
-  bool param_parse_error = 0;
+  uint8_t param_parse_error = 0;
   for (int i = 1; i < argc; i++)
   {
     // PCSX
@@ -1134,7 +1134,7 @@ int main (int argc, char **argv)
         printf("ERROR: -spuupdatefreq value must be between %d..%d\n"
                "(%d is once per frame)\n",
                SPU_UPDATE_FREQ_MIN, SPU_UPDATE_FREQ_MAX, SPU_UPDATE_FREQ_1);
-        param_parse_error = true;
+        param_parse_error = 1;
         break;
       }
     }
@@ -1163,7 +1163,7 @@ int main (int argc, char **argv)
       {
         printf("ERROR: -forcedxaupdates value must be between %d..%d\n",
                FORCED_XA_UPDATES_MIN, FORCED_XA_UPDATES_MAX);
-        param_parse_error = true;
+        param_parse_error = 1;
         break;
       }
     }
@@ -1172,15 +1172,15 @@ int main (int argc, char **argv)
     if (strcmp(argv[i],"-perfmon") == 0)
     {
       // Enable detailed stats and console output
-      Config.PerfmonConsoleOutput = true;
-      Config.PerfmonDetailedStats = true;
+      Config.PerfmonConsoleOutput = 1;
+      Config.PerfmonDetailedStats = 1;
     }
 
     // GPU
     // show FPS
     if (strcmp(argv[i],"-showfps") == 0)
     {
-      Config.ShowFps = true;
+      Config.ShowFps = 1;
     }
 
     // frame limit
@@ -1209,7 +1209,7 @@ int main (int argc, char **argv)
       if (val == -1000)
       {
         printf("ERROR: -frameskip value must be between -1..3 (-1 is AUTO)\n");
-        param_parse_error = true;
+        param_parse_error = 1;
         break;
       }
     }
@@ -1299,7 +1299,7 @@ int main (int argc, char **argv)
     // Don't output fixed number of samples per frame
     // (unknown if this helps or hurts performance
     //  or compatibility.) The default in all builds
-    //  of PCSX_ReARMed is "true", so that is also the
+    //  of PCSX_ReARMed is "1", so that is also the
     //  default here.
     if (strcmp(argv[i],"-nofixedupdates") == 0)
     {
@@ -1324,7 +1324,7 @@ int main (int argc, char **argv)
       if (val == -1)
       {
         printf("ERROR: -interpolation value must be one of: none,simple,gaussian,cubic\n");
-        param_parse_error = true;
+        param_parse_error = 1;
         break;
       }
 
@@ -1346,7 +1346,7 @@ int main (int argc, char **argv)
         printf("ERROR: -volume value must be between 0-1024. Value of 0 will mute sound\n"
                "        but SPU plugin will still run, ensuring best compatibility.\n"
                "        Use -silent flag to disable SPU plugin entirely.\n");
-        param_parse_error = true;
+        param_parse_error = 1;
         break;
       }
 
@@ -1358,8 +1358,8 @@ int main (int argc, char **argv)
     //  audio stutter will be increased. "False" is the
     //  default setting on Pandora/Pyra/Android builds of
     //  PCSX_ReARMed, but Wiz/Caanoo builds used the faster
-    //  inaccurate setting, "true", so I've made our default
-    //  "true" as well, since we target low-end devices.
+    //  inaccurate setting, "1", so I've made our default
+    //  "1" as well, since we target low-end devices.
     if (strcmp(argv[i],"-notempo") == 0)
     {
       spu_config.iTempo = 0;
@@ -1416,7 +1416,7 @@ int main (int argc, char **argv)
   if (argc < 2 || cdrfilename[0] == '\0')
   {
     // Enter frontend main-menu:
-    emu_running = false;
+    emu_running = 0;
     if (!SelectGame())
     {
       printf("ERROR: missing filename for -iso\n");
@@ -1436,8 +1436,8 @@ int main (int argc, char **argv)
     exit(1);
   }
 
-  pcsx4all_initted = true;
-  emu_running = true;
+  pcsx4all_initted = 1;
+  emu_running = 1;
 
   // Initialize plugin_lib, gpulib
   pl_init();

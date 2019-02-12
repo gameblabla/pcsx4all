@@ -201,7 +201,7 @@ int LoadCdrom() {
 	fake_bios_gpu_setup();
 
 	if (!Config.HLE) {
-		// skip BIOS logos, unless Config.SlowBoot is true
+		// skip BIOS logos, unless Config.SlowBoot is 1
 		if (!Config.SlowBoot) psxRegs.pc = psxRegs.GPR.n.ra;
 		return 0;
 	}
@@ -480,7 +480,8 @@ int Load(const char *ExePath) {
 	u8 opcode;
 	u32 section_address, section_size;
 	void *mem;
-
+	u32 new_pc;
+	
 	strncpy(CdromId, "SLUS99999", 9);
 	strncpy(CdromLabel, "SLUS_999.99", 11);
 
@@ -562,7 +563,6 @@ int Load(const char *ExePath) {
 							}
 							break;
 						case 3: /* register loading (PC only?) */
-							u32 new_pc;
 							if (fseek(tmpFile, 2, SEEK_CUR) == -1 || /* unknown field */
 							    fread(&new_pc, 4, 1, tmpFile) != 1) {
 								printf("Error reading CPE_EXE executable file\n");
@@ -742,9 +742,9 @@ int SaveState(const char *file) {
 	SPUFreeze_t *spufP = NULL;
 	unsigned char *pMem = NULL;
 	u32 Size;
-	bool close_error = false;
+	uint8_t close_error = 0;
 
-	if ((f = SaveFuncs.open(file, true)) == NULL) {
+	if ((f = SaveFuncs.open(file, 1)) == NULL) {
 		printf("Error opening savestate file for writing: %s\n", file);
 		return -1;
 	}
@@ -807,7 +807,7 @@ int SaveState(const char *file) {
 		goto error;
 
 	if (SaveFuncs.close(f)) {
-		close_error = true;
+		close_error = 1;
 		goto error;
 	}
 	return 0;
@@ -834,7 +834,7 @@ int LoadState(const char *file) {
 	// 160x120 rgb565 screenshot image
 	int sshot_image_size = 160*120*2;
 
-	if ((f = SaveFuncs.open(file, false)) == NULL) {
+	if ((f = SaveFuncs.open(file, 0)) == NULL) {
 		printf("Error opening savestate file for reading: %s\n", file);
 		return -1;
 	}
@@ -935,11 +935,11 @@ error:
 }
 
 // Checks if sstate 'file' contains a valid header and version.
-// If 'get_sshot' is true, it will check if it contains screenshot data.
-// If 'get_sshot' is true and 'sshot_image' is not NULL, it will copy
+// If 'get_sshot' is 1, it will check if it contains screenshot data.
+// If 'get_sshot' is 1 and 'sshot_image' is not NULL, it will copy
 //  the 160*120 rgb565 sshot data at sshot_image ptr.
 // Returns 0 for success, negative CHECKSTATE_ERR_* value for errors (misc.h)
-int CheckState(const char *file, bool *uses_hle, bool get_sshot, u16 *sshot_image)
+int CheckState(const char *file, uint8_t *uses_hle, uint8_t get_sshot, u16 *sshot_image)
 {
 	if (!file || file[0] == '\0') {
 		printf("Error in %s(): NULL ptr or empty savestate filename string\n", __func__);
@@ -949,9 +949,9 @@ int CheckState(const char *file, bool *uses_hle, bool get_sshot, u16 *sshot_imag
 	void *f = NULL;
 	char header[32];
 	u32 version;
-	bool hle;
+	uint8_t hle;
 
-	if ((f = SaveFuncs.open(file, false)) == NULL) {
+	if ((f = SaveFuncs.open(file, 0)) == NULL) {
 		printf("Error in %s() opening savestate file: %s\n", __func__, file);
 		perror(__func__);
 		return CHECKSTATE_ERR_OPEN;
@@ -1012,10 +1012,10 @@ int CheckState(const char *file, bool *uses_hle, bool get_sshot, u16 *sshot_imag
 // Misc utility functions //
 ////////////////////////////
 
-bool FileExists(const char* filename)
+uint8_t FileExists(const char* filename)
 {
 	if (!filename || *filename == '\0')
-		return false;
+		return 0;
 	struct stat st;
 	int result = stat(filename, &st);
 	return result == 0;

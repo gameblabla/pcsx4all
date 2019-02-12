@@ -143,14 +143,14 @@ static uintptr_t block_ret_addr;      /* Non-zero when blocks are using direct r
 static uintptr_t block_fast_ret_addr; /* Non-zero when blocks are using direct return jumps &
                                          dispatch loop fastpath is enabled */
 
-static bool psx_mem_mapped;                /* PS1 RAM mmap'd+mirrored at fixed address? (psxM) */
-static bool rec_mem_mapped;                /* Code ptr arrays mmap'd+mirrored at fixed address? (recRAM,recROM) */
+static uint8_t psx_mem_mapped;                /* PS1 RAM mmap'd+mirrored at fixed address? (psxM) */
+static uint8_t rec_mem_mapped;                /* Code ptr arrays mmap'd+mirrored at fixed address? (recRAM,recROM) */
 
 /* Flags used during a recompilation phase */
-static bool branch;                        /* Current instruction lies in a BD slot? */
-static bool end_block;                     /* Has recompilation phase ended? */
-static bool block_ra_loaded;               /* Is block return addr currently loaded in host $ra reg? */
-static bool skip_emitting_next_mflo;       /* Was a MULT/MULTU converted to 3-op MUL? See rec_mdu.cpp.h */
+static uint8_t branch;                        /* Current instruction lies in a BD slot? */
+static uint8_t end_block;                     /* Has recompilation phase ended? */
+static uint8_t block_ra_loaded;               /* Is block return addr currently loaded in host $ra reg? */
+static uint8_t skip_emitting_next_mflo;       /* Was a MULT/MULTU converted to 3-op MUL? See rec_mdu.cpp.h */
 
 
 #ifdef WITH_DISASM
@@ -350,23 +350,23 @@ static void recRecompile()
 	iRegs.consts |= (1 << 0);  // $r0 is always zero val
 
 	// Flag indicates when recompilation should stop
-	end_block = false;
+	end_block = 0;
 
 	// Flag indicates if $ra is currently loaded with block return address.
 	//  (When blocks are using indirect return jumps, they jump to address
 	//   in $ra. The dispatch loop will set it before all block entries, and
 	//   emitted code tries to keep it set.)
-	block_ra_loaded = true;
+	block_ra_loaded = 1;
 
 	// See convertMultiplyTo3Op() and recMFLO() in rec_mdu.cpp.h
-	skip_emitting_next_mflo = false;
+	skip_emitting_next_mflo = 0;
 
 	// Number of discardable instructions we are currently skipping
 	int discard_cnt = 0;
 
 	do {
 		// Flag indicates if next instruction lies in a BD slot
-		branch = false;
+		branch = 0;
 
 		psxRegs.code = *(u32 *)((char *)PSXM(pc));
 
@@ -421,7 +421,7 @@ static int recInit()
 #ifdef USE_VIRTUAL_RECRAM_MAPPING
 	if (!rec_mem_mapped && !recRAM && !recROM) {
 		if (rec_mmap_rec_mem() >= 0) {
-			rec_mem_mapped = true;
+			rec_mem_mapped = 1;
 			recRAM = (s8*)REC_RAM_VADDR;
 			recROM = (s8*)REC_ROM_VADDR;
 		}
@@ -474,7 +474,7 @@ static void recShutdown()
 	if (rec_mem_mapped)
 		rec_munmap_rec_mem();
 
-	psx_mem_mapped = rec_mem_mapped = false;
+	psx_mem_mapped = rec_mem_mapped = 0;
 }
 
 /* It seems there's no way to tell GCC that something is being called inside
@@ -663,7 +663,7 @@ __asm__ __volatile__ (
 // NOTE: We'd never reach this point because the block dispatch loop is
 //  currently infinite. This could change in the future.
 // TODO: Could add a way to reset a game or load a new game from within
-//  the running emulator by setting a global boolean, resetting
+//  the running emulator by setting a global uint8_tean, resetting
 //  psxRegs.io_cycle_counter to 0, and checking if it's been set before
 //  calling pxsBranchTest() here. If set, you must jump here to
 //  exit the loop, to ensure that stack frame is adjusted before return!
@@ -822,7 +822,7 @@ __asm__ __volatile__ (
 // NOTE: We'd never reach this point because the block dispatch loop is
 //  currently infinite. This could change in the future.
 // TODO: Could add a way to reset a game or load a new game from within
-//  the running emulator by setting a global boolean, resetting
+//  the running emulator by setting a global uint8_tean, resetting
 //  psxRegs.io_cycle_counter to 0, and checking if it's been set before
 //  calling pxsBranchTest() here. If set, you must jump here to
 //  exit the loop, to ensure that stack frame is adjusted before return!
@@ -1038,7 +1038,7 @@ __asm__ __volatile__ (
 // NOTE: We'd never reach this point because the block dispatch loop is
 //  currently infinite. This could change in the future.
 // TODO: Could add a way to reset a game or load a new game from within
-//  the running emulator by setting a global boolean, resetting
+//  the running emulator by setting a global uint8_tean, resetting
 //  psxRegs.io_cycle_counter to 0, and checking if it's been set before
 //  calling pxsBranchTest() here. If set, you must jump here to
 //  exit the loop, to ensure that stack frame is adjusted before return!
@@ -1253,7 +1253,7 @@ __asm__ __volatile__ (
 // NOTE: We'd never reach this point because the block dispatch loop is
 //  currently infinite. This could change in the future.
 // TODO: Could add a way to reset a game or load a new game from within
-//  the running emulator by setting a global boolean, resetting
+//  the running emulator by setting a global uint8_tean, resetting
 //  psxRegs.io_cycle_counter to 0, and checking if it's been set before
 //  calling pxsBranchTest() here. If set, you must jump here to
 //  exit the loop, to ensure that stack frame is adjusted before return!
@@ -1457,7 +1457,7 @@ static void recExecute()
 	//  block dispatch loops regardless.. All blocks load $ra off stack and jump
 	//  to it when returning.
 	// --> Var 'block_ret_addr' should remain set to zero throughout.
-	bool use_indirect_return_dispatch_loop = true;
+	uint8_t use_indirect_return_dispatch_loop = 1;
 	block_ret_addr = block_fast_ret_addr = 0;
 
 #if defined(ASM_EXECUTE_LOOP) && defined(USE_DIRECT_BLOCK_RETURN_JUMPS)
@@ -1492,7 +1492,7 @@ static void recExecute()
 
 			if (max_diff < 0x10000000) {
 				// Great, we'll emit code that uses direct return jumps
-				use_indirect_return_dispatch_loop = false;
+				use_indirect_return_dispatch_loop = 0;
 			} else {
 				printf("%s() WARNING: distance of %td too great for\n"
 					   "direct block returns. Falling back to indirect returns.\n", __func__, max_diff);
@@ -1531,7 +1531,7 @@ static void recClear(u32 Addr, u32 Size)
 	//  occur when many games stream CD data in-game.
 	u32 page = masked_ram_addr/4096;
 	u32 end_page = ((masked_ram_addr + (Size-1)*4)/4096) + 1;
-	bool has_code = false;
+	uint8_t has_code = 0;
 	do {
 		u32 pflag = 1 << (page & 7);  // Each byte in code_pages[] represents 8 pages
 		has_code = code_pages[page/8] & pflag;

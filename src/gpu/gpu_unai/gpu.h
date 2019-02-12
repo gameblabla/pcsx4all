@@ -64,9 +64,9 @@ struct gpu_unai_config_t
 #endif
 };
 
-extern gpu_unai_config_t gpu_unai_config_ext;
+extern struct gpu_unai_config_t gpu_unai_config_ext;
 
 // TODO: clean up show_fps frontend option
-extern  bool show_fps;
+extern uint8_t show_fps;
 
 #endif // GPU_UNAI_GPU_H

@@ -35,7 +35,7 @@
 
 struct pl_data_t
 {
-  bool fskip_advice, dynarec_compiled, is_pal;
+  uint8_t fskip_advice, dynarec_compiled, is_pal;
   int8_t frameskip;
   int frame_interval, frame_interval1024;
   int vsync_usec_time;
@@ -61,7 +61,7 @@ void pl_resume(void);
 void pl_clear_screen();
 void pl_clear_borders();
 
-static inline bool pl_frameskip_advice(void)
+static inline uint8_t pl_frameskip_advice(void)
 {
   return pl_data.fskip_advice;
 }
@@ -69,7 +69,7 @@ static inline bool pl_frameskip_advice(void)
 // Dynamic recompilers call this to advise recompilation occurred
 static inline void pl_dynarec_notify(void)
 {
-  pl_data.dynarec_compiled = true;
+  pl_data.dynarec_compiled = 1;
 }
 
 // In pl_sshot.cpp

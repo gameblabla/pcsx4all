@@ -87,22 +87,22 @@ static u32 SWR_MASKSHIFT[8] = { 0, 0xff, 0xffff, 0xffffff,
 #include "rec_lsu_hw.cpp.h"  // Direct HW I/O
 
 
-static inline bool skipCodeInvalidation(u32 reg_psx)
+static inline uint8_t skipCodeInvalidation(u32 reg_psx)
 {
-	bool skip_code_invalidation = false;
+	uint8_t skip_code_invalidation = 0;
 #ifdef SKIP_CODE_INVALIDATION_FOR_SOME_BASE_REGS
 		// Skip code invalidation when base register in use is obviously not
 		//  involved in code modification ($k0,$k1,$gp,$sp).
 		if (reg_psx >= 26 && reg_psx <= 29)
-			skip_code_invalidation = true;
+			skip_code_invalidation = 1;
 #endif
 	return skip_code_invalidation;
 }
 
 
-static inline bool skipAddressRangeCheck(u32 reg_psx)
+static inline uint8_t skipAddressRangeCheck(u32 reg_psx)
 {
-	bool skip_address_range_check = false;
+	uint8_t skip_address_range_check = 0;
 
 #ifdef SKIP_ADDRESS_RANGE_CHECK_FOR_SOME_BASE_REGS
 	if (psx_mem_mapped) {
@@ -110,7 +110,7 @@ static inline bool skipAddressRangeCheck(u32 reg_psx)
 		//  going to access RAM/scratchpad ($zero,$k0,$k1,$gp,$sp).
 		//  Zero reg can only access lower 64KB RAM region reserved for BIOS.
 		if ((reg_psx >= 26 && reg_psx <= 29) || (reg_psx == 0))
-			skip_address_range_check = true;
+			skip_address_range_check = 1;
 	}
 #endif
 
@@ -124,7 +124,7 @@ static inline bool skipAddressRangeCheck(u32 reg_psx)
    If 'pc_of_last_store_in_series' is not NULL, it will be set to the last store
    found in the series, or set to impossible value of 1 if no stores were found.
  */
-static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_includes_bd_slot_store)
+static int count_loads_stores(u32 *pc_of_last_store_in_series, uint8_t *series_includes_bd_slot_store)
 {
 	int count = 0;
 	u32 PC = pc - 4;
@@ -139,8 +139,8 @@ static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_incl
 
 	imm_min = imm_max = _Imm_;
 
-	bool store_found = false;
-	bool bd_slot_store_found = false;
+	uint8_t store_found = 0;
+	uint8_t bd_slot_store_found = 0;
 	int nops_at_end = 0;
 	for (;;)
 	{
@@ -156,8 +156,8 @@ static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_incl
 			continue;
 		}
 
-		bool is_store = opcodeIsStore(opcode);
-		bool is_load  = is_store ? false : opcodeIsLoad(opcode);
+		uint8_t is_store = opcodeIsStore(opcode);
+		uint8_t is_load  = is_store ? 0 : opcodeIsLoad(opcode);
 
 #ifdef LOG_LOAD_STORE_SERIES
 		num_stores += is_store;
@@ -183,7 +183,7 @@ static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_incl
 			{
 				// Include this branch/jump opcode in count. Emitter will skip it.
 				count++;
-				bd_slot_store_found = true;
+				bd_slot_store_found = 1;
 				nops_at_end = 0;
 				// Loop around again for BD-slot opcode, we'll terminate after that.
 				continue;
@@ -205,7 +205,7 @@ static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_incl
 		if (_fImm_(opcode) < imm_min) imm_min = _fImm_(opcode);
 
 		if (is_store) {
-			store_found = true;
+			store_found = 1;
 			if (pc_of_last_store_in_series != NULL)
 				*pc_of_last_store_in_series = (PC-4);
 		}
@@ -253,27 +253,27 @@ static int count_loads_stores(u32 *pc_of_last_store_in_series, bool *series_incl
 
 
 /* Emits a series of loads/stores to a non-const base address.
- * If 'force_indirect' is true, code emitted will use indirect C funcs to access
- * memory. If 'force_indirect' is false, both direct and indirect code will
+ * If 'force_indirect' is 1, code emitted will use indirect C funcs to access
+ * memory. If 'force_indirect' is 0, both direct and indirect code will
  * be emitted and address range will be checked before choosing path to take.
  */
 static void general_loads_stores(const int  count,
                              const u32  pc_of_last_store_in_series,
-                             const bool force_indirect)
+                             const uint8_t force_indirect)
 {
 	const u32 r1 = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
 
 	u32 PC = pc - 4;
 	int icount;
-	bool skip_address_range_check = false;
-	bool reg_state_pushed = false;
+	uint8_t skip_address_range_check = 0;
+	uint8_t reg_state_pushed = 0;
 
 #ifdef USE_DIRECT_MEM_ACCESS
 	u32 *backpatch_label_exit_1 = 0;
 	u32 *backpatch_label_exit_2 = 0;
 
-	const bool contains_store = (pc_of_last_store_in_series != 1);
-	const bool skip_code_invalidation = !contains_store || skipCodeInvalidation(_Rs_);
+	const uint8_t contains_store = (pc_of_last_store_in_series != 1);
+	const uint8_t skip_code_invalidation = !contains_store || skipCodeInvalidation(_Rs_);
 
 	skip_address_range_check = skipAddressRangeCheck(_Rs_);
 
@@ -287,7 +287,7 @@ static void general_loads_stores(const int  count,
 			//  of both the direct and indirect paths must remain identical.
 			//  Push the state here and we'll pop it before indirect path.
 			regPushState();
-			reg_state_pushed = true;
+			reg_state_pushed = 1;
 		}
 
 		u32 *backpatch_label_hle_1 = 0;
@@ -428,7 +428,7 @@ static void general_loads_stores(const int  count,
 
 		// Defer converting base reg until just before first use - this reduces
 		// load stalls when first opcode is a store and its 'rt' is not cached.
-		bool base_reg_converted = false;
+		uint8_t base_reg_converted = 0;
 
 		// Code invalidation needs the original base register value, however
 		//  it sometimes can get overwritten by the last load in a series.
@@ -448,8 +448,8 @@ static void general_loads_stores(const int  count,
 			if (opcode == 0)
 				continue;
 
-			const bool is_store = contains_store ? opcodeIsStore(opcode) : false;
-			const bool is_load  = is_store ? false : opcodeIsLoad(opcode);
+			const uint8_t is_store = contains_store ? opcodeIsStore(opcode) : 0;
+			const uint8_t is_load  = is_store ? 0 : opcodeIsLoad(opcode);
 
 			if (!is_store && !is_load) {
 				// Must be a jump/branch whose BD slot contained a store that
@@ -470,7 +470,7 @@ static void general_loads_stores(const int  count,
 				if (!base_reg_converted) {
 					// TEMP_2 = converted 'r1' base reg, TEMP_1 used as temp reg
 					emitAddressConversion(TEMP_2, r1, TEMP_1, psx_mem_mapped);
-					base_reg_converted = true;
+					base_reg_converted = 1;
 				}
 
 				backpatch_label_exit_1 = 0;
@@ -516,7 +516,7 @@ static void general_loads_stores(const int  count,
 				if (!base_reg_converted) {
 					// TEMP_2 = converted 'r1' base reg, TEMP_1 used as temp reg
 					emitAddressConversion(TEMP_2, r1, TEMP_1, psx_mem_mapped);
-					base_reg_converted = true;
+					base_reg_converted = 1;
 				}
 
 				if (icount == 1 && !(skip_address_range_check && skip_code_invalidation)) {
@@ -539,7 +539,7 @@ static void general_loads_stores(const int  count,
 			}
 		} while (--icount);
 
-		bool first_invalidation_done = false;
+		uint8_t first_invalidation_done = 0;
 		if (!skip_code_invalidation)
 		{
 			/*****************************************************
@@ -568,7 +568,7 @@ static void general_loads_stores(const int  count,
 					// We already placed base_reg+imm_max in MIPSREG_A0 during
 					//  initial range-checks. No need to load again if first
 					//  immediate is same as imm_max.
-					first_invalidation_done = true;
+					first_invalidation_done = 1;
 					if (imm != imm_max)
 						ADDIU(MIPSREG_A0, unmodified_base_reg, imm);  // Code invalidation needs eff addr
 				}
@@ -623,7 +623,7 @@ static void general_loads_stores(const int  count,
 
 	if (reg_state_pushed) {
 		regPopState();
-		reg_state_pushed = false;
+		reg_state_pushed = 0;
 	}
 
 	if (force_indirect || !skip_address_range_check)
@@ -656,8 +656,8 @@ static void general_loads_stores(const int  count,
 			if (opcode == 0)
 				continue;
 
-			const bool is_store = opcodeIsStore(opcode);
-			const bool is_load  = is_store ? false : opcodeIsLoad(opcode);
+			const uint8_t is_store = opcodeIsStore(opcode);
+			const uint8_t is_load  = is_store ? 0 : opcodeIsLoad(opcode);
 
 			if (!is_store && !is_load) {
 				// Must be a jump/branch whose BD slot contained a store that
@@ -892,7 +892,7 @@ static void const_loads_stores(const int count,
                                const u32 pc_of_last_store_in_series,
                                const u32 base_reg_constval)
 {
-	const bool contains_store = (pc_of_last_store_in_series != 1);
+	const uint8_t contains_store = (pc_of_last_store_in_series != 1);
 
 #ifndef SKIP_WRITEOK_CHECK
 	// Do nothing if (psxRegs.writeok == 0).
@@ -909,7 +909,7 @@ static void const_loads_stores(const int count,
 	// Keep upper half of last effective address in reg, tracking current
 	//  value so we can avoid loading same val repeatedly.
 	u16 mem_addr_hi = 0;
-	bool upper_mem_addr_loaded = false;
+	uint8_t upper_mem_addr_loaded = 0;
 
 	u32 PC = pc - 4;
 	int icount = count;
@@ -921,8 +921,8 @@ static void const_loads_stores(const int count,
 		if (opcode == 0)
 			continue;
 
-		const bool is_store = contains_store ? opcodeIsStore(opcode) : false;
-		const bool is_load  = is_store ? false : opcodeIsLoad(opcode);
+		const uint8_t is_store = contains_store ? opcodeIsStore(opcode) : 0;
+		const uint8_t is_load  = is_store ? 0 : opcodeIsLoad(opcode);
 
 		if (!is_store && !is_load) {
 			// Must be a jump/branch whose BD slot contained a store that
@@ -940,7 +940,7 @@ static void const_loads_stores(const int count,
 
 		if (!upper_mem_addr_loaded || (ADR_HI(mem_addr) != mem_addr_hi)) {
 			mem_addr_hi = ADR_HI(mem_addr);
-			upper_mem_addr_loaded = true;
+			upper_mem_addr_loaded = 1;
 			LUI(TEMP_2, ADR_HI(mem_addr));
 		}
 
@@ -965,15 +965,15 @@ static void const_loads_stores(const int count,
 static void emitLoadStoreSeries()
 {
 	// See comments below regarding series and BD slots
-	static bool next_call_emits_nothing = false;  // Static variable
+	static uint8_t next_call_emits_nothing = 0;  // Static variable
 	if (next_call_emits_nothing) {
 		// Skip emitting anything for just this one call
-		next_call_emits_nothing = false;
+		next_call_emits_nothing = 0;
 		return;
 	}
 
 	u32  pc_of_last_store_in_series = 1;
-	bool series_includes_bd_slot_store = false;
+	uint8_t series_includes_bd_slot_store = 0;
 	const int count = count_loads_stores(&pc_of_last_store_in_series, &series_includes_bd_slot_store);
 
 	// Series can include a store found in a BD-slot as their last opcode:
@@ -983,7 +983,7 @@ static void emitLoadStoreSeries()
 	//  BD-slot. We won't emit anything then, since we've already handled
 	//  it during this call.
 	if (series_includes_bd_slot_store)
-		next_call_emits_nothing = true;  // Static variable
+		next_call_emits_nothing = 1;  // Static variable
 
 #ifdef WITH_DISASM
 	// First opcode in series was already disassembled in recRecompile().
@@ -999,7 +999,7 @@ static void emitLoadStoreSeries()
 	}
 #endif
 
-	bool const_addr = false;
+	uint8_t const_addr = 0;
 #ifdef USE_CONST_ADDRESSES
 	const_addr = IsConst(_Rs_);
 #endif
@@ -1012,7 +1012,7 @@ static void emitLoadStoreSeries()
 
 		// Call general-case emitter for non-const address. It will need to
 		//  emit address range check and emit both direct & indirect code.
-		general_loads_stores(count, pc_of_last_store_in_series, false);
+		general_loads_stores(count, pc_of_last_store_in_series, 0);
 	} else
 	{
 		/************************
@@ -1024,12 +1024,12 @@ static void emitLoadStoreSeries()
 		const u32 addr_max = base_reg_constval + imm_max;
 		if ((addr_max & 0x0fffffff) >= 0x800000)
 		{
-			bool is_hw_address = false;
+			uint8_t is_hw_address = 0;
 #ifdef USE_DIRECT_HW_ACCESS
 			{
 				const u16 upper = addr_max >> 16;
 				if (upper == 0x1f80 || upper == 0x9f80 || upper == 0xbf80)
-					is_hw_address = true;
+					is_hw_address = 1;
 			}
 #endif
 
@@ -1047,7 +1047,7 @@ static void emitLoadStoreSeries()
 
 				// Call general-case emitter, but force indirect access since
 				//  known-const address is going to ROM or cache-control port.
-				general_loads_stores(count, pc_of_last_store_in_series, true);
+				general_loads_stores(count, pc_of_last_store_in_series, 1);
 			}
 		} else {
 			/****************************

@@ -145,8 +145,7 @@ INLINE void gpuCloseVideo(void)
 	FreeMem(FrameBuffer);
 }
 
-template<typename T>
-INLINE T Min2 (const T _a, const T _b) { return (_a<_b)?_a:_b; }
+int32_t Min2 (const int32_t _a, const int32_t _b) { return (_a<_b)?_a:_b; }
 
 #include "gpu_blit.h"
 

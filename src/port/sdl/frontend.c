@@ -179,8 +179,8 @@ struct dir_item
 
 int compare_names(struct dir_item *a, struct dir_item *b)
 {
-  bool aIsParent = strcmp(a->name, "..") == 0;
-  bool bIsParent = strcmp(b->name, "..") == 0;
+  uint8_t aIsParent = strcmp(a->name, "..") == 0;
+  uint8_t bIsParent = strcmp(b->name, "..") == 0;
 
   if (aIsParent && bIsParent)
     return 0;
@@ -637,7 +637,7 @@ static void gui_state_save_hint(int slot)
   if (!FileExists(fullpath))
     return;
 
-  int checkstate = CheckState(fullpath, NULL, true, NULL);
+  int checkstate = CheckState(fullpath, NULL, 1, NULL);
 
   // If file doesn't exist or has header/version mismatch, abort.
   // If CheckState() indicates file is ok except lacking screenshot,
@@ -655,7 +655,7 @@ static void gui_state_save_hint(int slot)
       if (sshot_img)
       {
         // Fetch the image data
-        CheckState(fullpath, NULL, true, sshot_img);
+        CheckState(fullpath, NULL, 1, sshot_img);
         sshot_img_num = slot;
       }
       else
@@ -871,7 +871,7 @@ static void gui_state_load_hint(int slot)
   if (!FileExists(fullpath))
     return;
 
-  int checkstate = CheckState(fullpath, NULL, true, NULL);
+  int checkstate = CheckState(fullpath, NULL, 1, NULL);
 
   // If file doesn't exist or has header/version mismatch, abort.
   // If CheckState() indicates file is ok except lacking screenshot,
@@ -889,7 +889,7 @@ static void gui_state_load_hint(int slot)
       if (sshot_img)
       {
         // Fetch the image data
-        CheckState(fullpath, NULL, true, sshot_img);
+        CheckState(fullpath, NULL, 1, sshot_img);
         sshot_img_num = slot;
       }
       else
@@ -1067,10 +1067,10 @@ static int gui_StateLoad()
 
 //To choose which of a multi-CD image should be used. Can be called
 // from front-end 'Swap CD' menu item, in which case parameter
-// 'swapping_cd' is true. Or, can be called via callback function
+// 'swapping_cd' is 1. Or, can be called via callback function
 // gui_select_multicd_to_boot_from() inside cdriso.cpp, in which
-// case swapping_cd parameter is false.
-static int gui_select_multicd(bool swapping_cd)
+// case swapping_cd parameter is 0.
+static int gui_select_multicd(uint8_t swapping_cd)
 {
   if (cdrIsoMultidiskCount <= 1)
     return 0;
@@ -1166,8 +1166,8 @@ static CALLBACK void gui_select_multicd_to_boot_from(void)
   if (cdrIsoMultidiskSelect >= cdrIsoMultidiskCount)
     cdrIsoMultidiskSelect = 0;
 
-  //Pass false to indicate a CD is not being swapped through front-end menu
-  gui_select_multicd(false);
+  //Pass 0 to indicate a CD is not being swapped through front-end menu
+  gui_select_multicd(0);
 
   //Before return to emu, clear/flip once more in case we're triple-buffered
   video_clear();
@@ -1177,12 +1177,12 @@ static CALLBACK void gui_select_multicd_to_boot_from(void)
 static int gui_swap_cd(void)
 {
   //Is a multi-cd image loaded? (EBOOT .pbp files support this)
-  bool using_multicd = cdrIsoMultidiskCount > 1;
+  uint8_t using_multicd = cdrIsoMultidiskCount > 1;
 
   if (using_multicd)
   {
-    // Pass true to gui_select_multicd() so it knows CD is being swapped
-    if (!gui_select_multicd(true))
+    // Pass 1 to gui_select_multicd() so it knows CD is being swapped
+    if (!gui_select_multicd(1))
     {
       // User cancelled, return to menu
       return 0;
@@ -1451,11 +1451,11 @@ static int fps_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (Config.ShowFps == false) Config.ShowFps = true;
+    if (Config.ShowFps == 0) Config.ShowFps = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (Config.ShowFps == true) Config.ShowFps = false;
+    if (Config.ShowFps == 1) Config.ShowFps = 0;
   }
   return 0;
 }
@@ -1463,7 +1463,7 @@ static int fps_alter(u32 keys)
 static char *fps_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", Config.ShowFps == true ? "on" : "off");
+  sprintf(buf, "%s", Config.ShowFps == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1471,11 +1471,11 @@ static int framelimit_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (Config.FrameLimit == false) Config.FrameLimit = true;
+    if (Config.FrameLimit == 0) Config.FrameLimit = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (Config.FrameLimit == true) Config.FrameLimit = false;
+    if (Config.FrameLimit == 1) Config.FrameLimit = 0;
   }
 
   return 0;
@@ -1537,13 +1537,13 @@ static int interlace_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.ilace_force == false)
-      gpu_unai_config_ext.ilace_force = true;
+    if (gpu_unai_config_ext.ilace_force == 0)
+      gpu_unai_config_ext.ilace_force = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.ilace_force == true)
-      gpu_unai_config_ext.ilace_force = false;
+    if (gpu_unai_config_ext.ilace_force == 1)
+      gpu_unai_config_ext.ilace_force = 0;
   }
 
   return 0;
@@ -1552,7 +1552,7 @@ static int interlace_alter(u32 keys)
 static char *interlace_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.ilace_force == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.ilace_force == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1560,13 +1560,13 @@ static int dithering_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.dithering == false)
-      gpu_unai_config_ext.dithering = true;
+    if (gpu_unai_config_ext.dithering == 0)
+      gpu_unai_config_ext.dithering = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.dithering == true)
-      gpu_unai_config_ext.dithering = false;
+    if (gpu_unai_config_ext.dithering == 1)
+      gpu_unai_config_ext.dithering = 0;
   }
 
   return 0;
@@ -1575,7 +1575,7 @@ static int dithering_alter(u32 keys)
 static char *dithering_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.dithering == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.dithering == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1583,13 +1583,13 @@ static int lighting_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.lighting == false)
-      gpu_unai_config_ext.lighting = true;
+    if (gpu_unai_config_ext.lighting == 0)
+      gpu_unai_config_ext.lighting = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.lighting == true)
-      gpu_unai_config_ext.lighting = false;
+    if (gpu_unai_config_ext.lighting == 1)
+      gpu_unai_config_ext.lighting = 0;
   }
 
   return 0;
@@ -1598,7 +1598,7 @@ static int lighting_alter(u32 keys)
 static char *lighting_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.lighting == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.lighting == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1606,13 +1606,13 @@ static int fast_lighting_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.fast_lighting == false)
-      gpu_unai_config_ext.fast_lighting = true;
+    if (gpu_unai_config_ext.fast_lighting == 0)
+      gpu_unai_config_ext.fast_lighting = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.fast_lighting == true)
-      gpu_unai_config_ext.fast_lighting = false;
+    if (gpu_unai_config_ext.fast_lighting == 1)
+      gpu_unai_config_ext.fast_lighting = 0;
   }
 
   return 0;
@@ -1621,7 +1621,7 @@ static int fast_lighting_alter(u32 keys)
 static char *fast_lighting_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.fast_lighting == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.fast_lighting == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1629,13 +1629,13 @@ static int blending_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.blending == false)
-      gpu_unai_config_ext.blending = true;
+    if (gpu_unai_config_ext.blending == 0)
+      gpu_unai_config_ext.blending = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.blending == true)
-      gpu_unai_config_ext.blending = false;
+    if (gpu_unai_config_ext.blending == 1)
+      gpu_unai_config_ext.blending = 0;
   }
 
   return 0;
@@ -1644,7 +1644,7 @@ static int blending_alter(u32 keys)
 static char *blending_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.blending == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.blending == 1 ? "on" : "off");
   return buf;
 }
 
@@ -1652,13 +1652,13 @@ static int clip_368_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-    if (gpu_unai_config_ext.clip_368 == false)
-      gpu_unai_config_ext.clip_368 = true;
+    if (gpu_unai_config_ext.clip_368 == 0)
+      gpu_unai_config_ext.clip_368 = 1;
   }
   else if (keys & KEY_LEFT)
   {
-    if (gpu_unai_config_ext.clip_368 == true)
-      gpu_unai_config_ext.clip_368 = false;
+    if (gpu_unai_config_ext.clip_368 == 1)
+      gpu_unai_config_ext.clip_368 = 0;
   }
 
   return 0;
@@ -1667,7 +1667,7 @@ static int clip_368_alter(u32 keys)
 static char *clip_368_show()
 {
   static char buf[16] = "\0";
-  sprintf(buf, "%s", gpu_unai_config_ext.clip_368 == true ? "on" : "off");
+  sprintf(buf, "%s", gpu_unai_config_ext.clip_368 == 1 ? "on" : "off");
   return buf;
 }
 #endif
@@ -1675,7 +1675,7 @@ static char *clip_368_show()
 static int gpu_settings_defaults()
 {
   Config.ShowFps = 0;
-  Config.FrameLimit = true;
+  Config.FrameLimit = 1;
   Config.FrameSkip = FRAMESKIP_OFF;
 
 #ifdef GPU_UNAI

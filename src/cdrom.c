@@ -1164,7 +1164,7 @@ void cdrReadInterrupt() {
 		}
 
 		int was_first_sector = (cdr.FirstSector == 1);
-		bool played_ADPCM = false;   // See comments further below
+		uint8_t played_ADPCM = 0;   // See comments further below
 
 		if((cdr.Transfer[4 + 2] & 0x4) &&
 			 (cdr.Transfer[4 + 1] == cdr.Channel) &&
@@ -1173,7 +1173,7 @@ void cdrReadInterrupt() {
 			if (!ret) {
 				cdrAttenuate(cdr.Xa.pcm, cdr.Xa.nsamples, cdr.Xa.stereo);
 				if ((cdr.Xa.nsamples != 0) && (cdr.Xa.freq != 0)) {
-					played_ADPCM = true;
+					played_ADPCM = 1;
 					SPU_playADPCMchannel(&cdr.Xa);
 				}
 
@@ -1352,7 +1352,7 @@ void cdrWrite1(unsigned char rt) {
 			set_loc[i] = btoi(cdr.Param[i]);
 
 		i = msf2sec(cdr.SetSectorPlay);
-		i = abs(int(i - msf2sec(set_loc)));
+		i = abs(i - msf2sec(set_loc));
 		if (i > 16)
 			cdr.Seeked = SEEK_PENDING;
 
@@ -1599,7 +1599,7 @@ void cdrReset() {
 	getCdInfo();
 }
 
-int cdrFreeze(void *f, FreezeMode mode)
+int cdrFreeze(void *f, enum FreezeMode mode)
 {
 	u32 tmp;
 	u8 tmpp[3];

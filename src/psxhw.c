@@ -886,6 +886,6 @@ void psxHwWrite32(u32 add, u32 value)
 
 }
 
-int psxHwFreeze(void* f, FreezeMode mode) {
+int psxHwFreeze(void* f, enum FreezeMode mode) {
 	return 0;
 }

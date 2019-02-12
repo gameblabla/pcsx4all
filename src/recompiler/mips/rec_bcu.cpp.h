@@ -8,7 +8,7 @@
 /* Convert some small forwards conditional branches to modern conditional moves */
 #define USE_CONDITIONAL_MOVE_OPTIMIZATIONS
 
-static bool convertBranchToConditionalMoves();
+static uint8_t convertBranchToConditionalMoves();
 
 static void recSYSCALL()
 {
@@ -22,7 +22,7 @@ static void recSYSCALL()
 	LI16(MIPSREG_A0, 0x20); // <BD> Load first param using BD slot of JAL()
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath_return = false;
+	uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -140,7 +140,7 @@ static void iJumpNormal(u32 bpc)
 	recDelaySlot();
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	bool use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	rec_recompile_end_part1();
 	regClearJump();
@@ -175,7 +175,7 @@ static void iJumpAL(u32 bpc, u32 nbpc)
 	}
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	bool use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	rec_recompile_end_part1();
 	regClearJump();
@@ -210,7 +210,7 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 		//  The way it's done here seems it'd be the correct way to do it in all
 		//  cases, but anything different causes immediate problems either way.
 		s32 val = GetConst(_Rs_);
-		bool branch_taken = false;
+		uint8_t branch_taken = 0;
 
 		switch (code & 0xfc1f0000) {
 			case 0x04000000: /* BLTZ */
@@ -283,7 +283,7 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 	const u32 *bd_slot_loc = (u32 *)recMem;
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	bool use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	// If indirect block returns are in use:
 	// Load host $ra with block return address using BD slot. Code emitted
@@ -385,7 +385,7 @@ static void emitBxx(u32 bpc)
 		//  cases, but anything different causes immediate problems either way.
 		s32 val1 = GetConst(_Rs_);
 		s32 val2 = GetConst(_Rt_);
-		bool branch_taken = false;
+		uint8_t branch_taken = 0;
 
 		switch (code & 0xfc000000) {
 			case 0x10000000: /* BEQ */
@@ -434,7 +434,7 @@ static void emitBxx(u32 bpc)
 	const u32 *bd_slot_loc = (u32 *)recMem;
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	bool use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	// If indirect block returns are in use:
 	// Load host $ra with block return address using BD slot. Code emitted
@@ -601,7 +601,7 @@ static void recJR_load_delay()
 	// $v0 here contains jump address returned from execBranchLoadDelay()
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath_return = false;
+	uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 	pc += 4;
@@ -628,7 +628,7 @@ static void recJR()
 	recDelaySlot();
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath_return = false;
+	uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -652,7 +652,7 @@ static void recJALR()
 	recDelaySlot();
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath_return = false;
+	uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -752,7 +752,7 @@ static void recHLE()
 	SW(TEMP_1, PERM_REG_1, off(pc));        // <BD> BD slot of JAL() above
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	bool use_fastpath_return = false;
+	uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -768,22 +768,22 @@ static void recHLE()
  * Can reduce total number of blocks and total recompiled code size by 5-10%,
  * and speed the code up a bit.
  *
- * Returns: true if branch was successfully converted, false if not.
+ * Returns: 1 if branch was successfully converted, 0 if not.
  *
  * NOTE: It is assumed 'beq/bne $zero,$zero' is caught before calling here.
  *       Is is also assumed we aren't asked to convert 'bgezal,bltzal', the
  *       branch-and-link instructions.
  */
 #ifdef USE_CONDITIONAL_MOVE_OPTIMIZATIONS
-static bool convertBranchToConditionalMoves()
+#define max_ops 4  // Up to this # opcodes total, excluding BD slot.
+// Temporary registers we can use
+#define max_renamed 4
+
+static uint8_t convertBranchToConditionalMoves()
 {
 	// Limit on size of branch-not-taken paths we convert. If it's too large,
 	// we'd waste time analyzing not-taken-paths that are really unlikely to
 	// exclusively contain ALU ops. Max of 3..5 seems to be the sweet spot.
-	const int max_ops = 4;  // Up to this # opcodes total, excluding BD slot.
-
-	// Temporary registers we can use
-	const int max_renamed = 4;
 	const u8  renamed_reg_pool[max_renamed] = { MIPSREG_A0, MIPSREG_A1, MIPSREG_A2, MIPSREG_A3 };
 	const u8  temp_condition_reg = TEMP_1;
 
@@ -792,20 +792,20 @@ static bool convertBranchToConditionalMoves()
 	const s32  branch_imm = _fImm_(branch_opcode);
 	const u8   branch_rs  = _fRs_(branch_opcode);
 	const u8   branch_rt  = _fRt_(branch_opcode);
-	const bool is_beq     = _fOp_(branch_opcode) == 0x04;
-	const bool is_bne     = _fOp_(branch_opcode) == 0x05;
+	const uint8_t is_beq     = _fOp_(branch_opcode) == 0x04;
+	const uint8_t is_bne     = _fOp_(branch_opcode) == 0x05;
 
 	// Don't allow any backward or 0-len branches, or branches too far.
 	if (branch_imm <= 1 || branch_imm > (max_ops+1))
-		return false;
+		return 0;
 
 	// Shouldn't happen: prior functions should catch 'BEQ/BNE $zero,$zero'.
 	if ((is_beq || is_bne) && (branch_rs == 0 && branch_rt == 0))
-		return false;
+		return 0;
 
 	// Branch/jump in BD slot? Give up.
 	if (opcodeIsBranchOrJump(bd_slot_opcode))
-		return false;
+		return 0;
 
 	/*******************************************************
 	 * STAGE 1: Ensure all ops are ALU, collect basic info *
@@ -813,19 +813,19 @@ static bool convertBranchToConditionalMoves()
 	struct {
 		u32  opcode;
 		u8   dst_reg;
-		bool writes_rt;
-		bool reads_rs;
-		bool reads_rt;
-		bool rs_renamed;
-		bool rt_renamed;
+		uint8_t writes_rt;
+		uint8_t reads_rs;
+		uint8_t reads_rt;
+		uint8_t rs_renamed;
+		uint8_t rt_renamed;
 		u8   dst_renamed_to;
 		u8   rs_renamed_to;
 		u8   rt_renamed_to;
 
 		//  Normally, it is assumed that dst reg has been renamed. However, some
 		// common 'addu rd, rs, $zero' compiler/assembler-generated reg-moves
-		// can avoid reg-renaming, and this gets set true.
-		bool emit_as_rd_rs_direct_cond_move;
+		// can avoid reg-renaming, and this gets set 1.
+		uint8_t emit_as_rd_rs_direct_cond_move;
 	} ops[max_ops];
 
 	memset(ops, 0, sizeof(ops));
@@ -834,7 +834,7 @@ static bool convertBranchToConditionalMoves()
 	u32  op_writes = 0;
 
 	int  num_ops = 0;
-	bool success = true;
+	uint8_t success = 1;
 
 	for (int i=0; i < (branch_imm-1); ++i)
 	{
@@ -865,13 +865,13 @@ static bool convertBranchToConditionalMoves()
 			num_ops++;
 		} else {
 			// Found non-ALU op, give up
-			success = false;
+			success = 0;
 			break;
 		}
 	}
 
 	if (!success || (num_ops == 0))
-		return false;
+		return 0;
 
 	/***************************************************************
 	 * STAGE 2: Register renaming, overflow-trap opcode conversion *
@@ -884,7 +884,7 @@ static bool convertBranchToConditionalMoves()
 	{
 		// Only needed during this renaming phase:
 		struct {
-			bool is_renamed;
+			uint8_t is_renamed;
 			u8   renamed_to;
 		} reg_map[32];
 
@@ -932,17 +932,17 @@ static bool convertBranchToConditionalMoves()
 			    !reg_map[dst_reg].is_renamed &&
 			    !reg_map[rs_reg].is_renamed)
 			{
-				ops[i].emit_as_rd_rs_direct_cond_move = true;
+				ops[i].emit_as_rd_rs_direct_cond_move = 1;
 				continue;
 			}
 
 			if (ops[i].reads_rs && reg_map[rs_reg].is_renamed) {
-				ops[i].rs_renamed = true;
+				ops[i].rs_renamed = 1;
 				ops[i].rs_renamed_to = reg_map[rs_reg].renamed_to;
 			}
 
 			if (ops[i].reads_rt && reg_map[rt_reg].is_renamed) {
-				ops[i].rt_renamed = true;
+				ops[i].rt_renamed = 1;
 				ops[i].rt_renamed_to = reg_map[rt_reg].renamed_to;
 			}
 
@@ -951,11 +951,11 @@ static bool convertBranchToConditionalMoves()
 			if (!reg_map[dst_reg].is_renamed) {
 				if (num_renamed >= max_renamed) {
 					// Oops, our reg-renaming pool is empty, must give up.
-					success = false;
+					success = 0;
 					break;
 				}
 
-				reg_map[dst_reg].is_renamed = true;
+				reg_map[dst_reg].is_renamed = 1;
 				reg_map[dst_reg].renamed_to = renamed_reg_pool[num_renamed];
 				host_to_psx_map[num_renamed] = dst_reg;
 				num_renamed++;
@@ -964,12 +964,12 @@ static bool convertBranchToConditionalMoves()
 			ops[i].dst_renamed_to = reg_map[dst_reg].renamed_to;
 
 			// NOTE: Unless 'ops[i].emit_as_rd_rs_direct_cond_move' was set
-			//       true, code will assume that dst_reg was renamed.
+			//       1, code will assume that dst_reg was renamed.
 		}
 	}
 
 	if (!success)
-		return false;
+		return 0;
 
 	/***********************************************************
 	 * STAGE 3: Allocate branch reg(s) and emit BD slot opcode *
@@ -994,7 +994,7 @@ static bool convertBranchToConditionalMoves()
 	const u32  bd_slot_writes = (u32)opcodeGetWrites(bd_slot_opcode);
 
 	// All branches read reg in 'rs' field
-	bool br1_locked = true;
+	uint8_t br1_locked = 1;
 	u32  br1 = 0;
 	if (bd_slot_writes & (1 << branch_rs)) {
 		// BD slot modifies a reg read by branch: must get special copy
@@ -1004,10 +1004,10 @@ static bool convertBranchToConditionalMoves()
 	}
 
 	// BEQ,BNE also read reg in 'rt' field
-	bool br2_locked = false;
+	uint8_t br2_locked = 0;
 	u32  br2 = 0;
 	if (is_beq || is_bne) {
-		br2_locked = true;
+		br2_locked = 1;
 		if (bd_slot_writes & (1 << branch_rt)) {
 			// BD slot modifies a reg read by branch: must get special copy
 			br2 = regMipsToHost(branch_rt, REG_LOADBRANCH, REG_REGISTERBRANCH);
@@ -1030,17 +1030,17 @@ static bool convertBranchToConditionalMoves()
 	// Conditional-moves will base their decision on this reg.
 	// Default is a temp reg, but sometimes we can use the branch's reg.
 	u32  condition_reg = temp_condition_reg;
-	bool condition_reg_locked = false;
+	uint8_t condition_reg_locked = 0;
 
 	// Use MOVZ or MOVN for conditional moves?
-	bool use_movz = true;
+	uint8_t use_movz = 1;
 
 	if (is_beq || is_bne)
 	{
 		/* BEQ,BNE */
 
 		if (is_beq)
-			use_movz = false;
+			use_movz = 0;
 
 		// NOTE: We assume any '$zero,$zero' comparisons were already caught by
 		//       the primary branch emitters long before the call here.
@@ -1068,9 +1068,9 @@ static bool convertBranchToConditionalMoves()
 			// Keep non-$zero condition reg locked until final MOVN/MOVZs are emitted
 			regUnlock(br1);
 			regUnlock(br2);
-			br1_locked = br2_locked = false;
+			br1_locked = br2_locked = 0;
 			condition_reg = regMipsToHost((branch_rt == 0 ? branch_rs : branch_rt), REG_LOAD, REG_REGISTER);
-			condition_reg_locked = true;
+			condition_reg_locked = 1;
 		} else {
 			SUBU(condition_reg, br1, br2);
 		}
@@ -1085,11 +1085,11 @@ static bool convertBranchToConditionalMoves()
 				break;
 			case 0x04010000: /* BGEZ */
 				SLT(condition_reg, br1, 0);
-				use_movz = false;
+				use_movz = 0;
 				break;
 			case 0x1c000000: /* BGTZ */
 				SLTI(condition_reg, br1, 1);
-				use_movz = false;
+				use_movz = 0;
 				break;
 			case 0x18000000: /* BLEZ */
 				SLTI(condition_reg, br1, 1);
@@ -1142,8 +1142,8 @@ static bool convertBranchToConditionalMoves()
 			u32  new_opcode = opcode;
 			u32  rs = 0;
 			u32  rt = 0;
-			bool rs_locked = false;
-			bool rt_locked = false;
+			uint8_t rs_locked = 0;
+			uint8_t rt_locked = 0;
 
 			if (ops[i].reads_rs) {
 				// Replace 'rs' opcode field with renamed or allocated reg
@@ -1152,7 +1152,7 @@ static bool convertBranchToConditionalMoves()
 					new_opcode |= (ops[i].rs_renamed_to << 21);
 				} else {
 					rs = regMipsToHost(orig_rs, REG_LOAD, REG_REGISTER);
-					rs_locked = true;
+					rs_locked = 1;
 					new_opcode |= (rs << 21);
 				}
 			}
@@ -1166,7 +1166,7 @@ static bool convertBranchToConditionalMoves()
 				} else {
 					// Insert allocated reg in rt field
 					rt = regMipsToHost(orig_rt, REG_LOAD, REG_REGISTER);
-					rt_locked = true;
+					rt_locked = 1;
 					new_opcode |= (rt << 16);
 				}
 			}
@@ -1229,6 +1229,6 @@ static bool convertBranchToConditionalMoves()
 	// We're done: recompilation will resume at the branch target pc.
 	pc += (branch_imm-1)*4;
 
-	return true;
+	return 1;
 }
 #endif // USE_CONDITIONAL_MOVE_OPTIMIZATIONS

@@ -49,7 +49,7 @@ typedef struct {
 typedef struct {
 	uint8_t *vram;
 	uint16_t x, y, w, h, hres, vres;
-	bool depth24, pal;
+	uint8_t depth24, pal;
 } GPUScreenInfo_t;
 
 /// GPU functions

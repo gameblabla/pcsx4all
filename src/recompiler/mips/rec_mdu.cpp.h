@@ -28,7 +28,7 @@
 	#define USE_3OP_MUL_JUMP_OPTIMIZATIONS
 #endif // HAVE_MIPS32_3OP_MUL
 
-static bool convertMultiplyTo3Op();
+static uint8_t convertMultiplyTo3Op();
 
 
 static void recMULT()
@@ -37,8 +37,8 @@ static void recMULT()
 
 #ifdef USE_CONST_MULT_OPTIMIZATIONS
 	// First, check if either or both operands are const values
-	bool rs_const = IsConst(_Rs_);
-	bool rt_const = IsConst(_Rt_);
+	uint8_t rs_const = IsConst(_Rs_);
+	uint8_t rt_const = IsConst(_Rt_);
 
 	if (rs_const || rt_const)
 	{
@@ -46,19 +46,19 @@ static void recMULT()
 		s32 rs_val = GetConst(_Rs_);
 		s32 rt_val = GetConst(_Rt_);
 
-		bool const_res = false;
+		uint8_t const_res = 0;
 		s32 lo_res = 0;
 		s32 hi_res = 0;
 
 		if ((rs_const && !rs_val) || (rt_const && !rt_val)) {
 			// If either operand is 0, both LO/HI result is 0
-			const_res = true;
+			const_res = 1;
 			lo_res = 0;
 			hi_res = 0;
 		} else if (rs_const && rt_const) {
 			// If both operands are known-const, compute result statically
 			s64 res = (s64)rs_val * (s64)rt_val;
-			const_res = true;
+			const_res = 1;
 			lo_res = (s32)res;
 			hi_res = (s32)(res >> 32);
 		} else if ((rs_const && (abs(rs_val) == 1)) || (rt_const && (abs(rt_val) == 1))) {
@@ -69,7 +69,7 @@ static void recMULT()
 			u32 ident_reg = regMipsToHost(ident_reg_psx, REG_LOAD, REG_REGISTER);
 
 			u32 work_reg = ident_reg;
-			bool negate_res = rs_const ? (rs_val < 0) : (rt_val < 0);
+			uint8_t negate_res = rs_const ? (rs_val < 0) : (rt_val < 0);
 
 			if (negate_res) {
 				SUBU(TEMP_1, 0, work_reg);
@@ -89,8 +89,8 @@ static void recMULT()
 			// If one of the operands is a const power-of-two, we can get result by shifting
 
 			// Determine which operand is const power-of-two value, if any
-			bool rs_pot = rs_const && (rs_val != 0x80000000) && ((abs(rs_val) & (abs(rs_val) - 1)) == 0);
-			bool rt_pot = rt_const && (rt_val != 0x80000000) && ((abs(rt_val) & (abs(rt_val) - 1)) == 0);
+			uint8_t rs_pot = rs_const && (rs_val != 0x80000000) && ((abs(rs_val) & (abs(rs_val) - 1)) == 0);
+			uint8_t rt_pot = rt_const && (rt_val != 0x80000000) && ((abs(rt_val) & (abs(rt_val) - 1)) == 0);
 
 			if (rs_pot || rt_pot) {
 				u32 npot_reg_psx = rs_pot ? _Rt_ : _Rs_;
@@ -101,7 +101,7 @@ static void recMULT()
 				u32 shift_amt = __builtin_ctz(pot_val);
 
 				u32 work_reg = npot_reg;
-				bool negate_res = rs_pot ? (rs_val < 0) : (rt_val < 0);
+				uint8_t negate_res = rs_pot ? (rs_val < 0) : (rt_val < 0);
 				if (negate_res) {
 					SUBU(TEMP_2, 0, npot_reg);
 					work_reg = TEMP_2;
@@ -171,8 +171,8 @@ static void recMULTU()
 
 	// First, check if either or both operands are const values
 #ifdef USE_CONST_MULT_OPTIMIZATIONS
-	bool rs_const = IsConst(_Rs_);
-	bool rt_const = IsConst(_Rt_);
+	uint8_t rs_const = IsConst(_Rs_);
+	uint8_t rt_const = IsConst(_Rt_);
 
 	if (rs_const || rt_const)
 	{
@@ -180,19 +180,19 @@ static void recMULTU()
 		u32 rs_val = GetConst(_Rs_);
 		u32 rt_val = GetConst(_Rt_);
 
-		bool const_res = false;
+		uint8_t const_res = 0;
 		u32 lo_res = 0;
 		u32 hi_res = 0;
 
 		if ((rs_const && !rs_val) || (rt_const && !rt_val)) {
 			// If either operand is 0, both LO/HI result is 0
-			const_res = true;
+			const_res = 1;
 			lo_res = 0;
 			hi_res = 0;
 		} else if (rs_const && rt_const) {
 			// If both operands are known-const, compute result statically
 			u64 res = (u64)rs_val * (u64)rt_val;
-			const_res = true;
+			const_res = 1;
 			lo_res = (u32)res;
 			hi_res = (u32)(res >> 32);
 		} else if ((rs_const && (rs_val == 1)) || (rt_const && (rt_val == 1))) {
@@ -211,8 +211,8 @@ static void recMULTU()
 			// If one of the operands is a const power-of-two, we can get result by shifting
 
 			// Determine which operand is const power-of-two value, if any
-			bool rs_pot = rs_const && ((rs_val & (rs_val - 1)) == 0);
-			bool rt_pot = rt_const && ((rt_val & (rt_val - 1)) == 0);
+			uint8_t rs_pot = rs_const && ((rs_val & (rs_val - 1)) == 0);
+			uint8_t rt_pot = rt_const && ((rt_val & (rt_val - 1)) == 0);
 
 			if (rs_pot || rt_pot) {
 				u32 npot_reg_psx = rs_pot ? _Rt_ : _Rs_;
@@ -284,8 +284,8 @@ static void recDIV()
 // Hi, Lo = rs / rt signed
 
 #ifdef USE_CONST_DIV_OPTIMIZATIONS
-	bool rs_const = IsConst(_Rs_);
-	bool rt_const = IsConst(_Rt_);
+	uint8_t rs_const = IsConst(_Rs_);
+	uint8_t rt_const = IsConst(_Rt_);
 
 	// First, check if divisor operand is const value
 	if (rt_const)
@@ -345,17 +345,17 @@ static void recDIV()
 			return;
 		} else {
 			// If divisor is a const power-of-two, we can get result by shifting
-			bool rt_pot = (rt_val != 0x80000000) && ((abs(int32_t(rt_val)) & (abs(int32_t(rt_val)) - 1)) == 0);
+			uint8_t rt_pot = (rt_val != 0x80000000) && ((abs(rt_val) & (abs(rt_val) - 1)) == 0);
 
 			if (rt_pot) {
 				u32 rs = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
 
 				// Count trailing 0s of const power-of-two divisor to get right-shift amount
-				u32 pot_val = (u32)abs(int32_t(rt_val));
+				u32 pot_val = (u32)abs(rt_val);
 				u32 shift_amt = __builtin_ctz(pot_val);
 
 				u32 work_reg = rs;
-				bool negate_res = (rt_val < 0);
+				uint8_t negate_res = (rt_val < 0);
 
 				if (negate_res) {
 					SUBU(TEMP_2, 0, rs);
@@ -398,11 +398,11 @@ static void recDIV()
 	//  -80000000h..-1   0   -->  Rs           +1
 	//  -80000000h      -1   -->  0           -80000000h
 
-	bool omit_div_by_zero_fixup = false;
+	uint8_t omit_div_by_zero_fixup = 0;
 
 	if (IsConst(_Rt_) && GetConst(_Rt_) != 0) {
 		// If divisor is known-const val and isn't 0, no need to fixup
-		omit_div_by_zero_fixup = true;
+		omit_div_by_zero_fixup = 1;
 	} else if (!branch) {
 #ifdef OMIT_DIV_BY_ZERO_FIXUP_IF_EXCEPTION_SEQUENCE_FOUND
 		// If we're not inside a branch-delay slot, we scan ahead for a
@@ -455,11 +455,11 @@ static void recDIVU()
 
 	// First, check if divisor operand is const value
 #ifdef USE_CONST_DIV_OPTIMIZATIONS
-	bool rt_const = IsConst(_Rt_);
+	uint8_t rt_const = IsConst(_Rt_);
 
 	if (rt_const)
 	{
-		bool rs_const = IsConst(_Rs_);
+		uint8_t rs_const = IsConst(_Rs_);
 
 		// Check rs_const before using rs_val value here!
 		u32 rs_val = GetConst(_Rs_);
@@ -513,7 +513,7 @@ static void recDIVU()
 			return;
 		} else {
 			// If divisor is a const power-of-two, we can get result by shifting
-			bool rt_pot = (rt_val & (rt_val - 1)) == 0;
+			uint8_t rt_pot = (rt_val & (rt_val - 1)) == 0;
 
 			if (rt_pot) {
 				u32 rs = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
@@ -552,11 +552,11 @@ static void recDIVU()
 	//  Rs              Rt       Hi/Remainder  Lo/Result
 	//  0..FFFFFFFFh    0   -->  Rs            FFFFFFFFh
 
-	bool omit_div_by_zero_fixup = false;
+	uint8_t omit_div_by_zero_fixup = 0;
 
 	if (IsConst(_Rt_) && GetConst(_Rt_) != 0) {
 		// If divisor is known-const val and isn't 0, no need to fixup
-		omit_div_by_zero_fixup = true;
+		omit_div_by_zero_fixup = 1;
 	} else if (!branch) {
 #ifdef OMIT_DIV_BY_ZERO_FIXUP_IF_EXCEPTION_SEQUENCE_FOUND
 		// See notes in recDIV() emitter
@@ -620,7 +620,7 @@ static void recMFLO()
 	if (skip_emitting_next_mflo) {
 		// A prior MULT/MULTU was converted to 3-op MUL. We emit nothing
 		//  for this MFLO.
-		skip_emitting_next_mflo = false;
+		skip_emitting_next_mflo = 0;
 		return;
 	}
 #endif
@@ -656,12 +656,12 @@ static void recMTLO()
  * peephole optimizer. On average, we succeed ~30-50% of the time. If
  * 'USE_3OP_MUL_JUMP_OPTIMIZATIONS' is defined, this rate is boosted to ~40-70%.
  *
- * Returns: true if 3-op MUL was emitted, false if conversion failed.
+ * Returns: 1 if 3-op MUL was emitted, 0 if conversion failed.
  *
  * NOTE: If conversion succeeds, flag 'skip_emitting_next_mflo' is set, telling
  *       recMFLO() to emit nothing at its next call.
  */
-static bool convertMultiplyTo3Op()
+static uint8_t convertMultiplyTo3Op()
 {
 	// Max number of opcodes to scan ahead in each stage/path
 	const int scan_max = 16;
@@ -670,7 +670,7 @@ static bool convertMultiplyTo3Op()
 	// multiply and the MFLO instruction.
 	u32 gpr_accesses = 0;
 
-	bool convertible = true;
+	uint8_t convertible = 1;
 
 	// 'PC' start address is the instruction after the initial multiply
 	u32 PC = pc;
@@ -686,11 +686,11 @@ static bool convertMultiplyTo3Op()
 		// jump, backwards-branch, large forwards-branch, or zero-length branch.
 
 		if (opcodeIsJump(OPCODE_AT(PC-8)))
-			return false;
+			return 0;
 
 		const int branch_imm = _fImm_(OPCODE_AT(PC-8));
 		if (branch_imm <= 0 || branch_imm > 8)
-			return false;
+			return 0;
 
 		// OK, the branch before the multiply is a small forwards-branch:
 		// Scan the branch-not-taken path to ensure there are no accesses
@@ -715,7 +715,7 @@ static bool convertMultiplyTo3Op()
 			    (_fOp_(opcode) == 0 && _fFunct_(opcode) == 0xc) ||  /* SYSCALL */
 			     opcodeIsBranchOrJump(opcode) )
 			{
-				convertible = false;
+				convertible = 0;
 				break;
 			}
 
@@ -724,7 +724,7 @@ static bool convertMultiplyTo3Op()
 
 			// Ensure there are no accesses of HI/LO in the branch-not-taken path.
 			if ((op_reg_accesses >> 32) & 3) {
-				convertible = false;
+				convertible = 0;
 				break;
 			}
 
@@ -735,7 +735,7 @@ static bool convertMultiplyTo3Op()
 	}
 
 	if (!convertible)
-		return false;
+		return 0;
 
 	/*****************************************
 	 * STAGE 2: Scan for an MFLO instruction *
@@ -747,7 +747,7 @@ static bool convertMultiplyTo3Op()
 	//  To keep things simpler and fast, if we come to a jump/branch, we'll give
 	// up unless the MFLO is in its BD slot.
 
-	bool in_bd_slot = false;
+	uint8_t in_bd_slot = 0;
 	u32  rd_of_mflo = 0;
 
 	int left = scan_max;
@@ -767,7 +767,7 @@ static bool convertMultiplyTo3Op()
 			//  For the multiply to be convertible to a 3-op MUL, the dest reg of
 			// the MFLO must not be accessed between the multiply and the MFLO.
 			if (gpr_accesses & (1 << rd_of_mflo))
-				convertible = false;
+				convertible = 0;
 
 			break;
 		}
@@ -777,7 +777,7 @@ static bool convertMultiplyTo3Op()
 
 		// Ensure there are no reads or writes of HI/LO whatsoever before MFLO.
 		if ((op_reg_accesses >> 32) & 3) {
-			convertible = false;
+			convertible = 0;
 			break;
 		}
 
@@ -785,19 +785,19 @@ static bool convertMultiplyTo3Op()
 		if ( _fOp_(opcode) == 0x3b || /* HLE */
 		     (_fOp_(opcode) == 0 && _fFunct_(opcode) == 0xc) ) /* SYSCALL */
 		{
-			convertible = false;
+			convertible = 0;
 			break;
 		}
 
 		if (opcodeIsBranchOrJump(opcode)) {
 			// Branch/jump in BD slot? Give up.
 			if (in_bd_slot) {
-				convertible = false;
+				convertible = 0;
 				break;
 			}
 
 			// Scan just the BD slot for an MFLO and stop.
-			in_bd_slot = true;
+			in_bd_slot = 1;
 			left = 1;
 		}
 
@@ -807,7 +807,7 @@ static bool convertMultiplyTo3Op()
 	// Give up if we haven't found MFLO, or MFLO's dest reg was
 	//  accessed between the multiply and the MFLO.
 	if (!rd_of_mflo || !convertible)
-		return false;
+		return 0;
 
 	// NOTE: We leave PC set to the instruction after the MFLO we found.
 
@@ -822,7 +822,7 @@ static bool convertMultiplyTo3Op()
 	//  If we encounter a branch/jump, or the MFLO we found in last stage was
 	// in a BD slot, we stop and proceed to the next stage.
 
-	bool found_hi_lo_overwrite = false;
+	uint8_t found_hi_lo_overwrite = 0;
 
 	if (!in_bd_slot)
 	{
@@ -843,13 +843,13 @@ static bool convertMultiplyTo3Op()
 
 			// Check for a HI and LO overwrite (MULT,MULTU,DIV,DIVU)
 			if (((op_reg_writes >> 32) & 3) == 3) {
-				found_hi_lo_overwrite = true;
+				found_hi_lo_overwrite = 1;
 				break;
 			}
 
 			// Check for a HI or LO access (only *after* overwrite check above)
 			if (((op_reg_accesses >> 32) & 3)) {
-				convertible = false;
+				convertible = 0;
 				break;
 			}
 
@@ -857,7 +857,7 @@ static bool convertMultiplyTo3Op()
 			if ( _fOp_(opcode) == 0x3b || /* HLE */
 			    (_fOp_(opcode) == 0 && _fFunct_(opcode) == 0xc) ) /* SYSCALL */
 			{
-				convertible = false;
+				convertible = 0;
 				break;
 			}
 
@@ -866,7 +866,7 @@ static bool convertMultiplyTo3Op()
 			{
 				// Branch/jump in BD slot? Give up.
 				if (in_bd_slot) {
-					convertible = false;
+					convertible = 0;
 					break;
 				}
 
@@ -887,21 +887,21 @@ static bool convertMultiplyTo3Op()
 				if ( _fOp_(opcode) == 0x3 ||  /* JAL */
 				    (_fOp_(opcode) == 0 && (_fFunct_(opcode) == 0x8 || _fFunct_(opcode) == 0x9)))  /* JR, JALR */
 				{
-					found_hi_lo_overwrite = true;
+					found_hi_lo_overwrite = 1;
 
 					// NOTE: we still scan the BD slot for a HI/LO access
 				}
 #endif // USE_3OP_MUL_JUMP_OPTIMIZATIONS
 
 				// Scan just the BD slot and stop.
-				in_bd_slot = true;
+				in_bd_slot = 1;
 				left = 1;
 			}
 		}
 	}
 
 	if (!convertible)
-		return false;
+		return 0;
 
 	//  NOTE: We leave PC set to the instruction after the last one analyzed.
 
@@ -916,7 +916,7 @@ static bool convertMultiplyTo3Op()
 	if (in_bd_slot && !found_hi_lo_overwrite)
 	{
 		int num_paths = 2;
-		bool path_has_hi_lo_overwrite[2] = { false, false };
+		uint8_t path_has_hi_lo_overwrite[2] = { 0, 0 };
 
 		// Begin/end PCs of each codepath's scan range
 		u32 path_start[2];
@@ -934,7 +934,7 @@ static bool convertMultiplyTo3Op()
 				num_paths = 1;
 			} else {
 				// Give up on a JR, JALR: target PC is unknown
-				convertible = false;
+				convertible = 0;
 			}
 		} else
 		{
@@ -978,11 +978,11 @@ static bool convertMultiplyTo3Op()
 		}
 
 		if (!convertible)
-			return false;
+			return 0;
 
 		for (int path=0; path < num_paths; ++path)
 		{
-			in_bd_slot = false;
+			in_bd_slot = 0;
 			PC = path_start[path];
 
 			int left = (path_end[path] - path_start[path]) / 4;
@@ -1002,13 +1002,13 @@ static bool convertMultiplyTo3Op()
 
 				// Check for a HI and LO overwrite (MULT,MULTU,DIV,DIVU)
 				if (((op_reg_writes >> 32) & 3) == 3) {
-					path_has_hi_lo_overwrite[path] = true;
+					path_has_hi_lo_overwrite[path] = 1;
 					break;
 				}
 
 				// Check for a HI or LO access (only *after* overwrite check above)
 				if (((op_reg_accesses >> 32) & 3)) {
-					convertible = false;
+					convertible = 0;
 					break;
 				}
 
@@ -1016,7 +1016,7 @@ static bool convertMultiplyTo3Op()
 				if ( _fOp_(opcode) == 0x3b || /* HLE */
 				    (_fOp_(opcode) == 0 && _fFunct_(opcode) == 0xc) ) /* SYSCALL */
 				{
-					convertible = false;
+					convertible = 0;
 					break;
 				}
 
@@ -1024,7 +1024,7 @@ static bool convertMultiplyTo3Op()
 				{
 					// Branch/jump in BD slot? Give up.
 					if (in_bd_slot) {
-						convertible = false;
+						convertible = 0;
 						break;
 					}
 
@@ -1033,14 +1033,14 @@ static bool convertMultiplyTo3Op()
 					if ( _fOp_(opcode) == 0x3 || /* JAL */
 					    (_fOp_(opcode) == 0 && (_fFunct_(opcode) == 0x8 || _fFunct_(opcode) == 0x9)))  /* JR, JALR */
 					{
-						path_has_hi_lo_overwrite[path] = true;
+						path_has_hi_lo_overwrite[path] = 1;
 
 						// NOTE: we still scan the BD slot for a HI/LO access
 					}
 #endif // USE_3OP_MUL_JUMP_OPTIMIZATIONS
 
 					// Scan just the BD slot for a HI/LO access or overwrite and stop.
-					in_bd_slot = true;
+					in_bd_slot = 1;
 					left = 1;
 				}
 			}
@@ -1066,7 +1066,7 @@ static bool convertMultiplyTo3Op()
 	}
 
 	if (!convertible || !found_hi_lo_overwrite)
-		return false;
+		return 0;
 
 	/***********************************************************
 	 * STAGE 5: Emit a 3-op MUL instead of original MULT/MULTU *
@@ -1106,12 +1106,12 @@ static bool convertMultiplyTo3Op()
 	regUnlock(rd);
 
 	// Set flag telling recMFLO() to emit nothing at its next call.
-	skip_emitting_next_mflo = true;
+	skip_emitting_next_mflo = 1;
 
 	// TODO - In the future, instead of using a global flag like above, it'd be
 	//  nicer to be able to flag certain PC locations in a block as
 	//  'should-be-skipped', catching them before ever calling their emitter.
 
-	return true;
+	return 1;
 }
 #endif // USE_3OP_MUL_OPTIMIZATIONS

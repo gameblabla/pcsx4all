@@ -157,7 +157,7 @@ typedef struct {
 	u32 cycle;
 	u32 interrupt;
 
-	intCycle_t intCycle[32];
+	struct intCycle_t intCycle[32];
 
 	u32 io_cycle_counter;
 

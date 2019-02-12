@@ -42,13 +42,13 @@ enum MemstatRegion { MEMSTAT_REGION_ANY, MEMSTAT_REGION_RAM, MEMSTAT_REGION_BLOC
 #ifdef DEBUG_MEM_STATS
 static void memstats_reset();
 static void memstats_print();
-static void memstats_add_read(u32 addr, MemstatWidth width);
-static void memstats_add_write(u32 addr, MemstatWidth width);
+static void memstats_add_read(u32 addr, enum MemstatWidth width);
+static void memstats_add_write(u32 addr, enum MemstatWidth width);
 #else
 static inline void memstats_reset() {}
 static inline void memstats_print() {}
-static inline void memstats_add_read(u32 addr, MemstatWidth width) {}
-static inline void memstats_add_write(u32 addr, MemstatWidth width) {}
+static inline void memstats_add_read(u32 addr, enum MemstatWidth width) {}
+static inline void memstats_add_write(u32 addr, enum MemstatWidth width) {}
 #endif // DEBUG_MEM_STATS
 
 
@@ -583,7 +583,7 @@ static void memstats_print()
 	memstats_region_print("TOTAL",                        MEMSTAT_REGION_ANY);
 }
 
-static inline void memstats_add_read(u32 addr, MemstatWidth width)
+static inline void memstats_add_read(u32 addr, enum MemstatWidth width)
 {
 	MemstatRegion region;
 	addr &= 0xfffffff;
@@ -611,7 +611,7 @@ static inline void memstats_add_read(u32 addr, MemstatWidth width)
 	memstats[MEMSTAT_TYPE_READ][MEMSTAT_REGION_ANY][width]++;
 }
 
-static inline void memstats_add_write(u32 addr, MemstatWidth width)
+static inline void memstats_add_write(u32 addr, enum MemstatWidth width)
 {
 	MemstatRegion region;
 	addr &= 0xfffffff;
