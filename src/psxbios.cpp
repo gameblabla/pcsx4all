@@ -1817,10 +1817,10 @@ void psxBios__boot(void) // a0
 	memset(psxR, 0, 0x80000);    // Bios memory
 }
 
-/* TODO FIXME : Not compliant */
+/* TODO FIXME : Not compliant. -1 indicates failure but using 1 for now. */
 void psxBios_get_cd_status(void) //a6
 {
-	v0 = -1;
+	v0 = 1;
 	pc0 = ra;
 }
 
@@ -2517,12 +2517,10 @@ void psxBios_nextfile(void) { // 43
 
 	if (!strncmp(ffile, "bu00", 4)) {
 		bufile(1);
-		v0 = a0;
 	}
 
 	if (!strncmp(ffile, "bu10", 4)) {
 		bufile(2);
-		v0 = a0;
 	}
 
 	pc0 = ra;
