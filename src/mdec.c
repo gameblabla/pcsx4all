@@ -667,7 +667,7 @@ void mdec1Interrupt() {
 	}
 }
 
-int mdecFreeze(void* f, FreezeMode mode)
+int mdecFreeze(void* f, enum FreezeMode mode)
 {
 	u8 *base = (u8 *)&psxM[0x100000];
 	u32 v;

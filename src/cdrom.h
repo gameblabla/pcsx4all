@@ -127,7 +127,7 @@ void cdrWrite0(unsigned char rt);
 void cdrWrite1(unsigned char rt);
 void cdrWrite2(unsigned char rt);
 void cdrWrite3(unsigned char rt);
-int cdrFreeze(void *f, FreezeMode mode);
+int cdrFreeze(void *f, enum FreezeMode mode);
 
 u16 calcCrc(const u8 *d, const int len);
 

@@ -339,7 +339,7 @@ static int count_LWC2_SWC2()
 	return count;
 }
 
-static bool skip_base_reg_conversion_LWC2_SWC2(u32 regpsx)
+static uint8_t skip_base_reg_conversion_LWC2_SWC2(u32 regpsx)
 {
 #if defined(USE_GTE_DIRECT_MEM_ACCESS) && defined(USE_CONST_ADDRESSES)
 	// Since we assume all LWC2/SWC2 ops address only RAM or scratchpad,
@@ -351,7 +351,7 @@ static bool skip_base_reg_conversion_LWC2_SWC2(u32 regpsx)
 	       GetConst(regpsx) >= (0x1f800000 - 32767) &&
 	       GetConst(regpsx) <= (0x1f8003fc + 32768);
 #else
-	return false;
+	return 0;
 #endif
 }
 
@@ -369,7 +369,7 @@ static void gen_LWC2_SWC2()
 		DISASM_PSX(pc + i * 4);
 #endif
 
-	bool direct_mem = false;
+	uint8_t direct_mem = 0;
 #ifdef USE_GTE_DIRECT_MEM_ACCESS
 	direct_mem = psx_mem_mapped;
 #endif
@@ -380,6 +380,7 @@ static void gen_LWC2_SWC2()
 		u32 base_reg = TEMP_3;
 
 #ifdef USE_GTE_MEM_PIPELINING
+		#define queue_capacity 4
 		// ---------------------------------------------------------
 		//  Emit pipeline-friendly code that avoids load-use stalls
 		// ---------------------------------------------------------
@@ -410,7 +411,6 @@ static void gen_LWC2_SWC2()
 		enum { LWC2_ENTRIES, SWC2_ENTRIES };
 		int queue_entry_type = LWC2_ENTRIES;  // Opcode type currently in queue (if any)
 
-		const int queue_capacity = 4;
 		union {                   // Entries have info needed for 2nd half of each operation:
 		    u8  gte_reg;          //  GTE reg (rt field) of entry's opcode (for LWC2 entries)
 		    s16 imm;              //  Immediate mem offset of the entry's opcode (for SWC2 entries)
@@ -421,14 +421,14 @@ static void gen_LWC2_SWC2()
 		const u8 queue_regmap[queue_capacity] = { MIPSREG_A0, MIPSREG_A1,
 		                                          MIPSREG_A2, MIPSREG_A3 };
 
-		bool skip_addr_conversion = skip_base_reg_conversion_LWC2_SWC2(_Rs_);
+		uint8_t skip_addr_conversion = skip_base_reg_conversion_LWC2_SWC2(_Rs_);
 		if (skip_addr_conversion) {
 			// Use the unmodified base reg
 			base_reg = rs;
 		}
 
 		// Defer converting 'rs' base reg until we actually need it
-		bool base_reg_converted = false;
+		uint8_t base_reg_converted = 0;
 
 		// NOTE: Any NOPs that were included in count will be skipped
 		int icount = count;
@@ -446,7 +446,7 @@ static void gen_LWC2_SWC2()
 						if (!skip_addr_conversion && !base_reg_converted) {
 							// base_reg = converted 'rs' base reg, TEMP_1 used as temp reg
 							emitAddressConversion(base_reg, rs, TEMP_1, psx_mem_mapped);
-							base_reg_converted = true;
+							base_reg_converted = 1;
 						}
 						u8  entry_reg = queue_regmap[queue_idx_beg];
 						s16 entry_imm = queue[queue_idx_beg].imm;
@@ -473,7 +473,7 @@ static void gen_LWC2_SWC2()
 					if (!skip_addr_conversion && !base_reg_converted) {
 						// base_reg = converted 'rs' base reg, TEMP_1 used as temp reg
 						emitAddressConversion(base_reg, rs, TEMP_1, psx_mem_mapped);
-						base_reg_converted = true;
+						base_reg_converted = 1;
 					}
 					u8  entry_reg = queue_regmap[queue_idx_end];
 					queue[queue_idx_end].gte_reg = _fRt_(opcode);
@@ -517,7 +517,7 @@ static void gen_LWC2_SWC2()
 					if (!skip_addr_conversion && !base_reg_converted) {
 						// base_reg = converted 'rs' base reg, TEMP_1 used as temp reg
 						emitAddressConversion(base_reg, rs, TEMP_1, psx_mem_mapped);
-						base_reg_converted = true;
+						base_reg_converted = 1;
 					}
 					u8  entry_reg = queue_regmap[queue_idx_beg];
 					s16 entry_imm = queue[queue_idx_beg].imm;
@@ -546,7 +546,7 @@ static void gen_LWC2_SWC2()
 						if (!skip_addr_conversion && !base_reg_converted) {
 							// base_reg = converted 'rs' base reg, TEMP_1 used as temp reg
 							emitAddressConversion(base_reg, rs, TEMP_1, psx_mem_mapped);
-							base_reg_converted = true;
+							base_reg_converted = 1;
 						}
 						u8  entry_reg = queue_regmap[queue_idx_beg];
 						s16 entry_imm = queue[queue_idx_beg].imm;
@@ -565,7 +565,7 @@ static void gen_LWC2_SWC2()
 		//  Emit simple direct-mem code
 		// -----------------------------
 
-		bool skip_addr_conversion = skip_base_reg_conversion_LWC2_SWC2(_Rs_);
+		uint8_t skip_addr_conversion = skip_base_reg_conversion_LWC2_SWC2(_Rs_);
 		if (skip_addr_conversion) {
 			// Use the unmodified base reg
 			base_reg = rs;

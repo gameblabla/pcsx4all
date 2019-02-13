@@ -34,7 +34,7 @@
  *  into a base reg that can be used to access psxM[]. The register
  *  specified by 'tmp_reg' can be overwritten in the process.
  */
-void emitAddressConversion(u32 dst_reg, u32 src_reg, u32 tmp_reg, bool psx_mem_mapped)
+void emitAddressConversion(u32 dst_reg, u32 src_reg, u32 tmp_reg, uint8_t psx_mem_mapped)
 {
 	if (psx_mem_mapped) {
 		// METHOD 1 (best): psxM is mmap'd to simple fixed virtual address,
@@ -71,29 +71,29 @@ void emitAddressConversion(u32 dst_reg, u32 src_reg, u32 tmp_reg, bool psx_mem_m
 
 /* Is opcode an ALU op?
  * NOTE: only MIPS I r3000a opcodes supported (for now)
- * Returns: true if ALU op, false if not.
+ * Returns: 1 if ALU op, 0 if not.
  *          If 'info' param is non-NULL and op is ALU, fill struct members.
  */
-bool opcodeIsALU(const u32 opcode, struct ALUOpInfo *info)
+uint8_t opcodeIsALU(const u32 opcode, struct ALUOpInfo *info)
 {
-	bool is_alu_op = false;
+	uint8_t is_alu_op = 0;
 
 	struct ALUOpInfo l_info;
-	l_info.writes_rt = false;
-	l_info.reads_rs  = false;
-	l_info.reads_rt  = false;
+	l_info.writes_rt = 0;
+	l_info.reads_rs  = 0;
+	l_info.reads_rt  = 0;
 
 	if (_fOp_(opcode) == 0)
 	{
-		l_info.writes_rt = false;
+		l_info.writes_rt = 0;
 
 		switch(_fFunct_(opcode))
 		{
 			case 0x00: // SLL    rd = rt << sa
 			case 0x02: // SRL    rd = rt >> sa
 			case 0x03: // SRA    rd = rt >> sa
-				is_alu_op = true;
-				l_info.reads_rt  = true;
+				is_alu_op = 1;
+				l_info.reads_rt  = 1;
 				break;
 			case 0x04: // SLLV   rd = rt << rs
 			case 0x06: // SRLV   rd = rt >> rs
@@ -108,9 +108,9 @@ bool opcodeIsALU(const u32 opcode, struct ALUOpInfo *info)
 			case 0x27: // NOR    rd = ~(rs | rt)
 			case 0x2a: // SLT    rd = rs < rt
 			case 0x2b: // SLTU   rd = rs < rt
-				is_alu_op = true;
-				l_info.reads_rs  = true;
-				l_info.reads_rt  = true;
+				is_alu_op = 1;
+				l_info.reads_rs  = 1;
+				l_info.reads_rt  = 1;
 				break;
 			default:
 				break;
@@ -127,12 +127,12 @@ bool opcodeIsALU(const u32 opcode, struct ALUOpInfo *info)
 		// 0x0e XORI   rt = rs ^ imm
 		// 0x0f LUI    rt = imm << 16
 
-		is_alu_op = true;
-		l_info.writes_rt = true;
+		is_alu_op = 1;
+		l_info.writes_rt = 1;
 
 		// LUI is unique: it reads nothing
 		if (_fOp_(opcode) != 0x0f)
-			l_info.reads_rs = true;
+			l_info.reads_rs = 1;
 	}
 
 	if (is_alu_op && info)

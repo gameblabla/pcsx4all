@@ -51,13 +51,13 @@ unsigned short sioReadCtrl16(void);
 unsigned short sioReadBaud16(void);
 
 void sioInterrupt(void);
-int sioFreeze(void* f, FreezeMode mode);
+int sioFreeze(void* f, enum FreezeMode mode);
 
 ////////////////////////
 // Memcard operations //
 ////////////////////////
 
-#define MCD_SIZE	(1024 * (8 * 16))
+#define MCD_SIZE	(1024 * 8 * 16)
 
 enum MemcardNum {
 	MCD1 = 0,
@@ -71,16 +71,16 @@ void sioSyncMcds(void);
 int sioMcdWrite(enum MemcardNum mcd_num, const char *src, uint32_t adr, int size);
 int sioMcdRead(enum MemcardNum mcd_num, char *dst, uint32_t adr, int size);
 char* sioMcdDataPtr(enum MemcardNum mcd_num);
-bool sioMcdInserted(enum MemcardNum mcd_num);
+uint8_t sioMcdInserted(enum MemcardNum mcd_num);
 int sioMcdFormat(enum MemcardNum mcd_num);
 
 /* Low-level memcard operations, used by above functions
  *  and any memcard management code.
  */
-int FlushMcd(enum MemcardNum mcd_num, bool sync_file);
+int FlushMcd(enum MemcardNum mcd_num, uint8_t sync_file);
 int EjectMcd(enum MemcardNum mcd_num);
 void InitMcdData(char *mcd_data);
-int CreateMcd(char *filename, bool overwrite_file);
+int CreateMcd(char *filename, uint8_t overwrite_file);
 int LoadMcd(enum MemcardNum mcd_num, char* filename);
 int SaveMcd(enum MemcardNum mcd_num, uint32_t adr, int size);
 

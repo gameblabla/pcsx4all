@@ -50,7 +50,7 @@ u32 psxRcntRcount(u32 index);
 u32 psxRcntRmode(u32 index);
 u32 psxRcntRtarget(u32 index);
 
-int psxRcntFreeze(void* f, FreezeMode mode);
+int psxRcntFreeze(void* f, enum FreezeMode mode);
 void psxRcntInitFromFreeze(void);
 
 void psxRcntAdjustTimestamps(const uint32_t prev_cycle_val);

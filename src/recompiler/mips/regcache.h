@@ -19,14 +19,14 @@ typedef struct {
 	u32	host_age;
 	u32	host_use;
 	u32	host_type;
-	bool	ismapped;
+	uint8_t	ismapped;
 	int	host_islocked;
 } HOST_RecRegister;
 
 typedef struct {
 	u32	mappedto;
-	bool	ismapped;
-	bool	psx_ischanged;
+	uint8_t	ismapped;
+	uint8_t	psx_ischanged;
 } PSX_RecRegister;
 
 typedef struct {
@@ -40,7 +40,7 @@ RecRegisters regcache;
 
 // Stack for regPushState()/regPopState()
 static int          regcache_bak_idx  = 0;
-static const int    regcache_bak_size = 8; // Abitrary size choice (overkill?)
+#define regcache_bak_size 8 // Abitrary size choice (overkill?)
 static RecRegisters regcache_bak[regcache_bak_size];
 
 /* Spill regs to psxRegs if they are in host regs and were modified */
@@ -55,8 +55,8 @@ static void regClearJump(void)
 				SW(mappedto, PERM_REG_1, offGPR(i));
 			}
 
-			regcache.psx[i].psx_ischanged = false;
-			regcache.host[mappedto].ismapped = regcache.psx[i].ismapped = false;
+			regcache.psx[i].psx_ischanged = 0;
+			regcache.host[mappedto].ismapped = regcache.psx[i].ismapped = 0;
 			regcache.host[mappedto].mappedto = regcache.psx[i].mappedto = 0;
 			regcache.host[mappedto].host_type = REG_EMPTY;
 			regcache.host[mappedto].host_age = 0;
@@ -83,8 +83,8 @@ static void regFreeRegs(void)
 				SW(hostreg, PERM_REG_1, offGPR(psxreg));
 			}
 
-			regcache.psx[psxreg].psx_ischanged = false;
-			regcache.host[hostreg].ismapped = regcache.psx[psxreg].ismapped = false;
+			regcache.psx[psxreg].psx_ischanged = 0;
+			regcache.host[hostreg].ismapped = regcache.psx[psxreg].ismapped = 0;
 			regcache.host[hostreg].mappedto = regcache.psx[psxreg].mappedto = 0;
 			regcache.host[hostreg].host_type = REG_EMPTY;
 			regcache.host[hostreg].host_age = 0;
@@ -143,19 +143,19 @@ static u32 regMipsToHostHelper(u32 regpsx, u32 action, u32 type)
 
 	regcache.host[regnum].host_type = type;
 	regcache.host[regnum].host_islocked++;
-	regcache.psx[regpsx].psx_ischanged = false;
+	regcache.psx[regpsx].psx_ischanged = 0;
 
 	if (action != REG_LOADBRANCH) {
 		regcache.host[regnum].host_age = 0;
 		regcache.host[regnum].host_use = 0;
-		regcache.host[regnum].ismapped = true;
+		regcache.host[regnum].ismapped = 1;
 		regcache.host[regnum].mappedto = regpsx;
-		regcache.psx[regpsx].ismapped = true;
+		regcache.psx[regpsx].ismapped = 1;
 		regcache.psx[regpsx].mappedto = regnum;
 	} else {
 		regcache.host[regnum].host_age = 0;
 		regcache.host[regnum].host_use = 0xFF;
-		regcache.host[regnum].ismapped = false;
+		regcache.host[regnum].ismapped = 0;
 		regcache.host[regnum].mappedto = 0;
 
 		// If reg value is known-const, see if it can be loaded with just one ALU op
@@ -207,14 +207,14 @@ static u32 regMipsToHost(u32 regpsx, u32 action, u32 type)
 				SW(mappedto, PERM_REG_1, offGPR(regpsx));
 			}
 
-			regcache.psx[regpsx].psx_ischanged = false;
-			regcache.psx[regpsx].ismapped = false;
+			regcache.psx[regpsx].psx_ischanged = 0;
+			regcache.psx[regpsx].ismapped = 0;
 			regcache.psx[regpsx].mappedto = 0;
 
 			regcache.host[mappedto].host_type = type;
 			regcache.host[mappedto].host_age = 0;
 			regcache.host[mappedto].host_use = 0xFF;
-			regcache.host[mappedto].ismapped = false;
+			regcache.host[mappedto].ismapped = 0;
 			regcache.host[mappedto].host_islocked++;
 			regcache.host[mappedto].mappedto = 0;
 
@@ -232,7 +232,7 @@ static void regMipsChanged(u32 regpsx)
 	if (!regpsx)
 		return;
 
-	regcache.psx[regpsx].psx_ischanged = true;
+	regcache.psx[regpsx].psx_ischanged = 1;
 }
 
 static void regUnlock(u32 reghost)
@@ -258,8 +258,8 @@ static void regReset()
 {
 	int i, i2;
 	for (i = 0; i < 32; i++) {
-		regcache.psx[i].psx_ischanged = false;
-		regcache.psx[i].ismapped = false;
+		regcache.psx[i].psx_ischanged = 0;
+		regcache.psx[i].ismapped = 0;
 		regcache.psx[i].mappedto = 0;
 	}
 
@@ -268,7 +268,7 @@ static void regReset()
 		regcache.host[i].host_age = 0;
 		regcache.host[i].host_use = 0;
 		regcache.host[i].host_islocked = 0;
-		regcache.host[i].ismapped = false;
+		regcache.host[i].ismapped = 0;
 		regcache.host[i].mappedto = 0;
 	}
 

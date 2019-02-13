@@ -52,6 +52,9 @@
 #include "gpu_command.h"
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int renderer_init(void)
 {
@@ -698,9 +701,12 @@ void renderer_set_interlace(int enable, int is_odd)
 }
 
 // Handle any gpulib settings applicable to gpu_unai:
-void renderer_set_config(const gpulib_config_t *config)
+void renderer_set_config(const struct gpulib_config_t *config)
 {
   gpu_unai.vram = (u16*)gpu.vram;
 }
 
+#ifdef __cplusplus
+}
+#endif
 // vim:shiftwidth=2:expandtab

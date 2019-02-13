@@ -65,12 +65,12 @@
  */
 int rec_mmap_psx_mem()
 {
-	bool l_psx_mem_mapped = false;
-	bool  success = true;
+	uint8_t l_psx_mem_mapped = 0;
+	uint8_t  success = 1;
 	int   memfd = -1;
 	void* mmap_retval = NULL;
 	const char* mem_fname = NULL;
-	bool  l_psxM_mirrored = false;
+	uint8_t  l_psxM_mirrored = 0;
 
 	// Everything done here with mmap() is with a granularity of 64KB, so
 	//  make sure the platform has a page size that will allow this
@@ -78,7 +78,7 @@ int rec_mmap_psx_mem()
 	if (page_size > 65536) {
 		printf("ERROR: %s expects system page size <= 65536 bytes\n"
 		       "       System reported page size: %ld bytes\n", __func__, page_size);
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
@@ -101,14 +101,14 @@ int rec_mmap_psx_mem()
 #else
 		printf("Error creating tmpfs file: %s\n", mem_fname);
 #endif
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
 	// We want 2MB of PSX RAM
 	if (ftruncate(memfd, 0x200000) < 0) {
 		printf("Error in call to ftruncate(), could not get 2MB of PSX RAM\n");
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
@@ -118,11 +118,11 @@ int rec_mmap_psx_mem()
 			PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, memfd, 0);
 	if (mmap_retval == MAP_FAILED) {
 		printf("Error: mmap() to %p of %uMB failed.\n", (void*)(PSX_MEM_VADDR), 0x200000/(1024*1024));
-		success = false;
+		success = 0;
 		goto exit;
 	}
 	psxM = (s8*)mmap_retval;
-	l_psx_mem_mapped = true;
+	l_psx_mem_mapped = 1;
 
 	// Create three mirrors of the 2MB RAM, all the way up to 0x7fffff
 	mmap_retval = mmap((void*)(PSX_MEM_VADDR+0x200000), 0x200000,
@@ -143,7 +143,7 @@ int rec_mmap_psx_mem()
 		printf("Error: creating 3rd mmap() mirror of 2MB PSX RAM failed.\n");
 		goto exit;
 	}
-	l_psxM_mirrored = true;
+	l_psxM_mirrored = 1;
 	printf(" ..success!\n");
 
 	printf("Mapping 8MB Expansion ROM + 64KB PSX HW I/O regions using mmap\n");
@@ -158,7 +158,7 @@ int rec_mmap_psx_mem()
 	if (mmap_retval == MAP_FAILED) {
 		printf("Error: mmap() to %p of %uKB failed.\n",
 				(void*)(PSX_MEM_VADDR+0x0f000000), (0x0f810000-0x0f000000)/1024);
-		success = false;
+		success = 0;
 		goto exit;
 	}
 	psxP = (s8*)mmap_retval;                          // ROM expansion region (parallel port)
@@ -216,12 +216,12 @@ void rec_munmap_psx_mem()
  */
 int rec_mmap_rec_mem()
 {
-	bool  l_rec_mem_mapped = false;
-	bool  success = true;
+	uint8_t  l_rec_mem_mapped = 0;
+	uint8_t  success = 1;
 	int   memfd = -1;
 	void* mmap_retval = NULL;
 	const char* mem_fname = NULL;
-	bool  l_recRAM_mirrored = false;
+	uint8_t  l_recRAM_mirrored = 0;
 
 	// Everything done here with mmap() is with a granularity of 512KB, so
 	//  make sure the platform has a page size that will allow this
@@ -230,7 +230,7 @@ int rec_mmap_rec_mem()
 	if (page_size > 524288) {
 		printf("ERROR: %s expects system page size <= 524288 bytes\n"
 		       "       System reported page size: %ld bytes\n", __func__, page_size);
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
@@ -253,14 +253,14 @@ int rec_mmap_rec_mem()
 #else
 		printf("Error creating tmpfs file: %s\n", mem_fname);
 #endif
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
 	// We want 2MB for recRAM (assuming 4-byte host pointers)
 	if (ftruncate(memfd, REC_RAM_SIZE) < 0) {
 		printf("Error in call to ftruncate(), could not get %uMB of recRAM\n", REC_RAM_SIZE/(1024*1024));
-		success = false;
+		success = 0;
 		goto exit;
 	}
 
@@ -270,10 +270,10 @@ int rec_mmap_rec_mem()
 			PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, memfd, 0);
 	if (mmap_retval == MAP_FAILED) {
 		printf("Error: mmap() to %p of %uMB failed.\n", (void*)(REC_RAM_VADDR), REC_RAM_SIZE/(1024*1024));
-		success = false;
+		success = 0;
 		goto exit;
 	}
-	l_rec_mem_mapped = true;
+	l_rec_mem_mapped = 1;
 
 	// Create three mirrors of the recRAM, to reflect PS1's RAM mirroring
 	mmap_retval = mmap((void*)(REC_RAM_VADDR+(REC_RAM_SIZE*1)), REC_RAM_SIZE,
@@ -294,7 +294,7 @@ int rec_mmap_rec_mem()
 		printf("Error: creating 3rd mmap() mirror of recRAM failed.\n");
 		goto exit;
 	}
-	l_recRAM_mirrored = true;
+	l_recRAM_mirrored = 1;
 	printf(" ..success!\n");
 
 	printf("Mapping %uKB recROM using mmap\n", REC_ROM_SIZE/1024);
@@ -310,7 +310,7 @@ int rec_mmap_rec_mem()
 	if (mmap_retval == MAP_FAILED) {
 		printf("Error: mmap() to %p of %uKB failed.\n",
 				(void*)REC_ROM_VADDR, REC_ROM_SIZE/1024);
-		success = false;
+		success = 0;
 		goto exit;
 	}
 	printf(" ..success!\n");

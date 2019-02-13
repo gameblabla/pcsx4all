@@ -106,10 +106,6 @@ struct psx_gpu
 
 extern struct psx_gpu gpu;
 
-extern const unsigned char cmd_lengths[256];
-
-int do_cmd_list(uint32_t *list, int count, int *last_cmd);
-
 struct gpulib_config_t
 {
 #ifdef GPULIB_USE_MMAP
@@ -130,28 +126,19 @@ struct gpulib_config_t
     // sprite-span functions, perhaps unnecessarily. No Abe Oddysey hack was
     // present in latest PCSX4ALL sources we were using.
     //bool abe_hack;
-    bool no_light, no_blend;
+    uint8_t no_light, no_blend;
     int  lineskip;
   } gpu_unai_config;
 };
 
-extern gpulib_config_t gpulib_config;
+extern struct gpulib_config_t gpulib_config;
 
 void gpulib_frameskip_prepare(signed char frameskip);
-void gpulib_set_config(const gpulib_config_t *config);
-
-int  renderer_init(void);
-void renderer_finish(void);
-void renderer_sync_ecmds(uint32_t * ecmds);
-void renderer_update_caches(int x, int y, int w, int h);
-void renderer_flush_queues(void);
-void renderer_set_interlace(int enable, int is_odd);
-void renderer_set_config(const gpulib_config_t *config);
-void renderer_notify_res_change(void);
+void gpulib_set_config(const struct gpulib_config_t *config);
 
 int  vout_init(void);
 int  vout_finish(void);
 void vout_update(void);
 void vout_blank(void);
-void vout_set_config(const gpulib_config_t *config);
+void vout_set_config(const struct gpulib_config_t *config);
 #endif // GPULIB_GPU_H

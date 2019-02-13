@@ -382,7 +382,7 @@ static int parsetoc(const char *isofile) {
 		return -1;
 	}
 
-	bool toc_named_as_cue = false;
+	uint8_t toc_named_as_cue = 0;
 	if ((fi = fopen(tocname, "r")) == NULL) {
 		// try changing extension to .cue (to satisfy some stupid tutorials)
 		strcpy(tocname + strlen(tocname) - 4, ".cue");
@@ -400,12 +400,12 @@ static int parsetoc(const char *isofile) {
 				return -1;
 			}
 		} else {
-			toc_named_as_cue = true;
+			toc_named_as_cue = 1;
 		}
 	}
 
 	// check if it's really a TOC and not a CUE
-	bool is_toc_file = false;
+	uint8_t is_toc_file = 0;
 	while (fgets(linebuf, sizeof(linebuf), fi) != NULL) {
 		if (strstr(linebuf, "TRACK") != NULL) {
 			char* mode_substr = strstr(linebuf, "MODE");
@@ -415,7 +415,7 @@ static int parsetoc(const char *isofile) {
 				// A line containing both the substrings "TRACK" and either
 				//  "MODE1" or "MODE2" exists, and the mode string lacks a
 				//  trailing slash, which would have indicated a CUE file.
-				is_toc_file = true;
+				is_toc_file = 1;
 
 				if (toc_named_as_cue)
 					printf("\nWarning: .CUE file is really a .TOC file (processing as TOC..)\n");
@@ -1254,7 +1254,7 @@ static int cdread_sub_mixed(FILE *f, unsigned int base, void *dest, int sector)
 	return ret;
 }
 
-static int uncompress2(void *out, unsigned long *out_size, void *in, unsigned long in_size)
+static int uncompress2_pcsx4all(void *out, unsigned long *out_size, void *in, unsigned long in_size)
 {
 	static z_stream z;
 	int ret = 0;
@@ -1334,7 +1334,7 @@ static int cdread_compressed(FILE *f, unsigned int base, void *dest, int sector)
 	if (is_compressed) {
 		cdbuffer_size_expect = sizeof(compr_img->buff_raw[0]) << compr_img->block_shift;
 		cdbuffer_size = cdbuffer_size_expect;
-		ret = uncompress2(compr_img->buff_raw[0], &cdbuffer_size, compr_img->buff_compressed, size);
+		ret = uncompress2_pcsx4all(compr_img->buff_raw[0], &cdbuffer_size, compr_img->buff_compressed, size);
 		if (ret != 0) {
 			printf("uncompress failed with %d for block %d, sector %d\n",
 					ret, block, sector);

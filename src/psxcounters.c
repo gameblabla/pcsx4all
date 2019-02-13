@@ -69,9 +69,9 @@ enum
     RcUnknown15       = 0x8000, // 15   ? (always zero)
 };
 
-static const u32 CounterQuantity  = 4;
-static const u32 CountToOverflow  = 0;
-static const u32 CountToTarget    = 1;
+#define CounterQuantity  4
+#define CountToOverflow 0
+#define CountToTarget 1
 
 const u32 FrameRate[2] = { 60, 50 };
 
@@ -85,14 +85,14 @@ static const u32 VBlankStart = 240;
 
 /******************************************************************************/
 
-static Rcnt rcnts[ CounterQuantity ];
+static struct Rcnt rcnts[ CounterQuantity ];
 
 u32 hSyncCount = 0;
 
 u32 frame_counter = 0;
 static u32 hsync_steps = 0;
 static u32 base_cycle = 0;
-static bool rcntFreezeLoaded = false;
+static uint8_t rcntFreezeLoaded = 0;
 
 //senquack - Originally separate variables, now handled together with
 // all other scheduled emu events as new event type PSXINT_RCNT
@@ -362,7 +362,7 @@ void psxRcntUpdate()
             // If frontend called LoadState(), loading a savestate, do not
             //  proceed further: Rootcounter state has been altered.
             if (rcntFreezeLoaded) {
-                rcntFreezeLoaded = false;
+                rcntFreezeLoaded = 0;
                 return;
             }
 
@@ -517,7 +517,7 @@ void psxRcntInit(void)
 
 /******************************************************************************/
 
-int psxRcntFreeze(void *f, FreezeMode mode)
+int psxRcntFreeze(void *f, enum FreezeMode mode)
 {
     // Old var left from when SPU was updated by very old psxcounters code,
     //  now this is 0 placeholder to maintain savestate compatibilty
@@ -555,7 +555,7 @@ void psxRcntInitFromFreeze(void)
 	base_cycle = 0;
 
 	// psxRcntUpdate() needs notification when state is altered:
-	rcntFreezeLoaded = true;
+	rcntFreezeLoaded = 1;
 }
 
 /******************************************************************************/

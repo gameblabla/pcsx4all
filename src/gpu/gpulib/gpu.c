@@ -22,6 +22,10 @@
 #include "gpu.h"
 #include "plugin_lib.h"
 
+#ifdef GPU_UNAI
+#include "gpu/gpu_unai/gpulib_if.h"  // To get config struct definition
+#endif
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #ifdef __GNUC__
   #define unlikely(x) __builtin_expect((x), 0)
@@ -42,7 +46,7 @@
 #define log_anomaly(...)
 
 struct psx_gpu gpu;
-gpulib_config_t gpulib_config;
+struct gpulib_config_t gpulib_config;
 
 static noinline int do_cmd_buffer(uint32_t *data, int count);
 static void finish_vram_transfer(int is_read);
@@ -847,7 +851,7 @@ void gpulib_frameskip_prepare(s8 frameskip)
   gpu.frameskip.frame_ready = 1;
 }
 
-void gpulib_set_config(const gpulib_config_t *config)
+void gpulib_set_config(const struct gpulib_config_t *config)
 {
 #ifdef GPULIB_USE_MMAP
   gpu.mmap = config->mmap;

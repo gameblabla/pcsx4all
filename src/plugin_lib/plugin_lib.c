@@ -63,7 +63,7 @@ void pl_clear_borders()
 
 static void pl_frameskip_prepare(s8 frameskip)
 {
-  pl_data.fskip_advice = false;
+  pl_data.fskip_advice = 0;
   pl_data.frameskip = frameskip;
   pl_data.is_pal = (Config.PsxType == PSXTYPE_PAL);
   pl_data.frame_interval = pl_data.is_pal ? 20000 : 16667;
@@ -89,7 +89,9 @@ void pl_frame_limit(void)
 
   gettimeofday(&now, 0);
 
+#ifdef USE_GPULIB
   GPU_getScreenInfo(&pl_data.sinfo);
+#endif
 
   if (pl_data.clear_ctr > 0)
   {
@@ -104,14 +106,14 @@ void pl_frame_limit(void)
   }
 
   // Update performance monitor
-  bool new_stats = pmonUpdate(&now);
+  uint8_t new_stats = pmonUpdate(&now);
   if (new_stats)
   {
     pmonGetStats(&pl_data.fps_cur, &pl_data.cpu_cur);
     pl_stats_update();
   }
   extern boolean use_speedup;
-  s8 framskip = use_speedup == false ? Config.FrameSkip : 3;
+  s8 framskip = use_speedup == 0 ? Config.FrameSkip : 3;
   // If cfg settings change, catch it here
   if (pl_data.frameskip != framskip ||
       pl_data.is_pal != (Config.PsxType == PSXTYPE_PAL))
@@ -149,11 +151,11 @@ void pl_frame_limit(void)
 
   if (diff < -pl_data.frame_interval)
   {
-    pl_data.fskip_advice = true;
+    pl_data.fskip_advice = 1;
   }
   else if (diff >= 0)
   {
-    pl_data.fskip_advice = false;
+    pl_data.fskip_advice = 0;
   }
 
   // recompilation is not that fast and may cause frame skip on
@@ -161,14 +163,14 @@ void pl_frame_limit(void)
   if (pl_data.dynarec_compiled)
   {
     if (pl_data.dynarec_active_vsyncs < 32)
-      pl_data.fskip_advice = false;
+      pl_data.fskip_advice = 0;
     pl_data.dynarec_active_vsyncs++;
   }
   else
   {
     pl_data.dynarec_active_vsyncs = 0;
   }
-  pl_data.dynarec_compiled = false;
+  pl_data.dynarec_compiled = 0;
 }
 
 void pl_init(void)
@@ -184,7 +186,7 @@ void pl_reset(void)
 {
   pl_data.clear_ctr = 0;
   pl_data.fps_cur = pl_data.cpu_cur = 0;
-  pl_data.dynarec_compiled = false;
+  pl_data.dynarec_compiled = 0;
   pl_data.dynarec_active_vsyncs = 0;
   pl_frameskip_prepare(Config.FrameSkip);
   sprintf(pl_data.stats_msg, "000x000x00 CPU=000%% FPS=000/00");
@@ -202,7 +204,9 @@ void pl_resume(void)
 {
   pmonResume();
   pl_frameskip_prepare(Config.FrameSkip);
+#ifdef USE_GPULIB
   GPU_requestScreenRedraw(); // GPU plugin should redraw screen
+#endif
 }
 
 static void pl_stats_update(void)

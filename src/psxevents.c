@@ -59,7 +59,7 @@ static void SPU_handleIRQ(void);
 ///////////////////////////////////
 // Internal queue implementation //
 ///////////////////////////////////
-static const int EVQUEUE_CAPACITY = PSXINT_COUNT;
+#define EVQUEUE_CAPACITY PSXINT_COUNT
 
 typedef void (*EventFunc)(void);
 
@@ -77,15 +77,15 @@ static void EventStubFunc(void)
 {
 }
 
-static inline bool EventMoreImminent(u8 lh_ev, u8 rh_ev);
+static inline uint8_t EventMoreImminent(u8 lh_ev, u8 rh_ev);
 static inline void evqueueClear(void);
 static inline size_t evqueueSize(void);
-static inline bool evqueueEmpty(void);
+static inline uint8_t evqueueEmpty(void);
 static inline u8 evqueueFront(void);
 static inline u8* evqueueFrontPtr(void);
 static inline u8* evqueueEndPtr(void);
 static inline void evqueueAdd(u8 ev);
-static inline bool evqueueRemove(u8 ev);
+static inline uint8_t evqueueRemove(u8 ev);
 static inline void evqueueRemoveFront(void);
 static inline void evqueueMoveTowardsFront(u8 *start, u8 *end);
 static inline void evqueueMoveTowardsBack(u8 *start, u8 *end);
@@ -192,7 +192,7 @@ static void psxEvqueueAdjustTimestamps(u32 prev_cycle_val)
 	psxRegs.intCycle[PSXINT_NEXT_EVENT].sCycle -= prev_cycle_val;
 }
 
-void psxEvqueueAdd(psxEventNum ev, u32 cycles_after)
+void psxEvqueueAdd(enum psxEventNum ev, u32 cycles_after)
 {
 	// Dequeue event if it already exists, to match original emu behavior
 	if (psxRegs.interrupt & (1 << ev))
@@ -209,7 +209,7 @@ void psxEvqueueAdd(psxEventNum ev, u32 cycles_after)
 	                           psxRegs.intCycle[PSXINT_NEXT_EVENT].cycle;
 }
 
-void psxEvqueueRemove(psxEventNum ev)
+void psxEvqueueRemove(enum psxEventNum ev)
 {
 	if (!(psxRegs.interrupt & (1 << ev)))
 		return;
@@ -313,7 +313,7 @@ static void SPU_handleIRQ(void)
 }
 
 // Returns true if event 'lh_ev' is more imminent than 'rh_ev'.
-static inline bool EventMoreImminent(u8 lh_ev, u8 rh_ev)
+static inline uint8_t EventMoreImminent(u8 lh_ev, u8 rh_ev)
 {
 	// Compare the two event timestamps, interpreting the result as a signed
 	//  integer in case one or both cross psxRegs.cycle overflow boundary.
@@ -334,7 +334,7 @@ static inline size_t evqueueSize(void)
 	return evqueue.useEndIdx - evqueue.useBeginIdx;
 }
 
-static inline bool evqueueEmpty(void)
+static inline uint8_t evqueueEmpty(void)
 {
 	return evqueue.useEndIdx == evqueue.useBeginIdx;
 }
@@ -402,14 +402,14 @@ static inline void evqueueAdd(u8 ev)
 }
 
 // Remove the first matching element, returning false if not found
-static bool evqueueRemove(u8 ev)
+static uint8_t evqueueRemove(u8 ev)
 {
 	u8 *it = evqueueFrontPtr();
 	while ((it != evqueueEndPtr()) && (*it != ev))
 		++it;
 
 	if (it == evqueueEndPtr())
-		return false;
+		return 0;
 
 	// Rather than be fancy and compute position relative to front/end, we
 	//  always shrink array towards front, to keep object code size small.
@@ -424,7 +424,7 @@ static bool evqueueRemove(u8 ev)
 	}
 #endif
 
-	return true;
+	return 1;
 }
 
 static inline void evqueueRemoveFront(void)

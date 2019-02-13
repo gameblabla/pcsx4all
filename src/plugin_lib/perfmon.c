@@ -62,13 +62,13 @@ static struct
 } pmon;
 
 // Returns # of microseconds spanning interval between tv and tv_old
-static inline suseconds_t tvdiff_usec(const timeval &tv, const timeval &tv_old)
+static inline suseconds_t tvdiff_usec(const struct timeval tv, const struct timeval tv_old)
 {
   return (tv.tv_sec - tv_old.tv_sec) * 1000000 + tv.tv_usec - tv_old.tv_usec;
 }
 
 // Returns # of microseconds total in tv1 and tv2
-static inline suseconds_t tvsum_usec(const timeval &tv1, const timeval &tv2)
+static inline suseconds_t tvsum_usec(const struct timeval tv1, const struct timeval tv2)
 {
   return (tv1.tv_sec + tv2.tv_sec) * 1000000 + tv1.tv_usec + tv2.tv_usec;
 }
@@ -110,15 +110,15 @@ void pmonReset()
   gettimeofday(&pmon.tv_last, 0);
 }
 
-bool pmonUpdate(struct timeval *tv_now)
+uint8_t pmonUpdate(struct timeval *tv_now)
 {
-  bool ret = false;
+  uint8_t ret = 0;
   pmon.frame_ctr++;
   suseconds_t diff = tvdiff_usec(*tv_now, pmon.tv_last);
 
   if (diff >= 1000000)
   {
-    ret = true;
+    ret = 1;
     pmon.fps_cur = 1000000.0f * (float)pmon.frame_ctr / (float)diff;
 #ifdef PERFMON_CPU_STATS
     pmon.cpu_cur = pmonGetCpuUsage(diff);
@@ -126,7 +126,7 @@ bool pmonUpdate(struct timeval *tv_now)
     pmon.tv_last = *tv_now;
     pmon.frame_ctr = 0;
 
-    bool new_detailed_stats = false;
+    uint8_t new_detailed_stats = 0;
     if (Config.PerfmonDetailedStats)
     {
       // Move old buffer entries to top, insert new entry at bottom
@@ -138,7 +138,7 @@ bool pmonUpdate(struct timeval *tv_now)
 
       if (pmon.buf.num_entries >= 5)
       {
-        new_detailed_stats = true;
+        new_detailed_stats = 1;
         pmon.buf.num_entries = 0;
 
         // Some very large pos/neg values to establish max/mins
@@ -230,7 +230,7 @@ void pmonGetStats(float *fps_cur, float *cpu_cur)
 #endif
 }
 
-void pmonPrintStats(bool print_detailed_stats)
+void pmonPrintStats(uint8_t print_detailed_stats)
 {
 #ifdef PERFMON_CPU_STATS
   printf("FPS: %6.1f  CPU: %6.1f%%\n", pmon.fps_cur, pmon.cpu_cur);

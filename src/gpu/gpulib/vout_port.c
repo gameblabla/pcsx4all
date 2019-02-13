@@ -42,7 +42,7 @@
 #define s32 int32_t
 #define s64 int64_t
 
-bool use_clip_368;
+uint8_t use_clip_368;
 
 static inline u16 middle(u16 s1, u16 s2, u16 s3)
 {
@@ -91,14 +91,13 @@ static inline u16 mask_filter(u16 *s)
   return (b<<11) | (g) | r; //(g<<6)
 }
 
-template<typename T>
-INLINE  T Min2 (const T _a, const T _b)
+int32_t Min2 (const int32_t _a, const int32_t _b)
 {
-  return (_a<_b)?_a:_b;
+	return (_a<_b)?_a:_b;
 }
 
 // GPU_BlitWW
-static inline void GPU_Blit320(const void* src, u16* dst16, bool isRGB24)
+static inline void GPU_Blit320(const void* src, u16* dst16, uint8_t isRGB24)
 {
   u32 uCount;
   if (!isRGB24)
@@ -156,7 +155,7 @@ static inline void GPU_Blit320(const void* src, u16* dst16, bool isRGB24)
 }
 
 //  GPU_BlitWWSWWSWS
-static inline void GPU_Blit512(const void* src, u16* dst16, bool isRGB24)
+static inline void GPU_Blit512(const void* src, u16* dst16, uint8_t isRGB24)
 {
   u32 uCount;
   if (!isRGB24)
@@ -236,7 +235,7 @@ static inline void GPU_Blit512(const void* src, u16* dst16, bool isRGB24)
 }
 
 //  GPU_BlitWWWWWS
-static inline void GPU_Blit384(const void* src, u16* dst16, bool isRGB24)
+static inline void GPU_Blit384(const void* src, u16* dst16, uint8_t isRGB24)
 {
   u32 uCount;
   if (!isRGB24)
@@ -363,7 +362,7 @@ static inline void GPU_Blit368_clip(const void* src, u16* dst16)
 
 
 //  GPU_BlitWWWWWWWWS
-static inline void GPU_Blit368(const void* src, u16* dst16, bool isRGB24/*, u32 uClip_src*/)
+static inline void GPU_Blit368(const void* src, u16* dst16, uint8_t isRGB24/*, u32 uClip_src*/)
 {
   u32 uCount;
   if (!isRGB24)
@@ -499,7 +498,7 @@ static inline void GPU_Blit368(const void* src, u16* dst16, bool isRGB24/*, u32 
 
 
 // GPU_BlitWWDWW
-static inline void GPU_Blit256(const void* src, u16* dst16, bool isRGB24)
+static inline void GPU_Blit256(const void* src, u16* dst16, uint8_t isRGB24)
 {
   u32 uCount;
   if (!isRGB24)
@@ -563,7 +562,7 @@ static inline void GPU_Blit256(const void* src, u16* dst16, bool isRGB24)
 
 
 // GPU_BlitWS
-static inline void GPU_Blit640(const void* src, u16* dst16, bool isRGB24)
+static inline void GPU_Blit640(const void* src, u16* dst16, uint8_t isRGB24)
 {
   u32 uCount;
   if (!isRGB24)
@@ -695,7 +694,7 @@ void vout_update(void)
     return;
   }
 
-  bool isRGB24 = gpu.status.rgb24;
+  uint8_t isRGB24 = gpu.status.rgb24;
   u16* dst16 = (u16*)SCREEN;
   u16* src16 = (u16*)gpu.vram;
 
@@ -743,7 +742,7 @@ void vout_update(void)
     {
       for (int y1=y0+h1; y0<y1; y0+=incY)   //SLPS02124
       {
-        if (use_clip_368 == false || isRGB24)
+        if (use_clip_368 == 0 || isRGB24)
         {
           GPU_Blit368(src16 + src16_offs, dst16, isRGB24);
         }
@@ -822,6 +821,6 @@ void vout_blank(void)
 {
 }
 
-void vout_set_config(const gpulib_config_t *config)
+void vout_set_config(const struct gpulib_config_t *config)
 {
 }
