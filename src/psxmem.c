@@ -146,7 +146,10 @@ void psxMemReset() {
 	memstats_reset();
 
 	memset(psxM, 0, 0x200000);
-	memset(psxP, 0, 0x10000);
+	// Set PIO Expansion region to all-ones.
+	// NOTE: Fixes 'Tetris with Card Captor Sakura - Eternal Heart (Japan)'
+	//       copy-protection freeze at startup. Adapted from Mednafen.
+	memset(psxP, 0xff, 0x10000); // PIO Expansion memory
 	memset(psxR, 0, 0x80000);    // Bios memory
 
 	if (Config.HLE==FALSE) {
