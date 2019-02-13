@@ -2352,22 +2352,6 @@ void psxBios_rename(void) { // 44
 	pc0 = ra;
 }
 
-#define budelete(mcd) { \
-	enum MemcardNum mcd_num = (mcd == 1) ? MCD1 : MCD2; \
-	char *mcd_data = sioMcdDataPtr(mcd_num); \
-	int i; \
-	for (i=1; i<16; i++) { \
-		char *ptr = mcd_data + 128 * i; \
-		if ((*ptr & 0xF0) != 0x50) continue; \
-		if (strcmp(Ra0+5, ptr+0xa)) continue; \
-		*ptr = (*ptr & 0xf) | 0xA0; \
-		sioMcdWrite(mcd_num, NULL, 128 * i, 1); \
-		/*printf("delete %s\n", ptr+0xa);*/ \
-		v0 = 1; \
-		break; \
-	} \
-}
-
 /*
  *	int delete(char *name);
  */
