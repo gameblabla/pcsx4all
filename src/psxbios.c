@@ -399,6 +399,8 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 		const char *ptr = mcd_data + 128 * nfile; \
 		nfile++; \
 		if ((*ptr & 0xF0) != 0x50) continue; \
+		/* Bug link files show up as free block. */ \
+		if (!ptr[0xa]) continue; \
 		ptr+= 0xa; \
 		if (pfile[0] == 0) { \
 			strncpy(dir->name, ptr, sizeof(dir->name)); \
