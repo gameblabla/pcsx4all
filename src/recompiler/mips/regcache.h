@@ -283,6 +283,7 @@ static void regReset()
 	}
 
 	regcache.reglist[i2] = 0xFF;
+	regcache.reglist_cnt = 0;
 	regcache_bak_idx = 0; // Empty regcache stack
 	//DEBUGF("reglist len %d", i2);
 }

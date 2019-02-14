@@ -1,4 +1,13 @@
+/******************************************************************************
+ * IMPORTANT: The following host registers have unique usage restrictions.    *
+ *            See notes in mips_codegen.h for full details.                   *
+ *  MIPSREG_AT, MIPSREG_V0, MIPSREG_V1, MIPSREG_RA                            *
+ *****************************************************************************/
+
 /* Optional defines (for debugging) */
+
+/* Use cached PC values in host $v0 reg */
+#define USE_PC_CACHING
 
 /* Detect conditional branches on known-const reg vals, eliminating
  *  dead code and unnecessary branches.
@@ -9,6 +18,131 @@
 #define USE_CONDITIONAL_MOVE_OPTIMIZATIONS
 
 static uint8_t convertBranchToConditionalMoves();
+
+enum {
+	BCU_FIRST_INSTRUCTION_MAYBE_EXECUTED  = 0,
+	BCU_FIRST_INSTRUCTION_ALWAYS_EXECUTED = 1
+};
+
+/* Emit code to set $v0 (MIPSREG_V0) to new PC prior to block exit.
+ *
+ *  If param 'first_instruction_always_executed' is 1, caller is indicating
+ *  that the first instruction emitted here will be executed along all paths
+ *  through the block's code, e.g. it is in a BD slot. This is to facilitate
+ *  caching of $v0 bpc values.
+ *
+ * IMPORTANT: Because of caching, we might emit nothing.
+ *            Callers must be careful to ensure any BD slots get filled.
+ */
+static void emitBlockReturnPC(const u32  new_pc,
+                              const uint8_t first_instruction_always_executed)
+{
+#ifdef USE_PC_CACHING
+	//  We try to keep PCs cached in $v0, or at least their upper halves. This
+	// way, we emit fewer instructions generating them overall. If we know the
+	// first instruction emitted here is executed in any path to later block
+	// code (e.g. it lies in the BD slot of a branch before a conditional block
+	// return), we propagate the $v0 value it writes.
+	//
+	//  Blocks assume that, before entry, dispatch loop sets $v0 to the PC of
+	// first instruction of the block. Most branch/jump targets are closeby.
+	//
+	//  Cached PCs are also used in iJumpAL() for return addresses.
+	//
+	//  $v0 is not a 'saved' reg, so the caching isn't perfect.. function calls
+	// can wipe it out. The JAL() macro automatically invalidates $v0 value.
+
+	if (!host_v0_reg_is_const || host_v0_reg_constval != new_pc)
+	{
+		u32 v0_val = host_v0_reg_constval;
+
+		if (new_pc >= 0x10000)
+		{
+			// Be careful to avoid possible overflow here.
+			if (host_v0_reg_is_const             &&
+			    (new_pc >> 28) == (v0_val >> 28) &&
+			    (s32)(new_pc - v0_val) >= -32768 &&
+			    (s32)(new_pc - v0_val) <=  32767)
+			{
+				ADDIU(MIPSREG_V0, MIPSREG_V0, new_pc - v0_val);
+
+				v0_val = new_pc;
+			} else
+			{
+				uint8_t first_instruction_emitted = 0;
+
+				if (!host_v0_reg_is_const || ((v0_val >> 16) != (new_pc >> 16))) {
+					LUI(MIPSREG_V0, new_pc >> 16);
+
+					first_instruction_emitted = 1;
+					v0_val = new_pc & 0xffff0000;
+				}
+
+				if ((v0_val & 0xffff) != (new_pc & 0xffff)) {
+					// Transform $v0's lower half to what we need.
+					XORI(MIPSREG_V0, MIPSREG_V0, (v0_val & 0xffff) ^ (new_pc & 0xffff));
+
+					if (!first_instruction_emitted)
+						v0_val = new_pc;
+				}
+			}
+		} else
+		{
+			LI16(MIPSREG_V0, new_pc);
+			v0_val = new_pc;
+		}
+
+		if (first_instruction_always_executed) {
+			host_v0_reg_is_const = 1;
+			host_v0_reg_constval = v0_val;
+		}
+	}
+#else
+	LI32(MIPSREG_V0, new_pc);
+#endif // USE_PC_CACHING
+}
+
+/* Emit code to set already-allocated register 'reg' to return address
+ *  'return_pc' of a JAL/JALR/BAL instruction.
+ *
+ */
+static void emitJumpAndLinkReturnAddress(const u32 reg,
+                                         const u32 return_pc)
+{
+	uint8_t wrote_reg = 0;
+
+#ifdef USE_PC_CACHING
+	// PCs are cached in host $v0 reg. Can we save an instruction?
+	//
+	// See comments in emitBlockReturnPC() for full details. Note that we
+	// are not writing to host $v0 here, but instead to an allocated PS1
+	// reg. So, we can use a cached $v0 value but we don't update/alter it.
+
+	if (host_v0_reg_is_const)
+	{
+		const u32 v0_val = host_v0_reg_constval;
+
+		// Be careful to avoid possible overflow here.
+		if ((v0_val >> 28) == (return_pc >> 28) &&
+		    (s32)(return_pc - v0_val) >= -32768 &&
+		    (s32)(return_pc - v0_val) <=  32767)
+		{
+			ADDIU(reg, MIPSREG_V0, return_pc - v0_val);
+
+			wrote_reg = 1;
+		} else if ((v0_val >> 16) == (return_pc >> 16))
+		{
+			// Transform $v0's lower half to what we need.
+			XORI(reg, MIPSREG_V0, (v0_val & 0xffff) ^ (return_pc & 0xffff));
+
+			wrote_reg = 1;
+		}
+	}
+#endif // USE_PC_CACHING
+
+	if (!wrote_reg)
+		LI32(reg, return_pc);
+}
 
 static void recSYSCALL()
 {
@@ -22,7 +156,7 @@ static void recSYSCALL()
 	LI16(MIPSREG_A0, 0x20); // <BD> Load first param using BD slot of JAL()
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	uint8_t use_fastpath_return = 0;
+	const uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -69,20 +203,20 @@ static int iLoadTest(u32 code)
 	return 0;
 }
 
-static int DelayTest(u32 pc, u32 bpc)
+static int DelayTest(const u32 pc, const u32 bpc)
 {
-	u32 code1 = *(u32 *)((char *)PSXM(pc));
-	u32 code2 = *(u32 *)((char *)PSXM(bpc));
-	u32 reg = _fRt_(code1);
+	const u32 code1 = OPCODE_AT(pc);
+	const u32 code2 = OPCODE_AT(bpc);
+	const u32 reg = _fRt_(code1);
 
 //#define LOG_BRANCHLOADDELAYS
 #ifdef LOG_BRANCHLOADDELAYS
 	if (iLoadTest(code1)) {
-		int i = psxTestLoadDelay(reg, code2);
+		const int i = psxTestLoadDelay(reg, code2);
 		if (i == 1 || i == 2) {
 			char buffer[512];
 			printf("Case %d at %08x\n", i, pc);
-			u32 jcode = *(u32 *)((char *)PSXM(pc - 4));
+			const u32 jcode = OPCODE_AT(pc - 4);
 			disasm_mips_instruction(jcode, buffer, pc - 4, 0, 0);
 			printf("%08x: %s\n", pc - 4, buffer);
 			disasm_mips_instruction(code1, buffer, pc, 0, 0);
@@ -108,12 +242,17 @@ static int DelayTest(u32 pc, u32 bpc)
    when the branch is taken. This fixes Tekken 2 (broken models). */
 static void recRevDelaySlot(u32 pc, u32 bpc)
 {
+	//  Set 'branch' to 1 before recompiling *either* opcode, indicating we're
+	// in a BD slot. Even though the opcode at bpc is not in a BD slot, it
+	// could be the first store in a series of stores sharing the same base reg.
+	// Setting 'branch' to 1 ensures just the one store gets emitted.
+
 	branch = 1;
 
-	psxRegs.code = *(u32 *)((char *)PSXM(bpc));
+	psxRegs.code = OPCODE_AT(bpc);
 	recBSC[psxRegs.code>>26]();
 
-	psxRegs.code = *(u32 *)((char *)PSXM(pc));
+	psxRegs.code = OPCODE_AT(pc);
 	recBSC[psxRegs.code>>26]();
 
 	branch = 0;
@@ -123,7 +262,7 @@ static void recRevDelaySlot(u32 pc, u32 bpc)
 static void recDelaySlot()
 {
 	branch = 1;
-	psxRegs.code = *(u32 *)((char *)PSXM(pc));
+	psxRegs.code = OPCODE_AT(pc);
 	DISASM_PSX(pc);
 	pc+=4;
 
@@ -140,15 +279,14 @@ static void iJumpNormal(u32 bpc)
 	recDelaySlot();
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	const uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	rec_recompile_end_part1();
 	regClearJump();
 
-	// Only need to set $v0 to new PC when not returning to 'fastpath'
-	if (!use_fastpath_return) {
-		LI32(MIPSREG_V0, bpc); // Block retval $v0 = new PC val
-	}
+	// Only need to set $v0 to new PC when not returning to 'fastpath'.
+	if (!use_fastpath_return)
+		emitBlockReturnPC(bpc, BCU_FIRST_INSTRUCTION_ALWAYS_EXECUTED);
 
 	rec_recompile_end_part2(use_fastpath_return);
 
@@ -157,17 +295,17 @@ static void iJumpNormal(u32 bpc)
 
 static void iJumpAL(u32 bpc, u32 nbpc)
 {
-#ifdef LOG_BRANCHLOADDELAYS
-	u32 dt = DelayTest(pc, bpc);
-#endif
-
-	u32 ra = regMipsToHost(31, REG_FIND, REG_REGISTER);
-	LI32(ra, nbpc);
+	const u32 ra = regMipsToHost(31, REG_FIND, REG_REGISTER);
+	emitJumpAndLinkReturnAddress(ra, nbpc);
+	regUnlock(ra);
 	SetConst(31, nbpc);
 	regMipsChanged(31);
 
-	int dt = DelayTest(pc, bpc);
+	const int dt = DelayTest(pc, bpc);
 	if (dt == 2) {
+		// BD slot trickery has been detected: use a workaround.
+		// Fixes freezes/glitches in 'Tomb Raider 2, 4, 5' and 'Mortal Kombat Trilogy'.
+
 		recRevDelaySlot(pc, bpc);
 		bpc += 4;
 	} else if (dt == 3 || dt == 0) {
@@ -175,15 +313,14 @@ static void iJumpAL(u32 bpc, u32 nbpc)
 	}
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	const uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	rec_recompile_end_part1();
 	regClearJump();
 
-	// Only need to set $v0 to new PC when not returning to 'fastpath'
-	if (!use_fastpath_return) {
-		LI32(MIPSREG_V0, bpc);     // Block retval $v0 = new PC val
-	}
+	// Only need to set $v0 to new PC when not returning to 'fastpath'.
+	if (!use_fastpath_return)
+		emitBlockReturnPC(bpc, BCU_FIRST_INSTRUCTION_ALWAYS_EXECUTED);
 
 	rec_recompile_end_part2(use_fastpath_return);
 
@@ -193,8 +330,8 @@ static void iJumpAL(u32 bpc, u32 nbpc)
 /* Used for BLTZ, BGTZ, BLTZAL, BGEZAL, BLEZ, BGEZ */
 static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 {
-	u32 code = psxRegs.code;
-	int dt = DelayTest(pc, bpc);
+	const u32 code = psxRegs.code;
+	const int dt = DelayTest(pc, bpc);
 
 #ifdef USE_CONST_BRANCH_OPTIMIZATIONS
 	// If test register is known-const, we can eliminate the branch:
@@ -205,11 +342,10 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 	//  trickery is detected.
 	if (IsConst(_Rs_) && ((dt == 3) || dt == 0))
 	{
-		// NOTE: Unlike normally-emitted branch code, we don't execute the delay
-		//  slot before doing branch tests when branch operands are known-const.
-		//  The way it's done here seems it'd be the correct way to do it in all
-		//  cases, but anything different causes immediate problems either way.
-		s32 val = GetConst(_Rs_);
+		// MIPS branch decisions are made before execution of delay slots.
+		// Do the same here: the delay slot could write to decision regs!
+
+		const s32 val = GetConst(_Rs_);
 		uint8_t branch_taken = 0;
 
 		switch (code & 0xfc1f0000) {
@@ -232,14 +368,20 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 				exit(1);
 		}
 
-		if (branch_taken) {
-			if (andlink)
-				iJumpAL(bpc, nbpc);
-			else
-				iJumpNormal(bpc);
-		} else {
-			recDelaySlot();
+		// Branch-and-link instructions always write return address, even
+		//  when branch is not taken!
+		if (andlink) {
+			const u32 ra = regMipsToHost(31, REG_FIND, REG_REGISTER);
+			emitJumpAndLinkReturnAddress(ra, nbpc);
+			regUnlock(ra);
+			SetConst(31, nbpc);
+			regMipsChanged(31);
 		}
+
+		if (branch_taken)
+			iJumpNormal(bpc);
+		else
+			recDelaySlot();
 
 		// We're done here, stop emitting code
 		return;
@@ -257,14 +399,38 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 	}
 #endif // USE_CONDITIONAL_MOVE_OPTIMIZATIONS
 
+	// Allocate branch decision reg. Hopefully, BD slot doesn't write to it.
+	// If it does, we must allocate private copy, increasing reg pressure.
+	u32 bd_slot_writes = 0;
+	if (OPCODE_AT(pc) != 0)
+		bd_slot_writes = (u32)opcodeGetWrites(OPCODE_AT(pc)) & ~1;
 
-	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
-
-	if (dt == 3 || dt == 0) {
-		recDelaySlot();
+	u32 br1;
+	if (bd_slot_writes & (1 << _Rs_)) {
+		// BD slot writes to reg read by branch: must get private copy.
+		br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	} else {
+		br1 = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
 	}
 
-	u32 *backpatch = (u32 *)recMem;
+	if (andlink) {
+		// Branch-and-link instructions always set the 'ra' reg, even when the
+		//  branch is not taken! Though, according to MIPS docs, the branch
+		//  decision is made before the 'ra' write. So, we write 'ra' *after*
+		//  allocating the the decision reg, which might get a private copy.
+		// NOTE: Branch-and-link is fairly rare, but some games do use it.
+		//       For testing the code here, try 'Tony Hawk Pro Skater 1/2'.
+		const u32 ra = regMipsToHost(31, REG_FIND, REG_REGISTER);
+		emitJumpAndLinkReturnAddress(ra, nbpc);
+		regUnlock(ra);
+		SetConst(31, nbpc);
+		regMipsChanged(31);
+	}
+
+	if (dt == 3 || dt == 0)
+		recDelaySlot();
+
+	u32* const backpatch = (u32 *)recMem;
 
 	// Check opcode and emit branch with REVERSED logic!
 	switch (code & 0xfc1f0000) {
@@ -279,73 +445,43 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 		exit(1);
 	}
 
-	// Remember location of branch delay slot so we can be sure it was filled
-	const u32 *bd_slot_loc = (u32 *)recMem;
+	// Remember location of branch delay slot so we can be sure it gets filled.
+	const uptr bd_slot_loc = (uptr)recMem;
+
+	// IMPORTANT: Don't emit any instructions between here (BD slot) and
+	//            the call to emitBlockReturnPC(). It affects PC caching.
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
-
-	// If indirect block returns are in use:
-	// Load host $ra with block return address using BD slot. Code emitted
-	//  in either branch path after this point can assume it is now loaded.
-	// NOTE: rec_recompile_end_part1() will only emit an instruction if $ra
-	//       is not already loaded, so ensure that next instruction emitted
-	//       after rec_recompile_end_part1() is also safe to put in BD slot.
-	rec_recompile_end_part1(); /* <BD> (MAYBE) */
-	block_ra_loaded = 1;
+	const uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
 	regPushState();
 
 	if (dt == 2) {
-		NOP(); /* <BD> (MAYBE) */
+		// BD slot trickery has been detected: use a workaround.
+		// Fixes gfx glitches in 'Tekken 2'
 
-		// Instruction at target PC should see ra reg write
-		if (andlink) {
-			u32 ra = regMipsToHost(31, REG_FIND, REG_REGISTER);
-			LI32(ra, nbpc);
-			regMipsChanged(31);
-			// Cannot set const because branch-not-taken path wouldn't see it:
-			SetUndef(31);
-		}
-
+		NOP();  // <BD slot>
 		recRevDelaySlot(pc, bpc);
 		bpc += 4;
-
-		// NOTE: Because the instruction at target PC might have emitted a JAL and
-		//       wiped out host $ra, load it again if necessary.
-		rec_recompile_end_part1();
-		block_ra_loaded = 1;
 	}
 
-	// If rec_recompile_end_part1() did not emit an instruction,
-	//  next instruction emitted here is BD slot:
-
-	// Only need to set $v0 to new PC when not returning to 'fastpath'
+	// Only need to set $v0 to new PC when not returning to 'fastpath'.
 	if (!use_fastpath_return) {
-		if (bpc > 0xffff) {
-			LUI(TEMP_1, (bpc >> 16));  /* <BD> (MAYBE) */
-			ORI(MIPSREG_V0, TEMP_1, (bpc & 0xffff));
-		} else {
-			LI16(MIPSREG_V0, (bpc & 0xffff));  /* <BD> (MAYBE) */
-		}
+		if (bd_slot_loc == (uptr)recMem)
+			emitBlockReturnPC(bpc, BCU_FIRST_INSTRUCTION_ALWAYS_EXECUTED);  // <BD slot> (if instruction is emitted)
+		else
+			emitBlockReturnPC(bpc, BCU_FIRST_INSTRUCTION_MAYBE_EXECUTED);
 	}
 
-	if (andlink && dt != 2) {
-		if (!use_fastpath_return && (bpc > 0xffff) && ((bpc >> 16) == (nbpc >> 16))) {
-			// Both PCs share an upper half, can save an instruction:
-			ORI(TEMP_1, TEMP_1, (nbpc & 0xffff));
-		} else {
-			LI32(TEMP_1, nbpc);  /* <BD> (MAYBE) */
-		}
-		SW(TEMP_1, PERM_REG_1, offGPR(31));
-	}
+	// If indirect block returns are in use, load host $ra with block return
+	// address. Otherwise, rec_recompile_end_part2() emits direct return jump.
+	rec_recompile_end_part1();  // <BD slot> (if instruction is emitted)
 
-	regClearBranch();
+	regClearBranch();  // <BD slot> (if instruction is emitted)
 
 	// Rarely, the branch delay slot is still empty at this point. Fill if so.
-	if (bd_slot_loc == recMem) {
-		NOP();  /* <BD> */
-	}
+	if (bd_slot_loc == (uptr)recMem)
+		NOP();  // <BD slot>
 
 	rec_recompile_end_part2(use_fastpath_return);
 
@@ -354,19 +490,17 @@ static void emitBxxZ(int andlink, u32 bpc, u32 nbpc)
 	fixup_branch(backpatch);
 	regUnlock(br1);
 
-	if (dt != 3 && dt != 0) {
+	if (dt != 3 && dt != 0)
 		recDelaySlot();
-	}
 }
 
 /* Used for BEQ and BNE */
 static void emitBxx(u32 bpc)
 {
+	const u32 code = psxRegs.code;
 #ifdef LOG_BRANCHLOADDELAYS
-	u32 dt = DelayTest(pc, bpc);
+	const u32 dt = DelayTest(pc, bpc);
 #endif
-
-	u32 code = psxRegs.code;
 
 	// XXX - If delay-slot trickery workarounds are ever added to this
 	//       emitter, as emitBxxZ() already has, be sure to disallow
@@ -379,12 +513,11 @@ static void emitBxx(u32 bpc)
 
 	if (IsConst(_Rs_) && IsConst(_Rt_))
 	{
-		// NOTE: Unlike normally-emitted branch code, we don't execute the delay
-		//  slot before doing branch tests when branch operands are known-const.
-		//  The way it's done here seems it'd be the correct way to do it in all
-		//  cases, but anything different causes immediate problems either way.
-		s32 val1 = GetConst(_Rs_);
-		s32 val2 = GetConst(_Rt_);
+		// MIPS branch decisions are made before execution of delay slots.
+		// Do the same here: the delay slot could write to decision regs!
+
+		const s32 val1 = GetConst(_Rs_);
+		const s32 val2 = GetConst(_Rt_);
 		uint8_t branch_taken = 0;
 
 		switch (code & 0xfc000000) {
@@ -415,11 +548,30 @@ static void emitBxx(u32 bpc)
 		return;
 #endif // USE_CONDITIONAL_MOVE_OPTIMIZATIONS
 
+	// Allocate branch decision regs. Hopefully, BD slot doesn't write to them.
+	// If it does, we must allocate private copies, increasing reg pressure.
+	u32 bd_slot_writes = 0;
+	if (OPCODE_AT(pc) != 0)
+		bd_slot_writes = (u32)opcodeGetWrites(OPCODE_AT(pc)) & ~1;
 
-	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
-	u32 br2 = regMipsToHost(_Rt_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	u32 br1;
+	if (bd_slot_writes & (1 << _Rs_)) {
+		// BD slot writes to reg read by branch: must get private copy.
+		br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	} else {
+		br1 = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
+	}
+	u32 br2;
+	if (bd_slot_writes & (1 << _Rt_)) {
+		// BD slot writes to reg read by branch: must get private copy.
+		br2 = regMipsToHost(_Rt_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+	} else {
+		br2 = regMipsToHost(_Rt_, REG_LOAD, REG_REGISTER);
+	}
+
 	recDelaySlot();
-	u32 *backpatch = (u32 *)recMem;
+
+	u32* const backpatch = (u32 *)recMem;
 
 	// Check opcode and emit branch with REVERSED logic!
 	switch (code & 0xfc000000) {
@@ -430,32 +582,28 @@ static void emitBxx(u32 bpc)
 		exit(1);
 	}
 
-	// Remember location of branch delay slot so we can be sure it was filled
-	const u32 *bd_slot_loc = (u32 *)recMem;
+	// Remember location of branch delay slot so we can be sure it gets filled.
+	const uptr bd_slot_loc = (uptr)recMem;
+
+	// IMPORTANT: Don't emit any instructions between here (BD slot) and
+	//            the call to emitBlockReturnPC(). It affects PC caching.
 
 	// Can block use 'fastpath' return? (branches backward to its beginning)
-	uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
+	const uint8_t use_fastpath_return = rec_recompile_use_fastpath_return(bpc);
 
-	// If indirect block returns are in use:
-	// Load host $ra with block return address using BD slot. Code emitted
-	//  in either branch path after this point can assume it is now loaded.
-	// NOTE: rec_recompile_end_part1() will only emit an instruction if $ra
-	//       is not already loaded, so ensure that next instruction emitted
-	//       after rec_recompile_end_part1() is also safe to put in BD slot.
-	rec_recompile_end_part1(); /* <BD> (MAYBE) */
-	block_ra_loaded = 1;
+	// Only need to set $v0 to new PC when not returning to 'fastpath'.
+	if (!use_fastpath_return)
+		emitBlockReturnPC(bpc, BCU_FIRST_INSTRUCTION_ALWAYS_EXECUTED);  // <BD slot> (if instruction is emitted)
 
-	// Only need to set $v0 to new PC when not returning to 'fastpath'
-	if (!use_fastpath_return) {
-		LI32(MIPSREG_V0, bpc);  /* <BD> (MAYBE) */
-	}
+	// If indirect block returns are in use, load host $ra with block return
+	// address. Otherwise, rec_recompile_end_part2() emits direct return jump.
+	rec_recompile_end_part1();  // <BD slot> (if instruction is emitted)
 
-	regClearBranch(); /* <BD> (MAYBE) */
+	regClearBranch();  // <BD slot> (if instruction is emitted)
 
 	// Rarely, the branch delay slot is still empty at this point. Fill if so.
-	if (bd_slot_loc == recMem) {
-		NOP();  /* <BD> */
-	}
+	if (bd_slot_loc == (uptr)recMem)
+		NOP();  // <BD slot>
 
 	rec_recompile_end_part2(use_fastpath_return);
 
@@ -470,9 +618,8 @@ static void recBLTZ()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (!(_Rs_)) {
 		recDelaySlot();
@@ -488,9 +635,8 @@ static void recBGTZ()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (!(_Rs_)) {
 		recDelaySlot();
@@ -547,17 +693,17 @@ extern void (*psxBSC[64])(void);
 /* HACK: Execute load delay in branch delay via interpreter */
 static u32 execBranchLoadDelay(u32 pc, u32 bpc)
 {
-	u32 code1 = *(u32 *)((char *)PSXM(pc));
-	u32 code2 = *(u32 *)((char *)PSXM(bpc));
+	const u32 code1 = OPCODE_AT(pc);
+	const u32 code2 = OPCODE_AT(bpc);
 
 	branch = 1;
 
 #ifdef LOG_BRANCHLOADDELAYS
-	int i = psxTestLoadDelay(_fRt_(code1), code2);
+	const int i = psxTestLoadDelay(_fRt_(code1), code2);
 	if (i == 1 || i == 2) {
 		char buffer[512];
 		printf("Case %d at %08x\n", i, pc);
-		u32 jcode = *(u32 *)((char *)PSXM(pc - 4));
+		const u32 jcode = OPCODE_AT(pc - 4);
 		disasm_mips_instruction(jcode, buffer, pc - 4, 0, 0);
 		printf("%08x: %s\n", pc - 4, buffer);
 		disasm_mips_instruction(code1, buffer, pc, 0, 0);
@@ -601,7 +747,7 @@ static void recJR_load_delay()
 	// $v0 here contains jump address returned from execBranchLoadDelay()
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	uint8_t use_fastpath_return = 0;
+	const uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 	pc += 4;
@@ -615,10 +761,12 @@ static void recJR_load_delay()
 static void recJR()
 {
 // jr Rs
-	u32 code = *(u32 *)((char *)PSXM(pc)); // opcode in branch delay
 
 	// if possible read delay in branch delay slot
-	if (iLoadTest(code)) {
+	if (iLoadTest(OPCODE_AT(pc))) {
+		// BD slot trickery has been detected: use a workaround.
+		// Fixes 'Skullmonkeys'.
+
 		recJR_load_delay();
 
 		return;
@@ -628,7 +776,7 @@ static void recJR()
 	recDelaySlot();
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	uint8_t use_fastpath_return = 0;
+	const uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -643,16 +791,20 @@ static void recJR()
 
 static void recJALR()
 {
-// jalr Rs
-	u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
-	u32 rd = regMipsToHost(_Rd_, REG_FIND, REG_REGISTER);
-	LI32(rd, pc + 4);
+// jalr Rs, Rd=pc+4
+
+	const u32 br1 = regMipsToHost(_Rs_, REG_LOADBRANCH, REG_REGISTERBRANCH);
+
+	const u32 rd = regMipsToHost(_Rd_, REG_FIND, REG_REGISTER);
+	emitJumpAndLinkReturnAddress(rd, pc + 4);
+	regUnlock(rd);
 	SetConst(_Rd_, pc + 4);
 	regMipsChanged(_Rd_);
+
 	recDelaySlot();
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	uint8_t use_fastpath_return = 0;
+	const uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -671,9 +823,8 @@ static void recBEQ()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (_Rs_ == _Rt_) {
 		iJumpNormal(bpc);
@@ -689,9 +840,8 @@ static void recBNE()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (!(_Rs_) && !(_Rt_)) {
 		recDelaySlot();
@@ -707,9 +857,8 @@ static void recBLEZ()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (!(_Rs_)) {
 		iJumpNormal(bpc);
@@ -725,9 +874,8 @@ static void recBGEZ()
 	u32 bpc = _Imm_ * 4 + pc;
 	u32 nbpc = pc + 4;
 
-	if (bpc == nbpc && psxTestLoadDelay(_Rs_, PSXMu32(bpc)) == 0) {
+	if (bpc == nbpc && psxTestLoadDelay(_Rs_, OPCODE_AT(bpc)) == 0)
 		return;
-	}
 
 	if (!(_Rs_)) {
 		iJumpNormal(bpc);
@@ -752,7 +900,7 @@ static void recHLE()
 	SW(TEMP_1, PERM_REG_1, off(pc));        // <BD> BD slot of JAL() above
 
 	// If new PC is unknown, cannot use 'fastpath' return
-	uint8_t use_fastpath_return = 0;
+	const uint8_t use_fastpath_return = 0;
 
 	rec_recompile_end_part1();
 
@@ -775,15 +923,14 @@ static void recHLE()
  *       branch-and-link instructions.
  */
 #ifdef USE_CONDITIONAL_MOVE_OPTIMIZATIONS
-#define max_ops 4  // Up to this # opcodes total, excluding BD slot.
-// Temporary registers we can use
-#define max_renamed 4
-
 static uint8_t convertBranchToConditionalMoves()
 {
 	// Limit on size of branch-not-taken paths we convert. If it's too large,
 	// we'd waste time analyzing not-taken-paths that are really unlikely to
 	// exclusively contain ALU ops. Max of 3..5 seems to be the sweet spot.
+	#define max_ops 4  // Up to this # opcodes total, excluding BD slot.
+	// Temporary registers we can use
+	#define max_renamed 4
 	const u8  renamed_reg_pool[max_renamed] = { MIPSREG_A0, MIPSREG_A1, MIPSREG_A2, MIPSREG_A3 };
 	const u8  temp_condition_reg = TEMP_1;
 

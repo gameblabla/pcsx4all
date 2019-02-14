@@ -1,3 +1,9 @@
+/******************************************************************************
+ * IMPORTANT: The following host registers have unique usage restrictions.    *
+ *            See notes in mips_codegen.h for full details.                   *
+ *  MIPSREG_AT, MIPSREG_V0, MIPSREG_V1, MIPSREG_RA                            *
+ *****************************************************************************/
+
 /***********************************************
  * Options that can be disabled for debugging: *
  ***********************************************/
@@ -153,6 +159,10 @@ static void recLUI()
 {
 	// rt = (u32)imm << 16
 
+	// Check for a LUI...LOAD sequence and emit an optimized one, if found.
+	if (!branch && emitOptimizedStaticLoad())
+		return;
+
 	/* Avoid loading the same constant more than once */
 	if (IsConst(_Rt_) && GetConst(_Rt_) == ((u32)_ImmU_ << 16))
 		return;
@@ -195,12 +205,50 @@ static void recADDU()
 {
 	// rd = rs + rt
 
-	const uint8_t set_const = IsConst(_Rs_) && IsConst(_Rt_);
+	const uint8_t rs_const = IsConst(_Rs_);
+	const uint8_t rt_const = IsConst(_Rt_);
+	const uint8_t set_const = rs_const && rt_const;
+
+	//  When an ADDU adds an unknown val to a known-const val:
+	// Propagate information about the known-const val's range with respect to
+	// PS1 address regions. If the dest reg is later used as a load/store base
+	// reg, that emitter can optimize, despite not knowing the exact value.
+	// This optimizes static array accesses in original PS1 code.
+	uint8_t fuzzy_ram_addr = 0;
+	uint8_t fuzzy_nonram_addr = 0;
+	uint8_t fuzzy_scratchpad_addr = 0;
+	if (!(rs_const && rt_const) && (rs_const || rt_const))
+	{
+		const u32 const_val = rs_const ? GetConst(_Rs_) : GetConst(_Rt_);
+
+		if (const_val >= 0x80000000 && const_val < 0x80800000)
+			fuzzy_ram_addr = 1;
+
+		// Is address obviously scratchpad, I/O, or ROM?
+		if ((const_val >= 0x1f000000 && const_val < 0x1f810000) ||
+		    (const_val >= 0xbfc00000 && const_val < 0xbfc80000))
+			fuzzy_nonram_addr = 1;
+
+		// To identify scratchpad-only addresses, we are stricter:
+		//  1KB scratchpad range lies in very close proximity to I/O addresses
+		// and it would be risky to assume that an ADDU of a value to the lowest
+		// address 0x1f80_0000 would result in a fuzzy scratchpad address.
+		// For range minimun, we instead use 0x1f80_0001.
+		if (const_val >= 0x1f800001 && const_val < 0x1f800400)
+			fuzzy_scratchpad_addr = 1;
+	}
 
 	REC_RTYPE_RD_RS_RT(ADDU, _Rd_, _Rs_, _Rt_);
 
 	if (set_const)
 		SetConst(_Rd_, GetConst(_Rs_) + GetConst(_Rt_));
+
+	if (fuzzy_ram_addr)
+		SetFuzzyRamAddr(_Rd_);
+	if (fuzzy_nonram_addr)
+		SetFuzzyNonramAddr(_Rd_);
+	if (fuzzy_scratchpad_addr)
+		SetFuzzyScratchpadAddr(_Rd_);
 }
 static void recADD()  { recADDU(); }
 
@@ -328,7 +376,7 @@ static void recSLL()
 		// Sequence we're looking for is:
 		//   SLL   rd = rt << sa    (this opcode)
 		//   SRA   rd = rt >> sa    (next opcode)
-		// Where the rd of SLL is the same as the rd,rt of ANDI,
+		// Where the rd of SLL is the same as the rd,rt of SRA,
 		//  and both shift amounts are equal and are either 24 or 16.
 
 		if (_fOp_(next_opcode) == 0 && _fFunct_(next_opcode) == 0x03 &&  // SRA

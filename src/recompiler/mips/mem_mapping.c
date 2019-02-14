@@ -2,7 +2,7 @@
  * Mips-to-mips recompiler for pcsx4all
  *
  * Copyright (c) 2009 Ulrich Hecht
- * Copyright (c) 2017 modified by Dmitry Smagin, Daniel Silsby
+ * Copyright (c) 2018 modified by Dmitry Smagin, Daniel Silsby
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -65,7 +65,7 @@
  */
 int rec_mmap_psx_mem()
 {
-	uint8_t l_psx_mem_mapped = 0;
+	uint8_t  l_psx_mem_mapped = 0;
 	uint8_t  success = 1;
 	int   memfd = -1;
 	void* mmap_retval = NULL;
@@ -144,7 +144,7 @@ int rec_mmap_psx_mem()
 		goto exit;
 	}
 	l_psxM_mirrored = 1;
-	printf(" ..success!\n");
+	printf(" ..mapped to %p\n", (void*)psxM);
 
 	printf("Mapping 8MB Expansion ROM + 64KB PSX HW I/O regions using mmap\n");
 	// Map regions to start at offset past psxM that matches PSX mapping,
@@ -163,7 +163,9 @@ int rec_mmap_psx_mem()
 	}
 	psxP = (s8*)mmap_retval;                          // ROM expansion region (parallel port)
 	psxH = (s8*)((uintptr_t)mmap_retval+0x00800000);  // HW I/O region
-	printf(" ..success!\n");
+	printf(" ..mapped to %p\n", (void*)psxP);
+
+	psxM_allocated = psxP_allocated = psxH_allocated = 1;
 
 exit:
 	if (!success) {
@@ -178,15 +180,18 @@ exit:
 			munmap((void*)PSX_MEM_VADDR, l_psxM_mirrored ? 0x800000 : 0x200000);
 		}
 		psxM = psxP = psxH = NULL;
+		psxM_allocated = psxP_allocated = psxH_allocated = 0;
 	}
 
 	// Close/unlink file: RAM is released when munmap()'ed or pid terminates
 #ifdef SHMEM_MIRRORING
-	shm_unlink(mem_fname);
+	if (mem_fname)
+		shm_unlink(mem_fname);
 #else
 	if (memfd >= 0)
 		close(memfd);
-	unlink(mem_fname);
+	if (mem_fname)
+		unlink(mem_fname);
 #endif
 
 	return success ? 0 : -1;
@@ -199,6 +204,7 @@ void rec_munmap_psx_mem()
 	// Unmap 8MB ROM Expansion and 64KB HW I/O regions
 	munmap((void*)(PSX_MEM_VADDR+0x0f000000), 0x0f810000-0x0f000000);
 	psxM = psxP = psxH = NULL;
+	psxM_allocated = psxP_allocated = psxH_allocated = 0;
 }
 
 
@@ -295,7 +301,7 @@ int rec_mmap_rec_mem()
 		goto exit;
 	}
 	l_recRAM_mirrored = 1;
-	printf(" ..success!\n");
+	printf(" ..mapped to %p\n", (void*)REC_RAM_VADDR);
 
 	printf("Mapping %uKB recROM using mmap\n", REC_ROM_SIZE/1024);
 	// Map recROM to start at offset past recRAM that matches PSX mapping,
@@ -313,7 +319,7 @@ int rec_mmap_rec_mem()
 		success = 0;
 		goto exit;
 	}
-	printf(" ..success!\n");
+	printf(" ..mapped to %p\n", (void*)REC_ROM_VADDR);
 
 exit:
 	if (!success) {
@@ -331,11 +337,13 @@ exit:
 
 	// Close/unlink file: RAM is released when munmap()'ed or pid terminates
 #ifdef SHMEM_MIRRORING
-	shm_unlink(mem_fname);
+	if (mem_fname)
+		shm_unlink(mem_fname);
 #else
 	if (memfd >= 0)
 		close(memfd);
-	unlink(mem_fname);
+	if (mem_fname)
+		unlink(mem_fname);
 #endif
 
 	return success ? 0 : -1;

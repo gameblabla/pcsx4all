@@ -2,7 +2,7 @@
  * Mips-to-mips recompiler for pcsx4all
  *
  * Copyright (c) 2009 Ulrich Hecht
- * Copyright (c) 2017 modified by Dmitry Smagin, Daniel Silsby
+ * Copyright (c) 2018 modified by Dmitry Smagin, Daniel Silsby
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,7 +39,14 @@
  * expansion, and I/O regions are mapped into this virtual address region,
  * i.e. psxM,psxP,psxH
  */
-#define PSX_MEM_VADDR 0x10000000LLU
+#ifdef MMAP_TO_ADDRESS_ZERO
+	// Allows address-conversion optimization.
+	#define PSX_MEM_VADDR 0ULL
+#else
+	// For development: null pointer dereferences will segfault as normal.
+	// Address conversions will need more instructions.
+	#define PSX_MEM_VADDR 0x10000000ULL
+#endif
 
 int rec_mmap_psx_mem();
 void rec_munmap_psx_mem();
@@ -50,14 +57,12 @@ void rec_munmap_psx_mem();
  * Recompiler's code ptr tables are mapped into this virtual address region,
  * i.e. recRAM and recROM.
  */
-
 #define REC_RAM_PTR_SIZE sizeof(uptr)
-
 #define REC_RAM_SIZE (0x200000 / 4 * REC_RAM_PTR_SIZE)
 #define REC_ROM_SIZE ( 0x80000 / 4 * REC_RAM_PTR_SIZE)
 
-#define REC_RAM_VADDR 0x20000000LLU
-#define REC_ROM_VADDR (REC_RAM_VADDR + (0x00c00000LLU / 4 * REC_RAM_PTR_SIZE))
+#define REC_RAM_VADDR 0x20000000ULL
+#define REC_ROM_VADDR (REC_RAM_VADDR + (0x00c00000ULL / 4 * REC_RAM_PTR_SIZE))
 
 int rec_mmap_rec_mem();
 void rec_munmap_rec_mem();

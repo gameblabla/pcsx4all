@@ -29,10 +29,15 @@
 #include "r3000a.h"
 #include "psxhw.h"
 
-
-/* Memory statistics (for development purposes) */
-
+/* Uncomment for memory statistics (for development purposes) */
 //#define DEBUG_MEM_STATS
+
+/* Uncomment for debug logging to console */
+//#define PSXMEM_LOG printf
+
+#ifndef PSXMEM_LOG
+#define PSXMEM_LOG(...)
+#endif
 
 enum MemstatType   { MEMSTAT_TYPE_READ, MEMSTAT_TYPE_WRITE, MEMSTAT_TYPE_COUNT };
 enum MemstatWidth  { MEMSTAT_WIDTH_8, MEMSTAT_WIDTH_16, MEMSTAT_WIDTH_32, MEMSTAT_WIDTH_COUNT };
@@ -51,15 +56,19 @@ static inline void memstats_add_read(u32 addr, enum MemstatWidth width) {}
 static inline void memstats_add_write(u32 addr, enum MemstatWidth width) {}
 #endif // DEBUG_MEM_STATS
 
+s8 *psxM;
+s8 *psxP;
+s8 *psxR;
+s8 *psxH;
+uint8_t psxM_allocated;
+uint8_t psxP_allocated;
+uint8_t psxR_allocated;
+uint8_t psxH_allocated;
 
-s8 *psxM = NULL;
-s8 *psxP = NULL;
-s8 *psxR = NULL;
-s8 *psxH = NULL;
+u8 **psxMemWLUT;
+u8 **psxMemRLUT;
 
-u8 **psxMemWLUT = NULL;
-u8 **psxMemRLUT = NULL;
-u8 *psxNULLread=NULL;
+static u8 *psxNULLread;
 
 /*  Playstation Memory Map (from Playstation doc by Joshua Walker)
 0x0000_0000-0x0000_ffff		Kernel (64K)	
@@ -78,34 +87,34 @@ u8 *psxNULLread=NULL;
 0xbfc0_0000-0xbfc7_ffff		BIOS (512K)
 */
 
-int psxMemInit() {
+int psxMemInit()
+{
 	int i;
 
-	psxMemRLUT = (u8 **)malloc(0x10000 * sizeof(void *));
-	psxMemWLUT = (u8 **)malloc(0x10000 * sizeof(void *));
-	memset(psxMemRLUT, 0, 0x10000 * sizeof(void *));
-	memset(psxMemWLUT, 0, 0x10000 * sizeof(void *));
+	if (psxMemRLUT == NULL) { psxMemRLUT = (u8 **)calloc(0x10000, sizeof(void *)); }
+	if (psxMemWLUT == NULL) { psxMemWLUT = (u8 **)calloc(0x10000, sizeof(void *)); }
+	if (psxNULLread == NULL) { psxNULLread = (u8*)calloc(0x10000, 1); }
 
-	if (psxM == NULL)
-		psxM = (s8 *)malloc(0x200000);
+	// If a dynarec hasn't already mmap'd any of psxM,psxP,psxH,psxR, allocate
+	//  them here. Always use booleans 'psxM_allocated' etc to check allocation
+	//  status: Dynarecs could choose to mmap 'psxM' pointer to address 0,
+	//  making a standard pointer NULLness check inappropriate.
 
-	// Allocate 64K each for 0x1f00_0000 and 0x1f80_0000 regions
-	if (psxP == NULL)
-		psxP = (s8 *)malloc(0x10000);
-	if (psxH == NULL)
-		psxH = (s8 *)malloc(0x10000);
+	// Allocate 2MB for PSX RAM
+	if (!psxM_allocated) { psxM = (s8*)malloc(0x200000);  psxM_allocated = psxM != NULL; }
 
-	if (psxR == NULL)
-		psxR = (s8 *)malloc(0x80000);
+	// Allocate 64K for PSX ROM expansion 0x1f00_0000 region
+	if (!psxP_allocated) { psxP = (s8*)malloc(0x10000);   psxP_allocated = psxP != NULL; }
 
-	if (psxNULLread == NULL)
-		psxNULLread=(u8*)malloc(0x10000);
+	// Allocate 64K for PSX scratcpad + HW I/O 0x1f80_0000 region
+	if (!psxH_allocated) { psxH = (s8*)malloc(0x10000);   psxH_allocated = psxH != NULL; }
 
-	memset(psxNULLread, 0, 0x10000);
-	
-	if (psxMemRLUT == NULL || psxMemWLUT == NULL || 
-		psxM == NULL || psxP == NULL || psxH == NULL ||
-		psxNULLread == NULL) {
+	// Allocate 512KB for PSX ROM 0xbfc0_0000 region
+	if (!psxR_allocated) { psxR = (s8*)malloc(0x80000);   psxR_allocated = psxR != NULL; }
+
+	if (psxMemRLUT == NULL || psxMemWLUT == NULL || psxNULLread == NULL ||
+	    !psxM_allocated || !psxP_allocated || !psxR_allocated || !psxH_allocated)
+	{
 		printf("Error allocating memory!");
 		return -1;
 	}
@@ -140,10 +149,11 @@ int psxMemInit() {
 	return 0;
 }
 
-void psxMemReset() {
+void psxMemReset()
+{
 	DIR *dirstream = NULL;
 	struct dirent *direntry;
-	boolean biosfound = FALSE;
+	boolean biosfound = 0;
 	FILE *f = NULL;
 	char bios[MAXPATHLEN];
 
@@ -156,11 +166,11 @@ void psxMemReset() {
 	memset(psxP, 0xff, 0x10000); // PIO Expansion memory
 	memset(psxR, 0, 0x80000);    // Bios memory
 
-	if (Config.HLE==FALSE) {
+	if (!Config.HLE) {
 		dirstream = opendir(Config.BiosDir);
 		if (dirstream == NULL) {
 			printf("Could not open BIOS directory: \"%s\". Enabling HLE Bios!\n", Config.BiosDir);
-			Config.HLE = TRUE;
+			Config.HLE = 1;
 			return;
 		}
 
@@ -188,8 +198,8 @@ void psxMemReset() {
 					}
 
 					fclose(f);
-					Config.HLE = FALSE;
-					biosfound = TRUE;
+					Config.HLE = 0;
+					biosfound = 1;
 					break;
 				}
 			}
@@ -198,7 +208,7 @@ void psxMemReset() {
 
 		if (!biosfound) {
 			printf("Could not locate BIOS: \"%s\". Enabling HLE BIOS!\n", Config.Bios);
-			Config.HLE = TRUE;
+			Config.HLE = 1;
 		}
 	}
 
@@ -208,10 +218,11 @@ void psxMemReset() {
 
 void psxMemShutdown()
 {
-	free(psxM);         psxM = NULL;
-	free(psxP);         psxP = NULL;
-	free(psxH);         psxH = NULL;
-	free(psxR);         psxR = NULL;
+	if (psxM_allocated) { free(psxM);  psxM = NULL;  psxM_allocated = 0; }
+	if (psxP_allocated) { free(psxP);  psxP = NULL;  psxP_allocated = 0; }
+	if (psxH_allocated) { free(psxH);  psxH = NULL;  psxH_allocated = 0; }
+	if (psxR_allocated) { free(psxR);  psxR = NULL;  psxR_allocated = 0; }
+
 	free(psxMemRLUT);   psxMemRLUT = NULL;
 	free(psxMemWLUT);   psxMemWLUT = NULL;
 	free(psxNULLread);  psxNULLread = NULL;
@@ -235,9 +246,7 @@ u8 psxMemRead8(u32 mem)
 		if (p != NULL) {
 			return *(u8*)(p + m);
 		} else {
-#ifdef PSXMEM_LOG
-			PSXMEM_LOG("err lb %8.8lx\n", mem);
-#endif
+			PSXMEM_LOG("%s(): err lb 0x%08x\n", __func__, mem);
 			ret = 0;
 		}
 	}
@@ -261,9 +270,7 @@ u16 psxMemRead16(u32 mem)
 		if (p != NULL) {
 			ret = SWAPu16(*(u16*)(p + m));
 		} else {
-#ifdef PSXMEM_LOG
-			PSXMEM_LOG("err lh %8.8lx\n", mem);
-#endif
+			PSXMEM_LOG("%s(): err lh 0x%08x\n", __func__, mem);
 			ret = 0;
 		}
 	}
@@ -287,9 +294,7 @@ u32 psxMemRead32(u32 mem)
 		if (p != NULL) {
 			ret = SWAPu32(*(u32*)(p + m));
 		} else {
-#ifdef PSXMEM_LOG
-			if (psxRegs.writeok) { PSXMEM_LOG("err lw %8.8lx\n", mem); }
-#endif
+			if (psxRegs.writeok) { PSXMEM_LOG("%s(): err lw 0x%08x\n", __func__, mem); }
 			ret = 0;
 		}
 	}
@@ -315,9 +320,7 @@ void psxMemWrite8(u32 mem, u8 value)
 			psxCpu->Clear((mem & (~3)), 1);
 #endif
 		} else {
-#ifdef PSXMEM_LOG
-			PSXMEM_LOG("err sb %8.8lx\n", mem);
-#endif
+			PSXMEM_LOG("%s(): err sb 0x%08x\n", __func__, mem);
 		}
 	}
 }
@@ -340,9 +343,7 @@ void psxMemWrite16(u32 mem, u16 value)
 			psxCpu->Clear((mem & (~3)), 1);
 #endif
 		} else {
-#ifdef PSXMEM_LOG
-			PSXMEM_LOG("err sh %8.8lx\n", mem);
-#endif
+			PSXMEM_LOG("%s(): err sh 0x%08x\n", __func__, mem);
 		}
 	}
 }
@@ -369,10 +370,7 @@ void psxMemWrite32(u32 mem, u32 value)
 #ifdef PSXREC
 				if (!psxRegs.writeok) psxCpu->Clear(mem, 1);
 #endif
-
-#ifdef PSXMEM_LOG
-				if (psxRegs.writeok) { PSXMEM_LOG("err sw %8.8lx\n", mem); }
-#endif
+				if (psxRegs.writeok) { PSXMEM_LOG("%s(): err sw 0x%08x\n", __func__, mem); }
 			} else {
 				// Write to cache control port 0xfffe0130
 				psxMemWrite32_CacheCtrlPort(value);
@@ -384,30 +382,32 @@ void psxMemWrite32(u32 mem, u32 value)
 // Write to cache control port 0xfffe0130
 void psxMemWrite32_CacheCtrlPort(u32 value)
 {
-#ifdef PSXREC
-	//   For dynarecs, they can choose to omit the check of 'writeok' before
-	// each store. To allow this, when cache is isolated, we backup the first
-	// 64KB of PS1 RAM. Then, the dynarec can allow all subsequent stores to go
-	// to RAM without any checks. After cache control port status returns to
-	// normal, i.e. cache is unisolated, we restore the backup.
-	//   The stores that come after cache isolation are meant soley to
-	// invalidate I-cache lines. The addresses written to are assumed to be
-	// within the first 64KB of addresses. The BIOS CacheFlush() 0x44 A0 routine
-	// is known to do this, and this also should work for games that use their
-	// own cache-flush routines, like '007 Tomorrow Never Dies'. Because some
-	// games do use their own cache-flush routines, we cannot rely merely on
-	// patching BIOS code or its 0x44 CacheFlush() A0 jumptable entry.
-	//   If we wanted to be paranoid, we could backup the entire 2MB of PS1 RAM
-	// instead of just 64KB. But, until it is proven a single game needs this,
-	// we'll stick with just 64KB.
-	//   Note that we alter the psxMemRLUT[] entries for this 64KB region to
-	// point to the backup while cache is isolated: this is done in case the
-	// dynarec needs to recompile some code during the sequence. It will read
-	// from the backed-up 64KB PS1 RAM, not from RAM overwritten by sequence.
-	// Of course, this assumes the recompiler is using psxMemRLUT[] or PSXM()
-	// macro to read PS1 code.   -senquack
+	PSXMEM_LOG("%s(): 0x%08x\n", __func__, value);
 
-	static u8 mem_bak[0x10000];
+#ifdef PSXREC
+	/*  Stores in PS1 code during cache isolation invalidate cachelines.
+	 * It is assumed that cache-flush routines write to the lowest 4KB of
+	 * address space for Icache, or 1KB for Dcache/scratchpad.
+	 *  Originally, stores had to check 'writeok' in psxRegs struct before
+	 * writing to RAM. To eliminate this necessity, we could simply patch the
+	 * BIOS 0x44 FlushCache() A0 jumptable entry. Unfortunately, this won't
+	 * work for some games that use less-buggy non-BIOS cache-flush routines
+	 * like '007 Tomorrow Never Dies', often provided by SN-systems, the PS1
+	 * toolchain provider.
+	 *  Instead, we backup the lowest 64KB PS1 RAM when the cache is isolated.
+	 * All stores write to RAM regardless of cache state. Thus, cache-flush
+	 * routines temporarily trash the lowest 4KB of PS1 RAM. Fortunately, they
+	 * ran in a 'critical section' with interrupts disabled, so there's little
+	 * worry of PS1 code ever reading the trashed contents.
+	 *  We point the relevant portions of psxMemRLUT[] to the 64KB backup while
+	 * cache is isolated. This is in case the dynarec needs to recompile some
+	 * code during isolation. As long as it reads code using psxMemRLUT[] ptrs,
+	 * it should never see trashed RAM contents.
+	 *
+	 * -senquack, mips dynarec team, 2017
+	 */
+
+	static u32 mem_bak[0x10000/4];
 #endif //PSXREC
 
 	switch (value)
@@ -415,39 +415,49 @@ void psxMemWrite32_CacheCtrlPort(u32 value)
 		case 0x800: case 0x804:
 			if (psxRegs.writeok == 0) break;
 			psxRegs.writeok = 0;
+			PSXMEM_LOG("%s(): Icache is isolated.\n", __func__);
+
 			memset(psxMemWLUT + 0x0000, 0, 0x80 * sizeof(void *));
 			memset(psxMemWLUT + 0x8000, 0, 0x80 * sizeof(void *));
 			memset(psxMemWLUT + 0xa000, 0, 0x80 * sizeof(void *));
 
 #ifdef PSXREC
-			// Cache is now isolated, pending cache-flush sequence:
-			//  Backup lower 64KB of PS1 RAM, and point RLUT to it.
-			memcpy(mem_bak, psxM, sizeof(mem_bak));
-			psxMemRLUT[0x0000] = psxMemRLUT[0x0020] = psxMemRLUT[0x0040] = psxMemRLUT[0x0060] = mem_bak;
-			psxMemRLUT[0x8000] = psxMemRLUT[0x8020] = psxMemRLUT[0x8040] = psxMemRLUT[0x8060] = mem_bak;
-			psxMemRLUT[0xa000] = psxMemRLUT[0xa020] = psxMemRLUT[0xa040] = psxMemRLUT[0xa060] = mem_bak;
+			/* Cache is now isolated, pending cache-flush sequence:
+			 *  Backup lower 64KB of PS1 RAM, adjust psxMemRLUT[].
+			 */
+			memcpy((void*)mem_bak, (void*)psxM, sizeof(mem_bak));
+			psxMemRLUT[0x0000] = psxMemRLUT[0x0020] = psxMemRLUT[0x0040] = psxMemRLUT[0x0060] = (u8 *)mem_bak;
+			psxMemRLUT[0x8000] = psxMemRLUT[0x8020] = psxMemRLUT[0x8040] = psxMemRLUT[0x8060] = (u8 *)mem_bak;
+			psxMemRLUT[0xa000] = psxMemRLUT[0xa020] = psxMemRLUT[0xa040] = psxMemRLUT[0xa060] = (u8 *)mem_bak;
 #endif
+
+			psxCpu->Notify(R3000ACPU_NOTIFY_CACHE_ISOLATED, NULL);
 			break;
 		case 0x00: case 0x1e988:
 			if (psxRegs.writeok == 1) break;
 			psxRegs.writeok = 1;
-			for (int i = 0; i < 0x80; i++) psxMemWLUT[i + 0x0000] = (u8*)&psxM[(i & 0x1f) << 16];
+			PSXMEM_LOG("%s(): Icache is unisolated.\n", __func__);
+
+			for (int i = 0; i < 0x80; i++)
+				psxMemWLUT[i + 0x0000] = (u8*)&psxM[(i & 0x1f) << 16];
 			memcpy(psxMemWLUT + 0x8000, psxMemWLUT, 0x80 * sizeof(void *));
 			memcpy(psxMemWLUT + 0xa000, psxMemWLUT, 0x80 * sizeof(void *));
 
 #ifdef PSXREC
-			// Cache is now unisolated: Restore backup of lower 64KB RAM,
-			//  and point loads to their original locations
-			memcpy(psxM, mem_bak, sizeof(mem_bak));
+			/* Cache is now unisolated:
+			 * Restore lower 64KB RAM contents and psxMemRLUT[].
+			 */
+			memcpy((void*)psxM, (void*)mem_bak, sizeof(mem_bak));
 			psxMemRLUT[0x0000] = psxMemRLUT[0x0020] = psxMemRLUT[0x0040] = psxMemRLUT[0x0060] = (u8 *)psxM;
 			psxMemRLUT[0x8000] = psxMemRLUT[0x8020] = psxMemRLUT[0x8040] = psxMemRLUT[0x8060] = (u8 *)psxM;
 			psxMemRLUT[0xa000] = psxMemRLUT[0xa020] = psxMemRLUT[0xa040] = psxMemRLUT[0xa060] = (u8 *)psxM;
 #endif
+
+			/* Dynarecs might take this opportunity to flush their code cache */
+			psxCpu->Notify(R3000ACPU_NOTIFY_CACHE_UNISOLATED, NULL);
 			break;
 		default:
-#ifdef PSXMEM_LOG
-			PSXMEM_LOG("unk %8.8lx = %x\n", mem, value);
-#endif
+			PSXMEM_LOG("%s(): unknown val 0x%08x\n", __func__, value);
 			break;
 	}
 }

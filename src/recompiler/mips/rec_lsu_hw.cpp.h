@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Dmitry Smagin / Daniel Silsby
+ * Copyright (c) 2018 Dmitry Smagin / Daniel Silsby
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,6 +29,11 @@
  * Last updated: Aug 4 2017
  */
 
+/******************************************************************************
+ * IMPORTANT: The following host registers have unique usage restrictions.    *
+ *            See notes in mips_codegen.h for full details.                   *
+ *  MIPSREG_AT, MIPSREG_V0, MIPSREG_V1, MIPSREG_RA                            *
+ *****************************************************************************/
 
 /* Will emit code for any indirect stores (calls to C). Bool at ptr param
  *  'C_func_called' will be set to 1 if a call to C is made, 0 if not.
@@ -942,31 +947,14 @@ static uint8_t emit_const_hw_load(u32 addr, u32 r2, u32 opcode, uint8_t *C_func_
 /* Emits a series of loads/stores to a known-const scratcpad/HW I/O base
  * address, i.e. address is in [0xXf80_0000 .. 0xXf80_ffff] range.
  */
-static void const_hw_loads_stores(const int  count,
-                                  const u32  pc_of_last_store_in_series,
-                                  const u32  base_reg_constval)
+static void const_hw_loads_stores(const int count,
+                                  u32 rs_constval)
 {
-	const uint8_t contains_store = (pc_of_last_store_in_series != 1);
-
-	/* DISABLED FOR NOW -
-	   This causes a slight performance decrease, probably because we tie
-	   up a regcache entry as base reg across the series. Until we get a
-	   better reg allocator, we'll leave this disabled.
-
-	// Is PS1 address space mapped virtually to a convenient location?
-	//  If so, we can use the original base register unmodified.
-	const uint8_t use_orig_addr = psx_mem_mapped &&
-	                           (base_reg_constval>>16) == 0x1f80 &&
-	                           PSX_MEM_VADDR == 0x10000000;
-	*/
-	const uint8_t use_orig_addr = 0;
-
-	u32 r1 = 0;  // Base register (if used below)
-	if (use_orig_addr)
-		r1 = regMipsToHost(_Rs_, REG_LOAD, REG_REGISTER);
-
-	uint8_t upper_psxH_loaded = 0;
-	u16 upper_psxH = 0;
+	// Keep upper half of last effective address in reg, tracking current
+	//  value so we can avoid loading same val repeatedly.
+	u32  base_reg = 0;
+	u32  base_reg_val = 0xffffffff;  // Initialize with impossible value
+	uint8_t base_reg_lui_emitted = 0;
 
 	u32 PC = pc - 4;
 	int icount = count;
@@ -978,67 +966,60 @@ static void const_hw_loads_stores(const int  count,
 		if (opcode == 0)
 			continue;
 
-		const uint8_t is_store = contains_store ? opcodeIsStore(opcode) : 0;
-		const uint8_t is_load  = is_store ? 0 : opcodeIsLoad(opcode);
+		const uint8_t is_store   = opcodeIsStore(opcode);
+		const uint8_t is_load    = !is_store && opcodeIsLoad(opcode);
+		const uint8_t is_lwl_lwr = is_load && opcodeIsLoadWordUnaligned(opcode);
 
 		if (!is_store && !is_load) {
-			// Must be a jump/branch whose BD slot contained a store that
-			//  was included in the series, so skip it.
+			// Must be a jump/branch whose BD slot is included as the last
+			//  load/store in the series: skip it.
 			continue;
 		}
 
-		const s16 imm = _fImm_(opcode);
-		const u32 rt  = _fRt_(opcode);
-		const u32 psx_eff_addr = base_reg_constval + imm;
+		const u32 op_rt = _fRt_(opcode);
+		const u32 psx_eff_addr = rs_constval + _fImm_(opcode);
 
 		uint8_t C_func_called = 0;
 		uint8_t emit_direct;
-		u32  r2;
+
+		u32  rt;
 		if (is_store) {
-			r2 = regMipsToHost(rt, REG_LOAD, REG_REGISTER);
-			emit_direct = emit_const_hw_store(psx_eff_addr, r2, opcode, &C_func_called);
+			rt = regMipsToHost(op_rt, REG_LOAD, REG_REGISTER);
+
+			emit_direct = emit_const_hw_store(psx_eff_addr, rt, opcode, &C_func_called);
 		} else {
-			const u32 insn = opcode & 0xfc000000;
-			if (insn == 0x88000000 || insn == 0x98000000) {
+			if (is_lwl_lwr) {
 				// LWL/LWR, so we need existing contents of register
-				r2 = regMipsToHost(rt, REG_LOAD, REG_REGISTER);
+				rt = regMipsToHost(op_rt, REG_LOAD, REG_REGISTER);
 			} else {
-				r2 = regMipsToHost(rt, REG_FIND, REG_REGISTER);
+				rt = regMipsToHost(op_rt, REG_FIND, REG_REGISTER);
 			}
-			emit_direct = emit_const_hw_load(psx_eff_addr, r2, opcode, &C_func_called);
+
+			emit_direct = emit_const_hw_load(psx_eff_addr, rt, opcode, &C_func_called);
 		}
 
-		// Emit direct access, ignoring any loads to zero reg
-		if (emit_direct && !(!is_store && rt == 0)) {
-			if (use_orig_addr) {
-				// Use the unmodified PS1 base address
-				LSU_OPCODE(opcode & 0xfc000000, r2, r1, imm);
-			} else {
-				const u32 psxH_eff_addr = (uintptr_t)psxH + (psx_eff_addr & 0xffff);
+		if (emit_direct)
+		{
+			const uptr host_addr = (uptr)psxH + (psx_eff_addr & 0xffff);
 
-				// If this is the first opcode, or a C function was called for
-				//  last HW IO port access, TEMP_1 must be (re)loaded with upper addr.
-				//  NOTE: it would be very unusual for upper psxH address to change
-				//  between iterations: all I/O ports are in lower half of 64KB range.
-				const u16 this_upper_psxH = ADR_HI(psxH_eff_addr);
-				if (!upper_psxH_loaded || C_func_called || (this_upper_psxH != upper_psxH)) {
-					LUI(TEMP_1, this_upper_psxH);
-					upper_psxH = this_upper_psxH;
-					upper_psxH_loaded = 1;
-				}
+			// Emit LUI for base reg (if not cached in host reg).
+			if (C_func_called ||
+			    !base_reg_lui_emitted ||
+			    base_reg_val != (ADR_HI(host_addr) << 16))
+			{
+				base_reg_lui_emitted = 1;
+				base_reg_val = ADR_HI(host_addr) << 16;
 
-				LSU_OPCODE(opcode & 0xfc000000, r2, TEMP_1, ADR_LO(psxH_eff_addr));
+				base_reg = emitConstBaseRegLUI(ADR_HI(host_addr));
 			}
+
+			LSU_OPCODE(opcode & 0xfc000000, rt, base_reg, ADR_LO(host_addr));
 		}
 
-		if (!is_store) {
-			SetUndef(rt);
-			regMipsChanged(rt);
+		if (is_load) {
+			SetUndef(op_rt);
+			regMipsChanged(op_rt);
 		}
-
-		regUnlock(r2);
+		regUnlock(rt);
 	} while (--icount);
-
-	if (use_orig_addr)
-		regUnlock(r1);
 }

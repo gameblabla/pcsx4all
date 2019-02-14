@@ -26,12 +26,20 @@
 #include "psxcounters.h"
 #include "psxbios.h"
 
+/* Possible vals for Notify() func param 'note' in R3000Acpu struct below */
+enum {
+	R3000ACPU_NOTIFY_CACHE_ISOLATED,
+	R3000ACPU_NOTIFY_CACHE_UNISOLATED,
+	R3000ACPU_NOTIFY_DMA3_EXE_LOAD
+};
+
 typedef struct {
 	int  (*Init)(void);
 	void (*Reset)(void);
 	void (*Execute)(void);
 	void (*ExecuteBlock)(unsigned target_pc);
 	void (*Clear)(u32 Addr, u32 Size);
+	void (*Notify)(int note, void *data);
 	void (*Shutdown)(void);
 } R3000Acpu;
 
