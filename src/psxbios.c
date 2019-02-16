@@ -220,6 +220,7 @@ typedef struct {
 } EXEC;
 
 struct DIRENTRY {
+	/* 0Ah-1Eh Filename in ASCII, terminated by 00h (max 20 chars, plus ending 00h) */
 	char name[20];
 	s32 attr;
 	s32 size;
@@ -372,9 +373,10 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	/*printf("read %d: %x,%x (%s)\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length, Mcd##mcd##Data + 128 * FDesc[1 + mcd].mcfile + 0xa);*/ \
 	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
 	sioMcdRead(((mcd == 1) ? MCD1 : MCD2), (char*)Ra1, offset, length); \
+	if (FDesc[1 + mcd].mode & 0x8000) { \
 	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
 	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
-	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
+	v0 = 0; } \
 	else v0 = length; \
 	FDesc[1 + mcd].offset += v0; \
 }
@@ -383,10 +385,11 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	unsigned offset = 8192 * FDesc[1 + mcd].mcfile + FDesc[1 + mcd].offset; \
 	/*printf("write %d: %x,%x\n", FDesc[1 + mcd].mcfile, FDesc[1 + mcd].offset, length);*/ \
 	sioMcdWrite((mcd==1) ? MCD1 : MCD2, (const char*)Ra1, offset, length); \
+	FDesc[1 + mcd].offset += length; \
+	if (FDesc[1 + mcd].mode & 0x8000) { \
 	DeliverEvent(0x11, 0x2); /* 0xf0000011, 0x0004 */ \
 	DeliverEvent(0x81, 0x2); /* 0xf4000001, 0x0004 */ \
-	FDesc[1 + mcd].offset += length; \
-	if (FDesc[1 + mcd].mode & 0x8000) v0 = 0; \
+	v0 = 0; } \
 	else v0 = length; \
 }
 
@@ -403,8 +406,8 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 		if (!ptr[0xa]) continue; \
 		ptr+= 0xa; \
 		if (pfile[0] == 0) { \
-			strncpy(dir->name, ptr, sizeof(dir->name)); \
-			dir->name[sizeof(dir->name) - 1] = '\0'; \
+			strncpy(dir->name, ptr, sizeof(dir->name) - 1); \
+			if (strlen(dir->name) < sizeof(dir->name)) dir->name[strlen(dir->name)] = '\0'; \
 		} else for (i=0; i<20; i++) { \
 			if (pfile[i] == ptr[i]) { \
 				dir->name[i] = ptr[i]; \
