@@ -399,7 +399,7 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 	while (nfile < 16) { \
 		int match=1; \
  \
-		const char *ptr = mcd_data + 128 * nfile; \
+		const char *ptr = mcd_data + 128 * (nfile + 1); \
 		nfile++; \
 		if ((*ptr & 0xF0) != 0x50) continue; \
 		/* Bug link files show up as free block. */ \
@@ -2300,7 +2300,7 @@ void psxBios_firstfile(void) { // 42
 	if (pa0) {
 		strcpy(ffile, pa0);
 		pfile = ffile+5;
-		nfile = 1;
+		nfile = 0;
 		if (!strncmp(pa0, "bu00", 4)) {
 			// firstfile() calls _card_read() internally, so deliver it's event
 			DeliverEvent(0x11, 0x2);
