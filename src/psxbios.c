@@ -1501,10 +1501,12 @@ void psxBios_Exec(void) { // 43
 
 void psxBios_FlushCache(void) { // 44
 #ifdef PSXBIOS_LOG
-	PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x44]);
+    PSXBIOS_LOG("psxBios_%s\n", biosA0n[0x44]);
 #endif
-
-	pc0 = ra;
+    psxCpu->Notify(R3000ACPU_NOTIFY_CACHE_ISOLATED, NULL);
+    psxCpu->Notify(R3000ACPU_NOTIFY_CACHE_UNISOLATED, NULL);
+ 
+    pc0 = ra;
 }
 
 void psxBios_GPU_dw(void) { // 0x46
