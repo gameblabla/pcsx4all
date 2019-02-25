@@ -30,12 +30,10 @@ SDL_LIBS   := $(shell $(SDL_CONFIG) --libs)
 MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
-C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DSHMEM_MIRRORING -DRS97
-C_ARCH  += -DMMAP_TO_ADDRESS_ZERO
-	
-OPTS = -Ofast -mno-fp-exceptions -mframe-header-opt -mno-mips16 -mno-interlink-compressed -msym32 -fno-caller-saves -mno-check-zero-division
+C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -fprofile-generate=/home/retrofw/profile
+OPTS = -O2 -mno-fp-exceptions -mframe-header-opt -mno-check-zero-division -fno-signed-zeros -fno-trapping-math -mno-interlink-compressed -fno-caller-saves -flto
 
-CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC $(OPTS) -fdata-sections -ffunction-sections -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -fdata-sections -ffunction-sections $(OPTS) -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -55,8 +53,8 @@ endif
 
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -nostdinc++ 
 
-LDFLAGS = $(SDL_LIBS) -lgcov -lrt -lz -Wl,--as-needed -Wl,--gc-sections -s -flto
-LDFLAGS += -Wl,-Ttext-segment=0x40000000
+LDFLAGS = $(SDL_LIBS) -lrt -lz -Wl,--as-needed -Wl,--gc-sections -s
+LDFLAGS += -flto
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
