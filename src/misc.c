@@ -736,7 +736,8 @@ static const u32 SaveVersionEarliestSupported = 0x8b410004;
 //                 * Embedded screenshot data area is expanded a bit and now
 //                   used for rgb565 160x120x2 image (38400 bytes)
 
-int SaveState(const char *file) {
+int SaveState(const char *file) 
+{
 	void* f;
 	GPUFreeze_t *gpufP = NULL;
 	SPUFreeze_t *spufP = NULL;

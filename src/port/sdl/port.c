@@ -210,8 +210,8 @@ static void setup_paths()
 void probe_lastdir()
 {
   DIR *dir;
-  if (!Config.LastDir)
-    return;
+ /* if (!Config.LastDir)
+    return;*/
 
   dir = opendir(Config.LastDir);
 
@@ -574,8 +574,8 @@ void config_save()
 // Returns 0: success, -1: failure
 int state_load(int slot)
 {
-  char savename[512];
-  sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, slot);
+  char savename[512+PATH_MAX];
+  snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, slot);
 
   if (FileExists(savename))
   {
@@ -588,10 +588,9 @@ int state_load(int slot)
 // Returns 0: success, -1: failure
 int state_save(int slot)
 {
-  char savename[512];
-  sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, slot);
-
-  return SaveState(savename);
+	char savename[512+PATH_MAX];
+	snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, slot);
+	return SaveState(savename);
 }
 
 static struct
@@ -680,7 +679,6 @@ void joy_init(void)
 
 void pad_update(void)
 {
-  int axisval;
   SDL_Event event;
   Uint8 *keys = SDL_GetKeyState(NULL);
 
@@ -689,7 +687,7 @@ void pad_update(void)
     switch (event.type)
     {
       case SDL_QUIT:
-        exit(0);
+        pcsx4all_exit();
         break;
       case SDL_KEYDOWN:
         switch (event.key.keysym.sym)
@@ -905,8 +903,8 @@ int main (int argc, char **argv)
   setup_paths();
 
   // PCSX
-  sprintf(Config.Mcd1, "%s/%s", memcardsdir, "mcd001.mcr");
-  sprintf(Config.Mcd2, "%s/%s", memcardsdir, "mcd002.mcr");
+  snprintf(Config.Mcd1, sizeof(Config.Mcd1), "%s/%s", memcardsdir, "mcd001.mcr");
+  snprintf(Config.Mcd2, sizeof(Config.Mcd2), "%s/%s", memcardsdir, "mcd002.mcr");
   strcpy(Config.PatchesDir, patchesdir);
   strcpy(Config.BiosDir, biosdir);
   strcpy(Config.Bios, "scph1001.bin");
