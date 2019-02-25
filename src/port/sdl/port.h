@@ -48,7 +48,7 @@ extern unsigned short *SCREEN;
 int state_load(int slot);
 int state_save(int slot);
 
-int SelectGame();
-int GameMenu();
+int SelectGame(void);
+int GameMenu(void);
 
 #endif

@@ -54,7 +54,7 @@ enum
   DKEY_TOTAL = 16
 };
 
-static SDL_Surface *screen;
+static SDL_Surface *screen, *rl_screen;
 unsigned short *SCREEN;
 
 static uint8_t pcsx4all_initted = 0;
@@ -63,7 +63,47 @@ static uint8_t emu_running = 0;
 void config_load();
 void config_save();
 
-const char CNTfix_table[19][10]=
+#define AVERAGEHI(AB) ((((AB) & 0xF7DE0000) >> 1) + (((AB) & 0xF7DE) << 15))
+#define AVERAGELO(CD) ((((CD) & 0xF7DE) >> 1) + (((CD) & 0xF7DE0000) >> 17))
+
+void upscale_320xXXX_to_480x272(uint32_t *dst, uint32_t *src, uint32_t height)
+{
+	uint32_t Eh = 0;
+	uint32_t source = 0;
+	uint32_t dh = 0;
+	uint32_t y, x;
+
+	for (y = 0; y < 272; y++)
+	{
+		source = dh * 320/2;
+
+		for (x = 0; x < 480/6; x++)
+		{
+			register uint32_t ab, cd;
+
+			__builtin_prefetch(dst + 4, 1);
+			__builtin_prefetch(src + source + 4, 0);
+
+			ab = src[source] & 0xF7DEF7DE;
+			cd = src[source + 1] & 0xF7DEF7DE;
+
+			*dst++ = (ab & 0xFFFF) + AVERAGEHI(ab);
+			*dst++ = (ab >> 16) + ((cd & 0xFFFF) << 16);
+			*dst++ = (cd & 0xFFFF0000) + AVERAGELO(cd);
+
+			source += 2;
+		}
+		Eh += height;
+		if(Eh >= 272)
+		{
+			Eh -= 272;
+			dh++; 
+		}
+	}
+}
+
+
+const char CNTfix_table[20][10]=
 {
 	/* Vandal Hearts */
 	{"SCPS45183"},
@@ -86,7 +126,13 @@ const char CNTfix_table[19][10]=
 	{"SLES12559"},
 	{"SLES02559"},
 	{"SLES12558"},
-	{"SLES02558"}
+	{"SLES02558"},
+	{"SLUS01042"},
+	{"SLUS01055"},
+	{"SCPS45467"},
+	{"SLPS02480"},
+	{"SLPS91479"},
+	{"SLPS02779"},
 };
 
 const char MemorycardHack[8][10] =
@@ -150,8 +196,8 @@ void CheckforCDROMid_applyhacks()
 
 static void pcsx4all_exit(void)
 {
-  if (SDL_MUSTLOCK(screen))
-    SDL_UnlockSurface(screen);
+  if (SDL_MUSTLOCK(rl_screen))
+    SDL_UnlockSurface(rl_screen);
 
   SDL_Quit();
 
@@ -210,8 +256,8 @@ static void setup_paths()
 void probe_lastdir()
 {
   DIR *dir;
- /* if (!Config.LastDir)
-    return;*/
+  if (!Config.LastDir)
+    return;
 
   dir = opendir(Config.LastDir);
 
@@ -574,8 +620,8 @@ void config_save()
 // Returns 0: success, -1: failure
 int state_load(int slot)
 {
-  char savename[512+PATH_MAX];
-  snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, slot);
+  char savename[512];
+  sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, slot);
 
   if (FileExists(savename))
   {
@@ -588,9 +634,10 @@ int state_load(int slot)
 // Returns 0: success, -1: failure
 int state_save(int slot)
 {
-	char savename[512+PATH_MAX];
-	snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, slot);
-	return SaveState(savename);
+  char savename[512];
+  sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, slot);
+
+  return SaveState(savename);
 }
 
 static struct
@@ -611,8 +658,8 @@ static struct
   { SDLK_LALT,		DKEY_CROSS },
   { SDLK_TAB,		DKEY_L1 },
   { SDLK_BACKSPACE,	DKEY_R1 },
-  { SDLK_END,		DKEY_L2 },
-  { SDLK_3,			DKEY_R2 },
+  { SDLK_1,			DKEY_L2 },
+  { SDLK_2,			DKEY_R2 },
   { SDLK_ESCAPE,		DKEY_SELECT },
 #else
   { SDLK_a,		DKEY_SQUARE },
@@ -635,8 +682,9 @@ static unsigned short pad2 = 0xffff;
 static unsigned short analog1 = 0;
 static int menu_check = 0;
 static int select_count = 0;
+uint8_t joy_count = 0;
 uint8_t use_speedup = 0;
-SDL_Joystick * sdl_joy;
+SDL_Joystick * sdl_joy[4];
 #define joy_commit_range    3276
 enum
 {
@@ -648,191 +696,200 @@ enum
 
 void joy_init(void)
 {
-  sdl_joy = SDL_JoystickOpen(0);
-  SDL_JoystickEventState(SDL_ENABLE);
-  /*
-  	int i;
-  	int joy_count;
-
+	/*int i;
   	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK))
   		return;
 
-  	joy_count = SDL_NumJoysticks();
+	joy_count = SDL_NumJoysticks();
 
   	if (!joy_count)
   		return;
 
   	// now try and open one. If, for some reason it fails, move on to the next one
   	for (i = 0; i < joy_count; i++)
-  	{
-  		sdl_joy = SDL_JoystickOpen(i);
-  		if (sdl_joy)
-  		{
-  			sdl_joy_num = i;
-  			break;
-  		}
-  	}
+  		sdl_joy[i] = SDL_JoystickOpen(i);*/
 
   	// make sure that Joystick event polling is a go
-  	SDL_JoystickEventState(SDL_ENABLE);*/
+  	SDL_JoystickEventState(SDL_ENABLE);
 }
 
 void pad_update(void)
 {
-  SDL_Event event;
-  Uint8 *keys = SDL_GetKeyState(NULL);
+	int axisval, a, k = 0;
+	SDL_Event event;
+	Uint8 *keys = SDL_GetKeyState(NULL);
 
-  while (SDL_PollEvent(&event))
-  {
-    switch (event.type)
-    {
-      case SDL_QUIT:
-        pcsx4all_exit();
-        break;
-      case SDL_KEYDOWN:
-        switch (event.key.keysym.sym)
-        {
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+			case SDL_QUIT:
+				exit(0);
+			break;
+			case SDL_KEYDOWN:
+			switch (event.key.keysym.sym)
+			{
 #ifndef GCW_ZERO
-          case SDLK_ESCAPE:
-            event.type = SDL_QUIT;
-            SDL_PushEvent(&event);
-            break;
+				case SDLK_ESCAPE:
+					event.type = SDL_QUIT;
+					SDL_PushEvent(&event);
+				break;
 #endif
-          case SDLK_v:
-          {
-            Config.ShowFps=!Config.ShowFps;
-          }
-          break;
-          default:
-            break;
-        }
-        break;
-      default:
-        break;
-    }
-  }
+				case SDLK_v:
+				{
+					Config.ShowFps=!Config.ShowFps;
+				}
+				break;
+				default:
+				break;
+			}
+			break;
+			case SDL_JOYAXISMOTION:
+			switch (event.jaxis.axis)
+			{
+				case 0: /* X axis */
+					axisval = event.jaxis.value;
+					analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
+					if (axisval > joy_commit_range)
+						analog1 |= ANALOG_RIGHT;
+					else if (axisval < -joy_commit_range)
+						analog1 |= ANALOG_LEFT;
+				break;
+				case 1: /* Y axis*/
+				axisval = event.jaxis.value;
+				analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
+				if (axisval > joy_commit_range)
+					analog1 |= ANALOG_DOWN;
+				else if (axisval < -joy_commit_range)
+					analog1 |= ANALOG_UP;
+				break;
+			}
+			break;
+			case SDL_JOYBUTTONDOWN:
+			break;
+			default:
+				break;
+		}
+	}
+	
+	while (keymap[k].key)
+	{
+		if (keys[keymap[k].key])
+			_pad1 &= ~(1 << keymap[k].bit);
+		else
+			_pad1 |= (1 << keymap[k].bit);
+		k++;
+	}
+	
+	/*if (joy_count > 0)
+	{
+		for(a=0;a<joy_count;a++)
+		{	
+			// If X is Pressed : 2
+			if (SDL_JoystickGetButton(sdl_joy[a], 2))
+			 pad1 &= ~(1 << DKEY_CROSS);
+			// If O is Pressed : 1
+			if (SDL_JoystickGetButton(sdl_joy[a], 1))
+			 pad1 &= ~(1 << DKEY_CIRCLE);
+			// If Square is Pressed : 3
+			if (SDL_JoystickGetButton(sdl_joy[a], 3))
+			 pad1 &= ~(1 << DKEY_SQUARE);
+			// If Triangle is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 0))
+			 pad1 &= ~(1 << DKEY_TRIANGLE);
+			 
+			// If Triangle is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 0))
+			 pad1 &= ~(1 << DKEY_TRIANGLE);
+			// If L1 is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 4))
+			 pad1 &= ~(1 << DKEY_L1);
+			// If L2 is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 6))
+			 pad1 &= ~(1 << DKEY_L2);
+			// If R1 is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 5))
+			 pad1 &= ~(1 << DKEY_R1);
+			// If R2 is Pressed : 0
+			if (SDL_JoystickGetButton(sdl_joy[a], 7))
+			 pad1 &= ~(1 << DKEY_R2);
+			 
+			if (SDL_JoystickGetButton(sdl_joy[a], 8))
+			 pad1 &= ~(1 << DKEY_SELECT);
+			if (SDL_JoystickGetButton(sdl_joy[a], 9))
+			 pad1 &= ~(1 << DKEY_START);
+		}
+	}*/
+	pad1 = _pad1;
 
-  int k = 0;
-  while (keymap[k].key)
-  {
-    if (keys[keymap[k].key])
-    {
-      _pad1 &= ~(1 << keymap[k].bit);
-    }
-    else
-    {
-      _pad1 |= (1 << keymap[k].bit);
-    }
-    k++;
-  }
-  pad1 = _pad1;
-
-  /* Special key combos for GCW-Zero */
+	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
-  // SELECT +
+	if (keys[SDLK_ESCAPE])
+	{
+		if (!keys[SDLK_RETURN])
+			menu_check = 1; //SELECT only
+		else if (menu_check == 1)
+			menu_check = 2; //SELECT + START
+		else
+		{
+			// START + SELECT
+			if (use_speedup == 0 && ++select_count == 70)
+				use_speedup = 1;
+		}
+	}
+	else
+		menu_check = 0;
 
-  
-  if (keys[SDLK_ESCAPE])
-  {
-    if (!keys[SDLK_RETURN])
-    {
-      menu_check = 1; //SELECT only
-    }
-    else if (menu_check == 1)
-    {
-      menu_check = 2; //SELECT + START
-    }
-    else
-    {
-      // START + SELECT
-      if (use_speedup == 0 && ++select_count == 70)
-      {
-        use_speedup = 1;
-      }
-    }
-  }
-  else
-  {
-    menu_check = 0;
-  }
+	if (use_speedup)
+	{
+		if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
+			select_count = 0;
+		else if (select_count == 0)
+			use_speedup = 0;
+	}
 
-  if (use_speedup)
-  {
-    if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
-    {
-      select_count = 0;
-    }
-    else if (select_count == 0)
-    {
-      use_speedup = 0;
-    }
-  }
-  
+	if (Config.AnalogArrow)
+	{
+		if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+			pad1 &= ~(1 << DKEY_UP);
+		if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+			pad1 &= ~(1 << DKEY_DOWN);
+		if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+			pad1 &= ~(1 << DKEY_LEFT);
+		if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+		pad1 &= ~(1 << DKEY_RIGHT);
+	}
+	else
+	{
+		// Analog Arrow Off
+		if (analog1 == ANALOG_DOWN)
+			menu_check = 2;
+	}
 
-
-  //
-  if (Config.AnalogArrow)
-  {
-    pad1 |= (1 << DKEY_SELECT);
-    // SELECT+B for psx's SELECT
-    if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
-    {
-      pad1 &= ~(1 << DKEY_SELECT);
-      pad1 |= (1 << DKEY_CROSS);
-    }
-
-    if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
-    {
-      pad1 &= ~(1 << DKEY_UP);
-    }
-    if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
-    {
-      pad1 &= ~(1 << DKEY_DOWN);
-    }
-    if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
-    {
-      pad1 &= ~(1 << DKEY_LEFT);
-    }
-    if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
-    {
-      pad1 &= ~(1 << DKEY_RIGHT);
-    }
-  }
-  else
-  {
-    // Analog Arrow Off
-	if (analog1 == ANALOG_DOWN)
-    {
-      menu_check = 2;
-    }
-  }
-
-
-  // SELECT+START for menu
-  if (menu_check == 2 && !keys[SDLK_LALT])
-  {
-    //Sync and close any memcard files opened for writing
-    //TODO: Disallow entering menu until they are synced/closed
-    // automatically, displaying message that write is in progress.
-    sioSyncMcds();
-
-    emu_running = 0;
-    pl_pause();    // Tell plugin_lib we're pausing emu
-    GameMenu();
-    emu_running = 1;
-    use_speedup = 0;
-    menu_check = 0;
-    analog1 = 0;
-    pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
-    video_clear();
-    video_flip();
-    video_clear();
+	// SELECT+START for menu
+	if (menu_check == 2 && !keys[SDLK_LALT])
+	{
+		//Sync and close any memcard files opened for writing
+		//TODO: Disallow entering menu until they are synced/closed
+		// automatically, displaying message that write is in progress.
+		sioSyncMcds();
+		emu_running = 0;
+		pl_pause();    // Tell plugin_lib we're pausing emu
+		GameMenu();
+		emu_running = 1;
+		use_speedup = 0;
+		menu_check = 0;
+		analog1 = 0;
+		pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
+		video_clear();
+		video_flip();
+		video_clear();
 #ifdef SDL_TRIPLEBUF
-    video_flip();
-    video_clear();
+		video_flip();
+		video_clear();
 #endif
-    pl_resume();    // Tell plugin_lib we're reentering emu
-  }
+		pl_resume();    // Tell plugin_lib we're reentering emu
+	}
 #endif
 }
 
@@ -843,23 +900,15 @@ unsigned short pad_read(int num)
 
 void video_flip(void)
 {
-  if(emu_running && Config.ShowFps)
-  {
-    port_printf(5, 5, pl_data.stats_msg);
-  }
-
-  if(SDL_MUSTLOCK(screen))
-  {
-    SDL_UnlockSurface(screen);
-  }
-
-  SDL_Flip(screen);
-
-  if(SDL_MUSTLOCK(screen))
-  {
-    SDL_LockSurface(screen);
-  }
-  SCREEN = (Uint16 *)screen->pixels;
+	if(emu_running && Config.ShowFps) port_printf(5, 5, pl_data.stats_msg);
+	
+	if(SDL_MUSTLOCK(rl_screen)) SDL_UnlockSurface(rl_screen);
+	
+	upscale_320xXXX_to_480x272((uint32_t*)rl_screen->pixels, (uint32_t*)screen->pixels, screen->h);
+	SDL_Flip(rl_screen);
+	
+	if(SDL_MUSTLOCK(rl_screen)) SDL_LockSurface(rl_screen);
+	SCREEN = (Uint16 *)screen->pixels;
 }
 
 /* This is used by gpu_dfxvideo only as it doesn't scale itself */
@@ -884,7 +933,7 @@ void video_set(unsigned short *pVideo, unsigned int width, unsigned int height)
 
 void video_clear(void)
 {
-  memset(screen->pixels, 0, screen->pitch*screen->h);
+	memset(screen->pixels, 0, screen->pitch*screen->h);
 }
 
 /* This is needed to override redirecting to stderr.txt and stdout.txt
@@ -903,8 +952,8 @@ int main (int argc, char **argv)
   setup_paths();
 
   // PCSX
-  snprintf(Config.Mcd1, sizeof(Config.Mcd1), "%s/%s", memcardsdir, "mcd001.mcr");
-  snprintf(Config.Mcd2, sizeof(Config.Mcd2), "%s/%s", memcardsdir, "mcd002.mcr");
+  sprintf(Config.Mcd1, "%s/%s", memcardsdir, "mcd001.mcr");
+  sprintf(Config.Mcd2, "%s/%s", memcardsdir, "mcd002.mcr");
   strcpy(Config.PatchesDir, patchesdir);
   strcpy(Config.BiosDir, biosdir);
   strcpy(Config.Bios, "scph1001.bin");
@@ -1387,29 +1436,24 @@ int main (int argc, char **argv)
   }
 
   //NOTE: spu_pcsxrearmed will handle audio initialization
-  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
+  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 
   atexit(pcsx4all_exit);
-
-	#ifdef SDL_TRIPLEBUF
-		int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
-	#else
-		int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
-	#endif
-	
-  screen = SDL_SetVideoMode(320, 240, 16, flags);
-  if (!screen)
+  
+  rl_screen = SDL_SetVideoMode(480, 272, 16, SDL_HWSURFACE);
+  if (!rl_screen)
   {
     puts("Failed to set video mode");
     exit(0);
   }
+  screen = SDL_CreateRGBSurface(SDL_SWSURFACE, 320, 240, 16, 0,0,0,0);
 
-  if (SDL_MUSTLOCK(screen))
-    SDL_LockSurface(screen);
+  if (SDL_MUSTLOCK(rl_screen))
+    SDL_LockSurface(rl_screen);
 
   SDL_WM_SetCaption("pcsx4all - SDL Version", "pcsx4all");
 
-  SCREEN = (Uint16 *)screen->pixels;
+  SCREEN = (uint16_t *)screen->pixels;
 
   if (argc < 2 || cdrfilename[0] == '\0')
   {
@@ -1595,7 +1639,7 @@ void port_printf(int x, int y, const char *text)
       screen[l * 320 * interval + 6] = (fontdata8x8[((text[i]) * 8) + l] & 0x02) ? 0xffff:0x0000;
       screen[l * 320 * interval + 7] = (fontdata8x8[((text[i]) * 8) + l] & 0x01) ? 0xffff:0x0000;
     }
-    screen += 8;
+	screen += 8;
   }
 }
 

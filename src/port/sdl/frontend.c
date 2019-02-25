@@ -629,9 +629,9 @@ static void gui_state_save_hint(int slot)
 {
   int x, y, len;
   char filename[128];
-  char fullpath[512];
-  sprintf(filename, "%s.%d.sav", CdromId, slot);
-  sprintf(fullpath, "%s/%s", sstatesdir, filename);
+  char fullpath[256+PATH_MAX];
+  snprintf(filename, sizeof(filename), "%s.%d.sav", CdromId, slot);
+  snprintf(fullpath, sizeof(fullpath), "%s/%s", sstatesdir, filename);
 
   // If file doesn't exist, there's no info to display
   if (!FileExists(fullpath))
@@ -760,8 +760,8 @@ static int gui_StateSave()
 
   for (int i=0; i < 10; ++i)
   {
-    char savename[512];
-    sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, i);
+    char savename[128+PATH_MAX];
+    snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, i);
     if (FileExists(savename))
     {
       str_slot[i] = str_slot_used[i];
@@ -863,9 +863,9 @@ static void gui_state_load_hint(int slot)
 {
   int x, y, len;
   char filename[128];
-  char fullpath[512];
-  sprintf(filename, "%s.%d.sav", CdromId, slot);
-  sprintf(fullpath, "%s/%s", sstatesdir, filename);
+  char fullpath[256+PATH_MAX];
+  snprintf(filename, sizeof(filename), "%s.%d.sav", CdromId, slot);
+  snprintf(fullpath, sizeof(fullpath), "%s/%s", sstatesdir, filename);
 
   // If file doesn't exist, there's no info to display
   if (!FileExists(fullpath))
@@ -991,8 +991,8 @@ static int gui_StateLoad()
   time_t newest_mtime = 0;
   for (int i=0; i < 10; ++i)
   {
-    char savename[512];
-    sprintf(savename, "%s/%s.%d.sav", sstatesdir, CdromId, i);
+    char savename[128+PATH_MAX];
+    snprintf(savename, sizeof(savename), "%s/%s.%d.sav", sstatesdir, CdromId, i);
     if (FileExists(savename))
     {
       time_t mtime;

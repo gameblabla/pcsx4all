@@ -143,7 +143,7 @@ void CALLBACK SPUplayADPCMchannel(xa_decode_t *);
 unsigned int CALLBACK SPUgetADPCMBufferRoom(void); //senquack - added function
 int  CALLBACK SPUplayCDDAchannel(short *, int);
 long CALLBACK SPUconfigure(void);
-long CALLBACK SPUfreeze(uint32_t, SPUFreeze_t *, uint32_t);
+extern long CALLBACK SPUfreeze(uint32_t ulFreezeMode, SPUFreeze_t * pF, uint32_t cycles);
 void CALLBACK SPUasync(uint32_t, uint32_t);
 
 #ifdef SPU_PCSXREARMED
