@@ -261,6 +261,15 @@ static int CurThread = 0;
 static FileDesc FDesc[32];
 static u32 card_active_chan;
 
+/* To avoid any issues with different behaviour when using the libc's own strlen instead.
+ * We want to mimic the PSX's behaviour in this case for bufile. */
+static size_t strlen_internal(char* p) 
+{
+	size_t size_of_array = 0;
+	while (*p++) size_of_array++;
+	return size_of_array;
+}
+
 INLINE void softCall(u32 pc) {
 	pc0 = pc;
 	ra = 0x80001000;
@@ -396,6 +405,7 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 #define bufile(mcd) { \
 	int i; \
 	const char *mcd_data = sioMcdDataPtr((mcd==1) ? MCD1 : MCD2); \
+	size_t size_of_name = strlen_internal(dir->name); \
 	while (nfile < 16) { \
 		int match=1; \
  \
@@ -407,7 +417,7 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 		ptr+= 0xa; \
 		if (pfile[0] == 0) { \
 			strncpy(dir->name, ptr, sizeof(dir->name) - 1); \
-			if (strlen(dir->name) < sizeof(dir->name)) dir->name[strlen(dir->name)] = '\0'; \
+			if (size_of_name < sizeof(dir->name)) dir->name[size_of_name] = '\0'; \
 		} else for (i=0; i<20; i++) { \
 			if (pfile[i] == ptr[i]) { \
 				dir->name[i] = ptr[i]; \
@@ -472,7 +482,6 @@ static void buopen(int mcd, char *ptr, u8 cfg)
 /* Internally redirects to "FileRead(fd,tempbuf,1)".*/
 /* For some strange reason, the returned character is sign-expanded; */
 /* So if a return value of FFFFFFFFh could mean either character FFh, or error. */
-/* TODO FIX ME : Properly implement this behaviour */
 void psxBios_getc(void) // 0x03, 0x35
 {
 	void *pa1 = Ra1;
@@ -487,7 +496,8 @@ void psxBios_getc(void) // 0x03, 0x35
 			case 3: buread(pa1, 2, 1); break;
 		}
 	}
-
+	
+	v0 = (s32)v0;
 	pc0 = ra;
 }
 
