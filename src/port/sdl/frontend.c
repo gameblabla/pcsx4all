@@ -14,6 +14,7 @@
 #include "plugins.h"
 #include "cdrom.h"
 #include "cdriso.h"
+#include "cdrom_hacks.h"
 
 /* PATH_MAX inclusion */
 #ifdef __MINGW32__
@@ -1985,6 +1986,7 @@ static int gui_LoadIso()
     //If a multi-CD Eboot .pbp is detected, cdriso.cpp's handlepbp() will
     // call this function later to allow choosing which CD to boot
     cdrIsoMultidiskCallback = gui_select_multicd_to_boot_from;
+    CheckforCDROMid_applyhacks();
 
     return 1;
   }

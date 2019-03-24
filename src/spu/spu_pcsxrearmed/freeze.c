@@ -224,8 +224,7 @@ static void load_register(unsigned long reg, unsigned int cycles)
 // SPUFREEZE: called by main emu on savestate load/save
 ////////////////////////////////////////////////////////////////////////
 
-long CALLBACK SPUfreeze(uint32_t ulFreezeMode, SPUFreeze_t * pF,
- uint32_t cycles)
+long CALLBACK SPUfreeze(uint32_t ulFreezeMode, SPUFreeze_t * pF, uint32_t cycles)
 {
  int i;SPUOSSFreeze_t * pFO;
 
