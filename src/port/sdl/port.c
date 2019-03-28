@@ -520,7 +520,6 @@ static struct
   { SDLK_LEFT,		DKEY_LEFT },
   { SDLK_RIGHT,		DKEY_RIGHT },
   
-#ifdef GCW_ZERO
   { SDLK_LSHIFT,		DKEY_SQUARE },
   { SDLK_LCTRL,		DKEY_CIRCLE },
   { SDLK_SPACE,		DKEY_TRIANGLE },
@@ -530,17 +529,6 @@ static struct
   { SDLK_END,		DKEY_L2 },
   { SDLK_3,			DKEY_R2 },
   { SDLK_ESCAPE,		DKEY_SELECT },
-#else
-  { SDLK_a,		DKEY_SQUARE },
-  { SDLK_x,		DKEY_CIRCLE },
-  { SDLK_s,		DKEY_TRIANGLE },
-  { SDLK_z,		DKEY_CROSS },
-  { SDLK_q,		DKEY_L1 },
-  { SDLK_w,		DKEY_R1 },
-  { SDLK_e,		DKEY_L2 },
-  { SDLK_r,		DKEY_R2 },
-  { SDLK_BACKSPACE,	DKEY_SELECT },
-#endif
 
   { SDLK_RETURN,		DKEY_START },
   { 0, 0 }
@@ -595,171 +583,191 @@ void joy_init(void)
 
 void pad_update(void)
 {
-  SDL_Event event;
-  Uint8 *keys = SDL_GetKeyState(NULL);
+	SDL_Event event;
+	Uint8 *keys = SDL_GetKeyState(NULL);
 
-  while (SDL_PollEvent(&event))
-  {
-    switch (event.type)
-    {
-      case SDL_QUIT:
-        pcsx4all_exit();
-        break;
-      case SDL_KEYDOWN:
-        switch (event.key.keysym.sym)
-        {
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+			case SDL_QUIT:
+				pcsx4all_exit();
+			break;
+			case SDL_KEYDOWN:
+			switch (event.key.keysym.sym)
+			{
 #ifndef GCW_ZERO
-          case SDLK_ESCAPE:
-            event.type = SDL_QUIT;
-            SDL_PushEvent(&event);
-            break;
+				case SDLK_ESCAPE:
+				event.type = SDL_QUIT;
+				SDL_PushEvent(&event);
+				break;
 #endif
-          case SDLK_v:
-          {
-            Config.ShowFps=!Config.ShowFps;
-          }
-          break;
-          default:
-            break;
-        }
-        break;
-      default:
-        break;
-    }
-  }
+				case SDLK_v:
+				{
+					Config.ShowFps=!Config.ShowFps;
+				}
+			break;
+			default:
+				break;
+			}
+			break;
+			default:
+			break;
+		}
+	}
 
-  int k = 0;
-  while (keymap[k].key)
-  {
-    if (keys[keymap[k].key])
-    {
-      _pad1 &= ~(1 << keymap[k].bit);
-    }
-    else
-    {
-      _pad1 |= (1 << keymap[k].bit);
-    }
-    k++;
-  }
-  pad1 = _pad1;
+	int k = 0;
+	while (keymap[k].key)
+	{
+		if (keys[keymap[k].key])
+		{
+			_pad1 &= ~(1 << keymap[k].bit);
+		}
+		else
+		{
+			_pad1 |= (1 << keymap[k].bit);
+		}
+		k++;
+	}
+	pad1 = _pad1;
 
-  /* Special key combos for GCW-Zero */
+	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
-  // SELECT +
+	if (keys[SDLK_ESCAPE])
+	{
+		/* We need to make sure to cancel out Select and L1/R2 being pressed when user presses L2/R2 hotkeys */	
+		// L2
+		if (keys[SDLK_TAB])
+		{
+			pad1 |= (1 << DKEY_SELECT);
+			pad1 |= (1 << DKEY_L1);
+			pad1 &= ~(1 << DKEY_L2);
+		}
+		else
+		{
+			pad1 |= (1 << DKEY_L2);
+		}
+		
+		// R2
+		if (keys[SDLK_BACKSPACE])
+		{
+			pad1 |= (1 << DKEY_SELECT);
+			pad1 |= (1 << DKEY_R1);
+			pad1 &= ~(1 << DKEY_R2);
+		}
+		else
+		{
+			pad1 |= (1 << DKEY_R2);
+		}
+	  
+		if (!keys[SDLK_RETURN])
+		{
+			menu_check = 1; //SELECT only
+		}
+		else if (menu_check == 1)
+		{
+			menu_check = 2; //SELECT + START
+		}
+		else
+		{
+			// START + SELECT
+			if (use_speedup == 0 && ++select_count == 70)
+			{
+				use_speedup = 1;
+			}
+		}
+	}
+	else
+	{
+		menu_check = 0;
+	}
 
+	if (use_speedup)
+	{
+		if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
+		{
+			select_count = 0;
+		}
+		else if (select_count == 0)
+		{
+			use_speedup = 0;
+		}
+	}
   
-  if (keys[SDLK_ESCAPE])
-  {
-    if (!keys[SDLK_RETURN])
-    {
-      menu_check = 1; //SELECT only
-    }
-    else if (menu_check == 1)
-    {
-      menu_check = 2; //SELECT + START
-    }
-    else
-    {
-      // START + SELECT
-      if (use_speedup == 0 && ++select_count == 70)
-      {
-        use_speedup = 1;
-      }
-    }
-  }
-  else
-  {
-    menu_check = 0;
-  }
+	//
+	if (Config.AnalogArrow)
+	{
+		pad1 |= (1 << DKEY_SELECT);
+		// SELECT+B for psx's SELECT
+		if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
+		{
+			pad1 &= ~(1 << DKEY_SELECT);
+			pad1 |= (1 << DKEY_CROSS);
+		}
 
-  if (use_speedup)
-  {
-    if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
-    {
-      select_count = 0;
-    }
-    else if (select_count == 0)
-    {
-      use_speedup = 0;
-    }
-  }
-  
-
-
-  //
-  if (Config.AnalogArrow)
-  {
-    pad1 |= (1 << DKEY_SELECT);
-    // SELECT+B for psx's SELECT
-    if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
-    {
-      pad1 &= ~(1 << DKEY_SELECT);
-      pad1 |= (1 << DKEY_CROSS);
-    }
-
-    if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
-    {
-      pad1 &= ~(1 << DKEY_UP);
-    }
-    if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
-    {
-      pad1 &= ~(1 << DKEY_DOWN);
-    }
-    if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
-    {
-      pad1 &= ~(1 << DKEY_LEFT);
-    }
-    if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
-    {
-      pad1 &= ~(1 << DKEY_RIGHT);
-    }
-  }
-  else
-  {
-    // Analog Arrow Off
-	if (analog1 == ANALOG_DOWN)
-    {
-      menu_check = 2;
-    }
-  }
+		if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+		{
+			pad1 &= ~(1 << DKEY_UP);
+		}
+		if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+		{
+			pad1 &= ~(1 << DKEY_DOWN);
+		}
+		if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+		{
+			pad1 &= ~(1 << DKEY_LEFT);
+		}
+		if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+		{
+			pad1 &= ~(1 << DKEY_RIGHT);
+		}
+	}
+	else
+	{
+		// Analog Arrow Off
+		if (analog1 == ANALOG_DOWN)
+		{
+			menu_check = 2;
+		}
+	}
 
 
-  // SELECT+START for menu
-  if (menu_check == 2 && !keys[SDLK_LALT])
-  {
-    //Sync and close any memcard files opened for writing
-    //TODO: Disallow entering menu until they are synced/closed
-    // automatically, displaying message that write is in progress.
-    sioSyncMcds();
+	// SELECT+START for menu
+	if (menu_check == 2 && !keys[SDLK_LALT])
+	{
+		// Sync and close any memcard files opened for writing
+		// TODO: Disallow entering menu until they are synced/closed
+		// automatically, displaying message that write is in progress.
+		sioSyncMcds();
 
-    emu_running = 0;
-    pl_pause();    // Tell plugin_lib we're pausing emu
-    GameMenu();
-    emu_running = 1;
-    use_speedup = 0;
-    menu_check = 0;
-    analog1 = 0;
-    pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
-    video_clear();
-    video_flip();
-    video_clear();
+		emu_running = 0;
+		pl_pause();    // Tell plugin_lib we're pausing emu
+		GameMenu();
+		emu_running = 1;
+		use_speedup = 0;
+		menu_check = 0;
+		analog1 = 0;
+		pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
+		video_clear();
+		video_flip();
+		video_clear();
 #ifdef SDL_TRIPLEBUF
-    video_flip();
-    video_clear();
+		video_flip();
+		video_clear();
 #endif
-    pl_resume();    // Tell plugin_lib we're reentering emu
-  }
+		pl_resume();    // Tell plugin_lib we're reentering emu
+	}
 #endif
 }
 
 unsigned short pad_read(int num)
 {
-  return (num == 0 ? pad1 : pad2);
+	return (num == 0 ? pad1 : pad2);
 }
 
 void video_flip(void)
 {
-  if(emu_running && Config.ShowFps)
+	if(emu_running && Config.ShowFps)
   {
     port_printf(5, 5, pl_data.stats_msg);
   }

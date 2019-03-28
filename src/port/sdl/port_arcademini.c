@@ -105,19 +105,19 @@ void upscale_320xXXX_to_480x272(uint32_t *dst, uint32_t *src, uint32_t height)
 
 static void pcsx4all_exit(void)
 {
-  if (SDL_MUSTLOCK(rl_screen))
-    SDL_UnlockSurface(rl_screen);
+	if (SDL_MUSTLOCK(rl_screen))
+		SDL_UnlockSurface(rl_screen);
 
-  SDL_Quit();
+	SDL_Quit();
 
-  if (pcsx4all_initted == 1)
-  {
-    ReleasePlugins();
-    psxShutdown();
-  }
+	if (pcsx4all_initted == 1)
+	{
+		ReleasePlugins();
+		psxShutdown();
+	}
 
-  // Store config to file
-  config_save();
+	// Store config to file
+	config_save();
 }
 
 static char homedir[PATH_MAX/2];
@@ -164,26 +164,25 @@ static void setup_paths()
 
 void probe_lastdir()
 {
-  DIR *dir;
-  if (!Config.LastDir)
-    return;
+	DIR *dir;
+	if (!Config.LastDir)
+		return;
+	dir = opendir(Config.LastDir);
 
-  dir = opendir(Config.LastDir);
-
-  if (!dir)
-  {
-    // Fallback to home directory.
-    strncpy(Config.LastDir, homedir, MAXPATHLEN);
-    Config.LastDir[MAXPATHLEN-1] = '\0';
-  }
-  else
-  {
-    closedir(dir);
-  }
+	if (!dir)
+	{
+		// Fallback to home directory.
+		strncpy(Config.LastDir, homedir, MAXPATHLEN);
+		Config.LastDir[MAXPATHLEN-1] = '\0';
+	}
+	else
+	{
+		closedir(dir);
+	}
 }
 
 #ifdef PSXREC
-  extern u32 cycle_multiplier; // in mips/recompiler.cpp
+	extern u32 cycle_multiplier; // in mips/recompiler.cpp
 #endif
 
 void config_load()
@@ -605,18 +604,27 @@ enum
 
 void joy_init(void)
 {
-	/*int i;
+	uint32_t i;
+  	uint32_t joy_count;
+
   	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK))
   		return;
 
-	joy_count = SDL_NumJoysticks();
+  	joy_count = SDL_NumJoysticks();
 
   	if (!joy_count)
   		return;
 
   	// now try and open one. If, for some reason it fails, move on to the next one
   	for (i = 0; i < joy_count; i++)
-  		sdl_joy[i] = SDL_JoystickOpen(i);*/
+  	{
+  		sdl_joy[i] = SDL_JoystickOpen(i);
+  		if (sdl_joy)
+  		{
+  			sdl_joy_num = i;
+  			break;
+  		}
+  	}
 
   	// make sure that Joystick event polling is a go
   	SDL_JoystickEventState(SDL_ENABLE);
