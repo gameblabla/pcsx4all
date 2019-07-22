@@ -2591,7 +2591,18 @@ void psxBios__card_wait(void) { // 5d
 #ifdef PSXBIOS_LOG
 	PSXBIOS_LOG("psxBios_%s\n", biosB0n[0x5d]);
 #endif
-
+	/*
+	01h=ready
+	02h=busy/read
+	04h=busy/write
+	08h=busy/info
+	11h=failed/timeout (eg. when no cartridge inserted)
+	21h=failed/general error
+	
+	Games like Fade To Black and Final Fantasy 8 use this and card_info for memory card detection.
+	Unfortunately, it's not implemented properly enough for either games to work.
+	*/
+	v0 = 0x1;
 	pc0 = ra;
 }
 
