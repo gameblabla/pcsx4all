@@ -865,9 +865,21 @@ void psxBios_strpbrk(void) { // 0x20
 			}
 		}
 	}
-
-	// should return a0 instead of NULL if not found (???)
-	v0 = a0; pc0 = ra;
+	
+	/* 
+	If there was no occurence, it returns 0 only if src[0]=00h, 
+	otherwise returns the incoming "src" value.
+	(which is the SAME return value as when a occurence did occur on 1st character).
+	*/
+	if (p1[0] == 0x00)
+	{
+		v0 = 0;
+	}
+	else
+	{
+		v0 = a0;
+	}
+	pc0 = ra;
 }
 
 void psxBios_strspn(void) { // 0x21
@@ -1854,7 +1866,7 @@ void psxBios_OpenEvent(void) { // 08
 
 	Event[ev][spec].status = EvStWAIT;
 	Event[ev][spec].mode = a2;
-	Event[ev][spec].fhandler = a3;
+	if (a2 == EvMdINTR) Event[ev][spec].fhandler = a3;
 
 	v0 = ev | (spec << 8);
 	pc0 = ra;
