@@ -99,7 +99,7 @@ endif
 OBJS += obj/gte.o
 OBJS += obj/spu/$(SPU)/spu.o
 
-OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o
 OBJS += obj/port/$(PORT)/frontend.o
 
 OBJS += obj/plugin_lib/perfmon.o

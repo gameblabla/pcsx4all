@@ -16,9 +16,9 @@ RECOMPILER = mips
 
 RM     = rm -f
 MD     = mkdir
-CC     = mipsel-linux-gcc
-CXX    = mipsel-linux-g++
-LD     = mipsel-linux-g++
+CC     = /opt/gcw0-toolchain/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -98,7 +98,7 @@ endif
 OBJS += obj/gte.o
 OBJS += obj/spu/$(SPU)/spu.o
 
-OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o
 OBJS += obj/port/$(PORT)/frontend.o
 
 OBJS += obj/plugin_lib/perfmon.o

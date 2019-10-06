@@ -664,13 +664,13 @@ void pad_update(void)
             #endif
           }
         break;
-        case 3: /* X axis*/
+        case 2: /* X axis */
           axisval = event.jaxis.value;
           tmp_axis = (axisval + 32768) / 256;
           joy_r = (joy_r & 0xFF00) | tmp_axis;
           
         break;
-        case 4: /* X axis*/
+        case 3: /* Y axis*/
           axisval = event.jaxis.value;
           tmp_axis = (axisval + 32768) / 256;
           joy_r = (joy_r & 0x00FF) | (tmp_axis << 8);
