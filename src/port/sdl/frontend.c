@@ -1402,6 +1402,45 @@ static char *Analog1_show()
   return buf;
 }
 
+static int Analog_Mode_alter(u32 keys)
+{
+  if (keys & KEY_RIGHT)
+  {
+	  Config.Analog_Mode++;
+    if (Config.Analog_Mode > 3) Config.Analog_Mode = 2;
+  }
+  else if (keys & KEY_LEFT)
+  {
+	  Config.Analog_Mode--;
+    if (Config.Analog_Mode < 1) Config.Analog_Mode = 0;
+  }
+
+  return 0;
+}
+
+static void Analog_Mode_hint()
+{
+  port_printf(6 * 8, 10 * 8, "Analog Mode");
+}
+
+static char *Analog_Mode_show()
+{
+  static char buf[16] = "\0";
+  switch(Config.Analog_Mode)
+  {
+	 case 0:
+		sprintf(buf, "Digital");
+	 break;
+	 case 1:
+		sprintf(buf, "DualAnalog");
+	 break;
+	 case 2:
+		sprintf(buf, "DualShock");
+	 break;
+  }
+  return buf;
+}
+
 static int settings_back()
 {
   return 1;
@@ -1416,6 +1455,7 @@ static int settings_defaults()
   Config.RCntFix = 0;
   Config.VSyncWA = 0;
   Config.AnalogArrow = 0;
+  Config.Analog_Mode = 0;
 #ifdef PSXREC
   Config.Cpu = 0;
 #else
@@ -1439,6 +1479,7 @@ static MENUITEM gui_SettingsItems[] =
   {(char *)"RCntFix              ", NULL, &RCntFix_alter, &RCntFix_show, &RCntFix_hint},
   {(char *)"VSyncWA              ", NULL, &VSyncWA_alter, &VSyncWA_show, &VSyncWA_hint},
   {(char *)"Analog Arrow Keys    ", NULL, &Analog1_alter, &Analog1_show, &Analog1_hint},
+  {(char *)"Analog Mode          ", NULL, &Analog_Mode_alter, &Analog_Mode_show, &Analog_Mode_hint},
   {(char *)"Restore defaults     ", &settings_defaults, NULL, NULL, NULL},
   {NULL, NULL, NULL, NULL, NULL},
   {(char *)"Back to main menu    ", &settings_back, NULL, NULL, NULL},

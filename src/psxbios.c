@@ -3132,16 +3132,16 @@ void psxBiosShutdown() {
 #define psxBios_PADpoll(pad) { \
 	PAD##pad##_startPoll(); \
 	pad_buf##pad[0] = 0; \
-	pad_buf##pad[1] = PAD##pad##_poll(); \
+	pad_buf##pad[1] = PAD##pad##_poll(0x42); \
 	if (!(pad_buf##pad[1] & 0x0f)) { \
 		bufcount = 32; \
 	} else { \
 		bufcount = (pad_buf##pad[1] & 0x0f) * 2; \
 	} \
-	PAD##pad##_poll(); \
+	PAD##pad##_poll(0); \
 	i = 2; \
 	while (bufcount--) { \
-		pad_buf##pad[i++] = PAD##pad##_poll(); \
+		pad_buf##pad[i++] = PAD##pad##_poll(0); \
 	} \
 }
 
@@ -3152,31 +3152,31 @@ void biosInterrupt(void) {
 			u32 *buf = (u32*)pad_buf;
 
 				PAD1_startPoll();
-				if (PAD1_poll() == 0x23) {
-					PAD1_poll();
-					*buf = PAD1_poll() << 8;
-					*buf|= PAD1_poll();
-					PAD1_poll();
-					*buf&= ~((PAD1_poll()>0x20)?1<<6:0);
-					*buf&= ~((PAD1_poll()>0x20)?1<<7:0);
+				if (PAD1_poll(0x42) == 0x23) {
+					PAD1_poll(0);
+					*buf = PAD1_poll(0) << 8;
+					*buf|= PAD1_poll(0);
+					PAD1_poll(0);
+					*buf&= ~((PAD1_poll(0)>0x20)?1<<6:0);
+					*buf&= ~((PAD1_poll(0)>0x20)?1<<7:0);
 				} else {
-					PAD1_poll();
-					*buf = PAD1_poll() << 8;
-					*buf|= PAD1_poll();
+					PAD1_poll(0);
+					*buf = PAD1_poll(0) << 8;
+					*buf|= PAD1_poll(0);
 				}
 
 				PAD2_startPoll();
-				if (PAD2_poll() == 0x23) {
-					PAD2_poll();
-					*buf|= PAD2_poll() << 24;
-					*buf|= PAD2_poll() << 16;
-					PAD2_poll();
-					*buf&= ~((PAD2_poll()>0x20)?1<<22:0);
-					*buf&= ~((PAD2_poll()>0x20)?1<<23:0);
+				if (PAD2_poll(0x42) == 0x23) {
+					PAD2_poll(0);
+					*buf|= PAD2_poll(0) << 24;
+					*buf|= PAD2_poll(0) << 16;
+					PAD2_poll(0);
+					*buf&= ~((PAD2_poll(0)>0x20)?1<<22:0);
+					*buf&= ~((PAD2_poll(0)>0x20)?1<<23:0);
 				} else {
-					PAD2_poll();
-					*buf|= PAD2_poll() << 24;
-					*buf|= PAD2_poll() << 16;
+					PAD2_poll(0);
+					*buf|= PAD2_poll(0) << 24;
+					*buf|= PAD2_poll(0) << 16;
 				}
 
 		}

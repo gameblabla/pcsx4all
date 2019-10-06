@@ -113,10 +113,10 @@ void sioWrite8(unsigned char value) {
 
 				switch (psxSio.CtrlReg & 0x2002) {
 					case 0x0002:
-						psxSio.buf[psxSio.parp] = PAD1_poll();
+						psxSio.buf[psxSio.parp] = PAD1_poll(value);
 						break;
 					case 0x2002:
-						psxSio.buf[psxSio.parp] = PAD2_poll();
+						psxSio.buf[psxSio.parp] = PAD2_poll(value);
 						break;
 				}
 
@@ -142,8 +142,8 @@ void sioWrite8(unsigned char value) {
 			psxSio.parp++;
 
 			switch (psxSio.CtrlReg & 0x2002) {
-				case 0x0002: psxSio.buf[psxSio.parp] = PAD1_poll(); break;
-				case 0x2002: psxSio.buf[psxSio.parp] = PAD2_poll(); break;
+				case 0x0002: psxSio.buf[psxSio.parp] = PAD1_poll(value); break;
+				case 0x2002: psxSio.buf[psxSio.parp] = PAD2_poll(value); break;
 			}
 
 			if (psxSio.parp == psxSio.bufcount) { psxSio.padst = 0; return; }

@@ -173,6 +173,7 @@ typedef struct {
 	boolean PerfmonDetailedStats;
 	// add new ...
 	boolean AnalogArrow;
+	u8 Analog_Mode;
 } PcsxConfig;
 
 extern PcsxConfig Config;

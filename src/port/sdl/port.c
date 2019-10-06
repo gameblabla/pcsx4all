@@ -1,3 +1,9 @@
+/*
+ * FrontEnd code for PCSX4ALL
+ * License : GPLv2
+ * Authors : Senquack, Dmitry Smagin, Gameblabla, JamesOFarrel, jbd1986 
+*/
+
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -526,21 +532,24 @@ static struct
   { SDLK_LALT,		DKEY_CROSS },
   { SDLK_TAB,		DKEY_L1 },
   { SDLK_BACKSPACE,	DKEY_R1 },
-  { SDLK_END,		DKEY_L2 },
-  { SDLK_3,			DKEY_R2 },
+  { SDLK_PAGEUP,		DKEY_L2 },
+  { SDLK_PAGEDOWN,			DKEY_R2 },
   { SDLK_ESCAPE,		DKEY_SELECT },
 
   { SDLK_RETURN,		DKEY_START },
   { 0, 0 }
 };
 
-static unsigned short pad1 = 0xffff, _pad1 = 0xffff;
-static unsigned short pad2 = 0xffff;
-static unsigned short analog1 = 0;
+static uint64_t pad1 = 0xFF5Affffffffffff;
+static uint64_t pad2 = 0x5AFFFFFF80808080;
+static unsigned short analog1 = 0,tmp_axis=0;
+static uint16_t  buttons = 0xFFFF;
 static int menu_check = 0;
 static int select_count = 0;
 uint8_t use_speedup = 0;
-SDL_Joystick * sdl_joy;
+static uint16_t id=0x5A41,joy_l = 0x8080,joy_r = 0x8080;
+SDL_Joystick * sdl_joy1;
+SDL_Joystick * sdl_joy2;
 #define joy_commit_range    3276
 enum
 {
@@ -552,39 +561,33 @@ enum
 
 void joy_init(void)
 {
-  sdl_joy = SDL_JoystickOpen(0);
-  SDL_JoystickEventState(SDL_ENABLE);
-  /*
-  	int i;
-  	int joy_count;
-
-  	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK))
-  		return;
-
-  	joy_count = SDL_NumJoysticks();
-
-  	if (!joy_count)
-  		return;
-
-  	// now try and open one. If, for some reason it fails, move on to the next one
-  	for (i = 0; i < joy_count; i++)
-  	{
-  		sdl_joy = SDL_JoystickOpen(i);
-  		if (sdl_joy)
-  		{
-  			sdl_joy_num = i;
-  			break;
-  		}
-  	}
-
-  	// make sure that Joystick event polling is a go
-  	SDL_JoystickEventState(SDL_ENABLE);*/
+	sdl_joy1 = SDL_JoystickOpen(0);
+	sdl_joy2 = SDL_JoystickOpen(1);
+	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+	SDL_JoystickEventState(SDL_ENABLE);
 }
 
 void pad_update(void)
 {
+	int axisval;
 	SDL_Event event;
 	Uint8 *keys = SDL_GetKeyState(NULL);
+	
+	switch(Config.Analog_Mode)
+	{
+		/* Digital. Required for Ganbare Goemon: Ooedo Daikaiten i believe */
+		case 0:
+			id=0x5A41;
+		break;
+		/* DualAnalog. Some games might misbehave with Dualshock like Descent so this is for those */
+		case 1:
+			id=0x5A53;
+		break;
+		/* DualShock, required for Ape Escape. */
+		case 2:
+			id=0x5A73;
+		break;
+	}
 
 	while (SDL_PollEvent(&event))
 	{
@@ -597,39 +600,108 @@ void pad_update(void)
 			switch (event.key.keysym.sym)
 			{
 #ifndef GCW_ZERO
-				case SDLK_ESCAPE:
-				event.type = SDL_QUIT;
-				SDL_PushEvent(&event);
-				break;
+        case SDLK_ESCAPE:
+          event.type = SDL_QUIT;
+          SDL_PushEvent(&event);
+          break;
 #endif
-				case SDLK_v:
-				{
-					Config.ShowFps=!Config.ShowFps;
-				}
-			break;
-			default:
-				break;
-			}
-			break;
-			default:
-			break;
-		}
-	}
+        case SDLK_v:
+        {
+          Config.ShowFps=!Config.ShowFps;
+        }
+        break;
+        default:
+        break;
+      }
+    break;
+
+    case SDL_JOYAXISMOTION:
+      switch (event.jaxis.axis)
+      {
+        case 0: /* X axis */
+          axisval = event.jaxis.value;
+          if(Config.AnalogArrow == 1) {
+            analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
+            if (axisval > joy_commit_range)
+            {
+              analog1 |= ANALOG_RIGHT;
+            }
+            else if (axisval < -joy_commit_range)
+            {
+              analog1 |= ANALOG_LEFT;
+            }
+          } else {
+			#ifdef DEBUG
+            printf("jx 0x%x ",joy_l);
+            #endif
+            tmp_axis = (axisval + 32768) / 256;
+            joy_l = (joy_l & 0xFF00) | tmp_axis;
+            #ifdef DEBUG
+            printf("jx 0x%x tx 0x%x\n",joy_l,tmp_axis);
+            #endif
+          }
+        break;
+        case 1: /* Y axis*/
+        axisval = event.jaxis.value;
+          if(Config.AnalogArrow == 1) {
+            analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
+            if (axisval > joy_commit_range)
+            {
+            analog1 |= ANALOG_DOWN;
+            }
+            else if (axisval < -joy_commit_range)
+            {
+            analog1 |= ANALOG_UP;
+            }
+          } else {
+			#ifdef DEBUG
+            printf("jy 0x%x ",joy_l);
+            #endif
+            tmp_axis = (axisval + 32768) / 256;
+            joy_l = (joy_l & 0x00FF) | (tmp_axis << 8);
+            #ifdef DEBUG
+            printf("jy 0x%x ty 0x%x\n",joy_l,tmp_axis);
+            #endif
+          }
+        break;
+        case 3: /* X axis*/
+          axisval = event.jaxis.value;
+          tmp_axis = (axisval + 32768) / 256;
+          joy_r = (joy_r & 0xFF00) | tmp_axis;
+          
+        break;
+        case 4: /* X axis*/
+          axisval = event.jaxis.value;
+          tmp_axis = (axisval + 32768) / 256;
+          joy_r = (joy_r & 0x00FF) | (tmp_axis << 8);
+        break;
+      }
+      break;
+      case SDL_JOYBUTTONDOWN:
+        if(event.jbutton.which == 0) {
+          buttons |= (1 << DKEY_L3);
+        } else if(event.jbutton.which == 1) {
+          buttons |= (1 << DKEY_R3);
+        }
+        break;
+      default:
+        break;
+    }
+  }
 
 	int k = 0;
 	while (keymap[k].key)
 	{
 		if (keys[keymap[k].key])
 		{
-			_pad1 &= ~(1 << keymap[k].bit);
+			buttons &= ~(1 << keymap[k].bit);
 		}
 		else
 		{
-			_pad1 |= (1 << keymap[k].bit);
+			buttons |= (1 << keymap[k].bit);
 		}
 		k++;
 	}
-	pad1 = _pad1;
 
 	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
@@ -637,7 +709,7 @@ void pad_update(void)
 	{
 		/* We need to make sure to cancel out Select and L1/R2 being pressed when user presses L2/R2 hotkeys */	
 		// L2
-		if (keys[SDLK_TAB])
+		/*if (keys[SDLK_TAB])
 		{
 			pad1 |= (1 << DKEY_SELECT);
 			pad1 |= (1 << DKEY_L1);
@@ -658,7 +730,7 @@ void pad_update(void)
 		else
 		{
 			pad1 |= (1 << DKEY_R2);
-		}
+		}*/
 	  
 		if (!keys[SDLK_RETURN])
 		{
@@ -695,43 +767,35 @@ void pad_update(void)
 	}
   
 	//
-	if (Config.AnalogArrow)
+	if (Config.AnalogArrow == 1)
 	{
-		pad1 |= (1 << DKEY_SELECT);
+		buttons |= (1 << DKEY_SELECT);
 		// SELECT+B for psx's SELECT
 		if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
 		{
-			pad1 &= ~(1 << DKEY_SELECT);
-			pad1 |= (1 << DKEY_CROSS);
+			buttons &= ~(1 << DKEY_SELECT);
+			buttons |= (1 << DKEY_CROSS);
 		}
 
-		if ((_pad1 & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+		if ((buttons & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
 		{
-			pad1 &= ~(1 << DKEY_UP);
+			buttons &= ~(1 << DKEY_UP);
 		}
-		if ((_pad1 & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+		if ((buttons & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
 		{
-			pad1 &= ~(1 << DKEY_DOWN);
+			buttons &= ~(1 << DKEY_DOWN);
 		}
-		if ((_pad1 & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+		if ((buttons & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
 		{
-			pad1 &= ~(1 << DKEY_LEFT);
+			buttons &= ~(1 << DKEY_LEFT);
 		}
-		if ((_pad1 & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+		if ((buttons & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
 		{
-			pad1 &= ~(1 << DKEY_RIGHT);
+			buttons &= ~(1 << DKEY_RIGHT);
 		}
 	}
-	else
-	{
-		// Analog Arrow Off
-		if (analog1 == ANALOG_DOWN)
-		{
-			menu_check = 2;
-		}
-	}
-
-
+  
+  
 	// SELECT+START for menu
 	if (menu_check == 2 && !keys[SDLK_LALT])
 	{
@@ -747,7 +811,7 @@ void pad_update(void)
 		use_speedup = 0;
 		menu_check = 0;
 		analog1 = 0;
-		pad1 |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
+		buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
 		video_clear();
 		video_flip();
 		video_clear();
@@ -758,9 +822,15 @@ void pad_update(void)
 		pl_resume();    // Tell plugin_lib we're reentering emu
 	}
 #endif
+
+	pad1 = (uint64_t)id<<48 | (uint64_t)buttons<<32 | (uint32_t) joy_r <<16 | (joy_l);
+	#ifdef DEBUG
+	printf("id: 0x%x buttons: 0x%x, joy_r: 0x%x joy_l: 0x%x\n",id,buttons,joy_r,joy_l);
+	printf("pad1: 0x%llx\n",pad1);
+	#endif
 }
 
-unsigned short pad_read(int num)
+uint64_t pad_read(int num)
 {
 	return (num == 0 ? pad1 : pad2);
 }
@@ -1393,7 +1463,7 @@ int main (int argc, char **argv)
     }
   }
 
-  CheckforCDROMid_applyhacks();
+  //CheckforCDROMid_applyhacks();
   
   joy_init();
 

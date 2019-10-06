@@ -34,7 +34,7 @@ static inline int fsync(int f)
 unsigned get_ticks(void);
 void wait_ticks(unsigned s);
 void pad_update(void);
-unsigned short pad_read(int num);
+uint64_t pad_read(int num);
 
 void video_flip(void);
 #ifdef GPU_DFXVIDEO
