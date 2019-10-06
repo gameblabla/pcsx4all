@@ -23,7 +23,7 @@ SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
 SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 
-CFLAGS = -ggdb3 -O2 -march=native -DGCW_ZERO \
+CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \

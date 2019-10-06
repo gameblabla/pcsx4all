@@ -523,7 +523,7 @@ static int gui_Credits()
 
     // diplay menu
     port_printf(15 * 8 + 4, 10, "CREDITS:");
-    port_printf( 2 * 8, 30, "pcsx team, pcsx-df team, pcsx-r team");
+    port_printf( 2 * 8, 30, "pcsx, pcsx-df, pcsx-r team.");
 
     port_printf( 6 * 8, 50, "Franxis and Chui - PCSX4ALL");
     port_printf( 4 * 8, 60, "Unai - fast PCSX4ALL GPU plugin");
@@ -535,6 +535,8 @@ static int gui_Credits()
     port_printf( 0 * 8, 110, "Dmitry Smagin - porting and optimizing");
     port_printf( 0 * 8, 120, "                of mips recompiler,");
     port_printf( 0 * 8, 130, "                gui coding");
+    
+    port_printf( 0 * 8, 140, "Gameblabla  - RS-97, HLE, other fixes");
 
     port_printf( 0 * 8, 150, "senquack - fixing polygons in gpu_unai,");
     port_printf( 0 * 8, 160, "           porting spu and other stuff");
@@ -2058,8 +2060,8 @@ static int gui_SPUSettings()
 
 static int gui_Quit()
 {
-  exit(0);
-  return 0;
+	exit(0);
+	return 0;
 }
 
 static void ShowMenuItem(int x, int y, MENUITEM *mi)

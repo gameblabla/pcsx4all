@@ -13,3 +13,4 @@ stdout.txt
 *.bat
 err.txt
 *.ipk
+*.cue

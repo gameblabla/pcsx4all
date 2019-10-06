@@ -9,7 +9,7 @@ cat > default.gcw0.desktop <<EOF
 [Desktop Entry]
 Name=Pcsx4all
 Comment=Sony PSX emulator
-Exec=pcsx4all
+Exec=pcsx4all -iso %f
 Terminal=false
 Type=Application
 StartupNotify=true

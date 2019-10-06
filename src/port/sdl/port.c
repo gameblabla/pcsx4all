@@ -72,19 +72,19 @@ void config_save();
 
 static void pcsx4all_exit(void)
 {
-  if (SDL_MUSTLOCK(screen))
-    SDL_UnlockSurface(screen);
+	if (SDL_MUSTLOCK(screen))
+		SDL_UnlockSurface(screen);
 
-  SDL_Quit();
+	SDL_Quit();
 
-  if (pcsx4all_initted == 1)
-  {
-    ReleasePlugins();
-    psxShutdown();
-  }
+	if (pcsx4all_initted == 1)
+	{
+		ReleasePlugins();
+		psxShutdown();
+	}
 
-  // Store config to file
-  config_save();
+	// Store config to file
+	config_save();
 }
 
 static char homedir[PATH_MAX/2];
@@ -127,7 +127,6 @@ static void setup_paths()
 	MKDIR(biosdir);
 	MKDIR(patchesdir);
 }
-
 
 void probe_lastdir()
 {
@@ -1463,7 +1462,7 @@ int main (int argc, char **argv)
     }
   }
 
-  //CheckforCDROMid_applyhacks();
+  CheckforCDROMid_applyhacks();
   
   joy_init();
 

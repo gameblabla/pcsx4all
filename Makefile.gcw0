@@ -34,7 +34,7 @@ else
 	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 endif
 
-CFLAGS = $(C_ARCH) -mplt -mno-shared -ggdb3 -O2 -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -O2 -flto -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -52,7 +52,7 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lrt -lz
+LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \

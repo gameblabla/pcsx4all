@@ -54,6 +54,31 @@ const char MemorycardHack[8][10] =
 	{"SCUS94409"}
 };
 
+const char DualShockOnlyGames[16][10] =
+{
+	/* Ape Escape */
+	{"SCES01564"},
+	{"SCES02031"},
+	{"SCES02028"},
+	{"SCES02029"},
+	{"SCES02030"},
+	{"SCPS45411"},
+	{"SCPS10091"},
+	{"SCPS91196"},
+	{"SCPS91331"},
+	{"SCUS94423"},
+	
+	/* Resident Evil 2 : Dual shock edition */
+	{"SLPS01510"},
+	{"SLUS00748"},
+	{"SLUS00756"},
+	
+	/* Resident Evil : Director's Cut */
+	{"SLUS00747"},
+	{"SLPS01512"}
+};
+
+
 /* Function for automatic patching according to GameID.
  * It's possible that some of these games have no IDs, like some japanese games i encountered.
  * I need to check whenever this matters or not for our games.
@@ -80,6 +105,15 @@ void CheckforCDROMid_applyhacks()
 	{
 		Config.VSyncWA = 1;
 		return;
+	}
+	
+	/* Force DualShock mode for some games (Ape Escape, RE Dual shock edition) */
+	for(i=0;i<sizeof(DualShockOnlyGames);i++)
+	{
+		if (strncmp(CdromId, DualShockOnlyGames[i], 9) == 0)
+		{
+			Config.Analog_Mode = 2;
+		}
 	}
 	
 	/* Apply Memory card hack for Codename Tenka for going past the screen asking to remove MC */
