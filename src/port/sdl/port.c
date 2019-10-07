@@ -541,16 +541,17 @@ static struct
   { 0, 0 }
 };
 
-static uint64_t pad1 = 0xFF5Affffffffffff;
-static uint64_t pad2 = 0x5AFFFFFF80808080;
+static uint16_t pad1 = 0xFFFF;
+static uint16_t pad2 = 0xFFFF;
+
+static uint16_t pad1_buttons = 0xFFFF;
+
 static unsigned short analog1 = 0,tmp_axis=0;
-static uint16_t  buttons = 0xFFFF;
 static int menu_check = 0;
 static int select_count = 0;
 uint8_t use_speedup = 0;
 static uint16_t id=0x5A41,joy_l = 0x8080,joy_r = 0x8080;
-SDL_Joystick * sdl_joy1;
-SDL_Joystick * sdl_joy2;
+SDL_Joystick * sdl_joy[2];
 #define joy_commit_range    2048
 enum
 {
@@ -560,12 +561,20 @@ enum
   ANALOG_RIGHT = 8
 };
 
+struct ps1_controller player_controller[2];
+
 void joy_init(void)
 {
-	sdl_joy1 = SDL_JoystickOpen(0);
-	sdl_joy2 = SDL_JoystickOpen(1);
+	sdl_joy[0] = SDL_JoystickOpen(0);
+	sdl_joy[1] = SDL_JoystickOpen(1);
 	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
 	SDL_JoystickEventState(SDL_ENABLE);
+	
+	player_controller[0].id = 0x41;
+	player_controller[0].joy_left_ax0 = 127;
+	player_controller[0].joy_left_ax1 = 127;
+	player_controller[0].joy_right_ax0 = 127;
+	player_controller[0].joy_right_ax1 = 127;
 }
 
 void pad_update(void)
@@ -577,16 +586,16 @@ void pad_update(void)
 	switch(Config.Analog_Mode)
 	{
 		/* Digital. Required for Ganbare Goemon: Ooedo Daikaiten i believe */
-		case 0:
-			id=0x5A41;
+		default:
+			player_controller[0].id=0x41;
 		break;
 		/* DualAnalog. Some games might misbehave with Dualshock like Descent so this is for those */
 		case 1:
-			id=0x5A53;
+			player_controller[0].id=0x53;
 		break;
 		/* DualShock, required for Ape Escape. */
 		case 2:
-			id=0x5A73;
+			player_controller[0].id=0x73;
 		break;
 	}
 
@@ -632,8 +641,7 @@ void pad_update(void)
               analog1 |= ANALOG_LEFT;
             }
           } else {
-            tmp_axis = (axisval + 32768) / 256;
-            joy_l = (joy_l & 0xFF00) | tmp_axis;
+            player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
           }
         break;
         case 1: /* Y axis*/
@@ -642,35 +650,31 @@ void pad_update(void)
             analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
             if (axisval > joy_commit_range)
             {
-            analog1 |= ANALOG_DOWN;
+				analog1 |= ANALOG_DOWN;
             }
             else if (axisval < -joy_commit_range)
             {
-            analog1 |= ANALOG_UP;
+				analog1 |= ANALOG_UP;
             }
           } else {
-            tmp_axis = (axisval + 32768) / 256;
-            joy_l = (joy_l & 0x00FF) | (tmp_axis << 8);
+            player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
           }
         break;
         case 2: /* X axis */
-          axisval = event.jaxis.value;
-          tmp_axis = (axisval + 32768) / 256;
-          joy_r = (joy_r & 0xFF00) | tmp_axis;
-          
-        break;
+			axisval = event.jaxis.value;
+			player_controller[0].joy_right_ax0 = (axisval + 32768) / 256;
+		break;
         case 3: /* Y axis*/
           axisval = event.jaxis.value;
-          tmp_axis = (axisval + 32768) / 256;
-          joy_r = (joy_r & 0x00FF) | (tmp_axis << 8);
+           player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
         break;
       }
       break;
       case SDL_JOYBUTTONDOWN:
         if(event.jbutton.which == 0) {
-          buttons |= (1 << DKEY_L3);
+          pad1_buttons |= (1 << DKEY_L3);
         } else if(event.jbutton.which == 1) {
-          buttons |= (1 << DKEY_R3);
+          pad1_buttons |= (1 << DKEY_R3);
         }
         break;
       default:
@@ -683,11 +687,11 @@ void pad_update(void)
 	{
 		if (keys[keymap[k].key])
 		{
-			buttons &= ~(1 << keymap[k].bit);
+			pad1_buttons &= ~(1 << keymap[k].bit);
 		}
 		else
 		{
-			buttons |= (1 << keymap[k].bit);
+			pad1_buttons |= (1 << keymap[k].bit);
 		}
 		k++;
 	}
@@ -758,29 +762,29 @@ void pad_update(void)
 	//
 	if (Config.AnalogArrow == 1)
 	{
-		buttons |= (1 << DKEY_SELECT);
+		pad1_buttons |= (1 << DKEY_SELECT);
 		// SELECT+B for psx's SELECT
 		if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
 		{
-			buttons &= ~(1 << DKEY_SELECT);
-			buttons |= (1 << DKEY_CROSS);
+			pad1_buttons &= ~(1 << DKEY_SELECT);
+			pad1_buttons |= (1 << DKEY_CROSS);
 		}
 
-		if ((buttons & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+		if ((pad1_buttons & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
 		{
-			buttons &= ~(1 << DKEY_UP);
+			pad1_buttons &= ~(1 << DKEY_UP);
 		}
-		if ((buttons & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+		if ((pad1_buttons & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
 		{
-			buttons &= ~(1 << DKEY_DOWN);
+			pad1_buttons &= ~(1 << DKEY_DOWN);
 		}
-		if ((buttons & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+		if ((pad1_buttons & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
 		{
-			buttons &= ~(1 << DKEY_LEFT);
+			pad1_buttons &= ~(1 << DKEY_LEFT);
 		}
-		if ((buttons & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+		if ((pad1_buttons & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
 		{
-			buttons &= ~(1 << DKEY_RIGHT);
+			pad1_buttons &= ~(1 << DKEY_RIGHT);
 		}
 	}
   
@@ -800,7 +804,7 @@ void pad_update(void)
 		use_speedup = 0;
 		menu_check = 0;
 		analog1 = 0;
-		buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
+		pad1_buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
 		video_clear();
 		video_flip();
 		video_clear();
@@ -812,10 +816,10 @@ void pad_update(void)
 	}
 #endif
 
-	pad1 = (uint64_t)id<<48 | (uint64_t)buttons<<32 | (uint32_t) joy_r <<16 | (joy_l);
+	pad1 = pad1_buttons;
 }
 
-uint64_t pad_read(int num)
+uint16_t pad_read(int num)
 {
 	return (num == 0 ? pad1 : pad2);
 }

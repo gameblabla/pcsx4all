@@ -17,6 +17,16 @@
 #define PATH_MAX 2048
 #endif
 
+struct ps1_controller
+{
+	uint8_t id;
+	uint8_t joy_right_ax0;
+	uint8_t joy_right_ax1;
+	uint8_t joy_left_ax0;
+	uint8_t joy_left_ax1;
+};
+
+extern struct ps1_controller player_controller[2];
 
 ///////////////////////////
 // Windows compatibility //
@@ -34,7 +44,7 @@ static inline int fsync(int f)
 unsigned get_ticks(void);
 void wait_ticks(unsigned s);
 void pad_update(void);
-uint64_t pad_read(int num);
+uint16_t pad_read(int num);
 
 void video_flip(void);
 #ifdef GPU_DFXVIDEO

@@ -27,8 +27,8 @@
 #include "r3000a.h"
 
 unsigned char CurPad = 0, CurCmd = 0;
-unsigned char configmode = 0, padmode = 0;
-unsigned char padid = 0x41;
+unsigned char configmode[2] = {0, 0}, padmode[2] = {0, 0};
+unsigned char padid[2] = {0x41, 0x41};
 
 typedef struct tagGlobalData
 {
@@ -85,18 +85,24 @@ unsigned char PAD1_poll(unsigned char value) {
 	uint32_t size_buf = 8;
 
 	if (g.CurByte1 == 0) {
-		uint64_t n;
+		uint16_t n;
 		g.CurByte1++;
 
 		n = pad_read(0);
+		
+		g.CmdLen1 = 8;
+		
 		// Don't enable Analog/Vibration for a standard pad
-		if (buf[0] == 0x41) {
+		if (player_controller[0].id == 0x41) {
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
-		} else {
+			g.CmdLen1 = 4;
+		}
+		else 
+		{
 			CurCmd = value;
 		}
 		
-		g.CmdLen1 = 8;
+		
 
 		switch (CurCmd) 
 		{
@@ -124,27 +130,27 @@ unsigned char PAD1_poll(unsigned char value) {
 				return 0xF3;
 				
 			case CMD_CONFIG_MODE:
-			if (configmode) {
+			if (configmode[0]) {
 				memcpy(buf, stdcfg,  8);
 				return 0xF3;
 			}
 			// else FALLTHROUGH
 			case CMD_READ_DATA_AND_VIBRATE:
 			default:
-			if (buf[0] == 0x41)
+
+			buf[2] = n & 0xFF;
+			buf[3] = n >> 8;
+			if (padmode[0] == 1)
 			{
-				g.CmdLen1 = 4;
-				size_buf = 4;
-			}
-			for(uint32_t i=0;i<size_buf;i=i+2)
-			{
-				buf[i] = (n >> ((7-i-1) * 8)) & 0xFF;
-				buf[i+1] = (n >> ((7-i) * 8)) & 0xFF;
+				buf[4] = player_controller[0].joy_right_ax0;
+				buf[5] = player_controller[0].joy_right_ax1;
+				buf[6] = player_controller[0].joy_left_ax0;
+				buf[7] = player_controller[0].joy_left_ax1;
 			}
 			break;
 		}
 
-		return padid;
+		return padid[0];
 	}
 
 	if (g.CurByte1 >= g.CmdLen1)
@@ -155,13 +161,13 @@ unsigned char PAD1_poll(unsigned char value) {
 		switch (CurCmd) 
 		{
 			case CMD_CONFIG_MODE:
-				configmode = value;
+				configmode[0] = value;
 				break;
 
 			case CMD_SET_MODE_AND_LOCK:
-				padmode = value;
+				padmode[0] = value;
 				/* Required to fix games that don't properly support the Dualshock */
-				padid = value ? 0x73 : 0x41;
+				padid[0] = value ? 0x73 : 0x41;
 				break;
 
 			case CMD_QUERY_ACT:
@@ -179,7 +185,6 @@ unsigned char PAD1_poll(unsigned char value) {
 						break;
 				}
 				break;
-
 			case CMD_QUERY_MODE:
 				switch (value) {
 					case 0: // mode 0 - digital mode
@@ -200,18 +205,15 @@ unsigned char PAD1_poll(unsigned char value) {
 unsigned char PAD2_poll(unsigned char value) {
 	static uint8_t buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
 
-	if (g.CurByte2 == 0) {
-		uint64_t n;
+	if (g.CurByte2 == 0) 
+	{
+		uint16_t n;
 		g.CurByte2++;
-
 		n = pad_read(1);
-		for(int i=0;i<8;i=i+2)
-		{
-			buf[i] = (n >> ((7-i-1) * 8)) & 0xFF;
-			buf[i+1] = (n >> ((7-i) * 8)) & 0xFF;
-		}
-		g.CmdLen2 = 8;
-		return buf[0];
+		buf[2] = n & 0xFF;
+		buf[3] = n >> 8;
+		g.CmdLen2 = 4;
+		return 0x41;
 	}
 
 	if (g.CurByte2 >= g.CmdLen2) return 0xFF;
