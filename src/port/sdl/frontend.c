@@ -1408,13 +1408,13 @@ static int Analog_Mode_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
   {
-	  Config.Analog_Mode++;
-    if (Config.Analog_Mode > 3) Config.Analog_Mode = 2;
+		Config.Analog_Mode++;
+		if (Config.Analog_Mode > 2) Config.Analog_Mode = 2;
   }
   else if (keys & KEY_LEFT)
   {
-	  Config.Analog_Mode--;
-    if (Config.Analog_Mode < 1) Config.Analog_Mode = 0;
+		Config.Analog_Mode--;
+		if (Config.Analog_Mode < 1) Config.Analog_Mode = 0;
   }
 
   return 0;
