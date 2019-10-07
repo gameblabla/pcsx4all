@@ -85,10 +85,16 @@ unsigned char PAD1_poll(unsigned char value) {
 
 	if (g.CurByte1 == 0) {
 		uint64_t n;
-		CurCmd = value;
 		g.CurByte1++;
 
 		n = pad_read(0);
+		// Don't enable Analog/Vibration for a standard pad
+		if (buf[0] == 0x41) {
+			CurCmd = CMD_READ_DATA_AND_VIBRATE;
+		} else {
+			CurCmd = value;
+		}
+		
 		g.CmdLen1 = 8;
 
 		switch (CurCmd) 
@@ -124,7 +130,11 @@ unsigned char PAD1_poll(unsigned char value) {
 			// else FALLTHROUGH
 			case CMD_READ_DATA_AND_VIBRATE:
 			default:
-			if (buf[0] == 0x41) size_buf = 4;
+			if (buf[0] == 0x41)
+			{
+				g.CmdLen1 = 4;
+				size_buf = 4;
+			}
 			for(uint32_t i=0;i<size_buf;i=i+2)
 			{
 				buf[i] = (n >> ((7-i-1) * 8)) & 0xFF;
@@ -191,7 +201,7 @@ unsigned char PAD2_poll(unsigned char value) {
 		uint64_t n;
 		g.CurByte2++;
 
-		n = pad_read(0);
+		n = pad_read(1);
 		for(int i=0;i<8;i=i+2)
 		{
 			buf[i] = (n >> ((7-i-1) * 8)) & 0xFF;

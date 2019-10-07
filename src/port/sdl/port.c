@@ -549,7 +549,7 @@ uint8_t use_speedup = 0;
 static uint16_t id=0x5A41,joy_l = 0x8080,joy_r = 0x8080;
 SDL_Joystick * sdl_joy1;
 SDL_Joystick * sdl_joy2;
-#define joy_commit_range    3276
+#define joy_commit_range    2048
 enum
 {
   ANALOG_UP = 1,
@@ -630,14 +630,8 @@ void pad_update(void)
               analog1 |= ANALOG_LEFT;
             }
           } else {
-			#ifdef DEBUG
-            printf("jx 0x%x ",joy_l);
-            #endif
             tmp_axis = (axisval + 32768) / 256;
             joy_l = (joy_l & 0xFF00) | tmp_axis;
-            #ifdef DEBUG
-            printf("jx 0x%x tx 0x%x\n",joy_l,tmp_axis);
-            #endif
           }
         break;
         case 1: /* Y axis*/
@@ -653,14 +647,8 @@ void pad_update(void)
             analog1 |= ANALOG_UP;
             }
           } else {
-			#ifdef DEBUG
-            printf("jy 0x%x ",joy_l);
-            #endif
             tmp_axis = (axisval + 32768) / 256;
             joy_l = (joy_l & 0x00FF) | (tmp_axis << 8);
-            #ifdef DEBUG
-            printf("jy 0x%x ty 0x%x\n",joy_l,tmp_axis);
-            #endif
           }
         break;
         case 2: /* X axis */
@@ -823,10 +811,6 @@ void pad_update(void)
 #endif
 
 	pad1 = (uint64_t)id<<48 | (uint64_t)buttons<<32 | (uint32_t) joy_r <<16 | (joy_l);
-	#ifdef DEBUG
-	printf("id: 0x%x buttons: 0x%x, joy_r: 0x%x joy_l: 0x%x\n",id,buttons,joy_r,joy_l);
-	printf("pad1: 0x%llx\n",pad1);
-	#endif
 }
 
 uint64_t pad_read(int num)
@@ -935,6 +919,7 @@ int main (int argc, char **argv)
   Config.FrameLimit = 1;
   Config.FrameSkip = FRAMESKIP_OFF;
   Config.AnalogArrow = 0;
+  Config.Analog_Mode = 0;
 
   //zear - Added option to store the last visited directory.
   strncpy(Config.LastDir, homedir, MAXPATHLEN); /* Defaults to home directory. */
@@ -1032,6 +1017,7 @@ int main (int argc, char **argv)
 
   // Load config from file.
   config_load();
+  if (Config.Analog_Mode < 0 || Config.Analog_Mode > 2) Config.Analog_Mode = 0;
 
   // Check if LastDir exists.
   probe_lastdir();
