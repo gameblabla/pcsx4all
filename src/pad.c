@@ -28,6 +28,7 @@
 
 unsigned char CurPad = 0, CurCmd = 0;
 unsigned char configmode = 0, padmode = 0;
+unsigned char padid = 0x41;
 
 typedef struct tagGlobalData
 {
@@ -89,7 +90,7 @@ unsigned char PAD1_poll(unsigned char value) {
 
 		n = pad_read(0);
 		// Don't enable Analog/Vibration for a standard pad
-		if (buf[0] == 0x41) {
+		if (padid == 0x41) {
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
 		} else {
 			CurCmd = value;
@@ -143,7 +144,7 @@ unsigned char PAD1_poll(unsigned char value) {
 			break;
 		}
 
-		return buf[0];
+		return padid;
 	}
 
 	if (g.CurByte1 >= g.CmdLen1)
@@ -159,6 +160,8 @@ unsigned char PAD1_poll(unsigned char value) {
 
 			case CMD_SET_MODE_AND_LOCK:
 				padmode = value;
+				/* Required to fix games that don't properly support the Dualshock */
+				padid = value ? 0x73 : 0x41;
 				break;
 
 			case CMD_QUERY_ACT:
