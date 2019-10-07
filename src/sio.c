@@ -251,15 +251,13 @@ void sioWrite8(unsigned char value) {
 			return;
 		case 0x81: // start memcard
 			if (psxSio.CtrlReg & 0x2000) {
-				if (!sioMcdInserted(MCD2))
+				if (!sioMcdInserted(MCD2) || Config.MemoryCardHack == 1)
 					goto no_device;
 				memcpy(psxSio.buf, psxSio.cardh2, 4);
-				if (!Config.Mcd2[0] && Config.MemoryCardHack == 1) psxSio.buf[3]=0; // is card 2 plugged?
 			} else {
 				if (!sioMcdInserted(MCD1))
 					goto no_device;
 				memcpy(psxSio.buf, psxSio.cardh1, 4);
-				if (!Config.Mcd1[0] && Config.MemoryCardHack == 1) psxSio.buf[2]=0; // is card 1 plugged? (Codename Tenka)
 			}
 			psxSio.StatReg |= RX_RDY;
 			psxSio.parp = 0;
