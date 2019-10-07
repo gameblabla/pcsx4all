@@ -298,6 +298,11 @@ void config_load()
       sscanf(arg, "%d", &value);
       Config.AnalogArrow = value;
     }
+    else if (!strcmp(line, "Analog_Mode"))
+    {
+      sscanf(arg, "%d", &value);
+      Config.Analog_Mode = value;
+    }
 #ifdef SPU_PCSXREARMED
     else if (!strcmp(line, "SpuUseInterpolation"))
     {
@@ -441,12 +446,13 @@ void config_save()
           "ShowFps %d\n"
           "FrameLimit %d\n"
           "FrameSkip %d\n"
-          "AnalogArrow %d\n",
+          "AnalogArrow %d\n"
+          "Analog_Mode %d\n",
           CONFIG_VERSION, Config.Xa, Config.Mdec, Config.PsxAuto,
           Config.Cdda, Config.HLE, Config.RCntFix, Config.VSyncWA,
           Config.Cpu, Config.PsxType, Config.SpuIrq, Config.SyncAudio,
           Config.SpuUpdateFreq, Config.ForcedXAUpdates, Config.ShowFps, Config.FrameLimit,
-          Config.FrameSkip, Config.AnalogArrow);
+          Config.FrameSkip, Config.AnalogArrow, Config.Analog_Mode);
 
 #ifdef SPU_PCSXREARMED
   fprintf(f, "SpuUseInterpolation %d\n", spu_config.iUseInterpolation);
@@ -489,6 +495,7 @@ void config_save()
     fprintf(f, "Bios %s\n", Config.Bios);
   }
 
+  fsync(f);
   fclose(f);
 }
 
@@ -550,7 +557,6 @@ static unsigned short analog1 = 0,tmp_axis=0;
 static int menu_check = 0;
 static int select_count = 0;
 uint8_t use_speedup = 0;
-static uint16_t id=0x5A41,joy_l = 0x8080,joy_r = 0x8080;
 SDL_Joystick * sdl_joy[2];
 #define joy_commit_range    2048
 enum

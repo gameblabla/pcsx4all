@@ -26,9 +26,10 @@
 #include "psxmem.h"
 #include "r3000a.h"
 
-unsigned char CurPad = 0, CurCmd = 0;
-unsigned char configmode[2] = {0, 0}, padmode[2] = {0, 0};
-unsigned char padid[2] = {0x41, 0x41};
+uint8_t CurPad = 0, CurCmd = 0;
+uint8_t configmode[2] = {0, 0}, padmode[2] = {0, 0}, pad_controllertype[2] = {0, 0};
+uint8_t Vib[2][2];
+uint8_t VibF[2][2];
 
 typedef struct tagGlobalData
 {
@@ -82,53 +83,48 @@ static uint8_t unk4d[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 unsigned char PAD1_poll(unsigned char value) {
 	static uint8_t buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
-	uint32_t size_buf = 8;
+	uint8_t changed = 0;
+	uint8_t i;
 
 	if (g.CurByte1 == 0) {
 		uint16_t n;
 		g.CurByte1++;
 
 		n = pad_read(0);
-		
+
 		g.CmdLen1 = 8;
 		
 		// Don't enable Analog/Vibration for a standard pad
-		if (player_controller[0].id == 0x41) {
+		if (player_controller[0].id == 0x41)
+		{
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
-			g.CmdLen1 = 4;
 		}
 		else 
 		{
 			CurCmd = value;
 		}
 		
-		
-
 		switch (CurCmd) 
 		{
 			case CMD_SET_MODE_AND_LOCK:
 				memcpy(buf, stdmode,  8);
-			return 0xF3;
+				return 0xF3;
 			case CMD_QUERY_MODEL_AND_MODE:
 				memcpy(buf, stdmodel,  8);
 				buf[4] = 0x01;
-			return 0xF3;
+				return 0xF3;
 			case CMD_QUERY_ACT:
 				memcpy(buf, unk46,  8);
 				return 0xF3;
-
 			case CMD_QUERY_COMB:
 				memcpy(buf, unk47,  8);
 				return 0xF3;
-
 			case CMD_QUERY_MODE:
 				memcpy(buf, unk4c,  8);
 				return 0xF3;
-
 			case CMD_VIBRATION_TOGGLE:
 				memcpy(buf, unk4d,  8);
 				return 0xF3;
-				
 			case CMD_CONFIG_MODE:
 			if (configmode[0]) {
 				memcpy(buf, stdcfg,  8);
@@ -137,20 +133,25 @@ unsigned char PAD1_poll(unsigned char value) {
 			// else FALLTHROUGH
 			case CMD_READ_DATA_AND_VIBRATE:
 			default:
-
 			buf[2] = n & 0xFF;
 			buf[3] = n >> 8;
-			if (padmode[0] == 1)
+			
+			/* Make sure that in Digital mode that lengh is 4, not 8 for the 2 analogs. 
+			 * This must be done here and not before otherwise, it might not enter the switch loop
+			 * and Dualshock features won't work.
+			 * */
+			if (pad_controllertype[0] == 0) g.CmdLen1 = 4;
+			
+			if (g.CmdLen1 > 4)
 			{
 				buf[4] = player_controller[0].joy_right_ax0;
 				buf[5] = player_controller[0].joy_right_ax1;
 				buf[6] = player_controller[0].joy_left_ax0;
 				buf[7] = player_controller[0].joy_left_ax1;
-			}
-			break;
+			}	
+			return pad_controllertype[0] ? player_controller[0].id : 0x41;
 		}
-
-		return padid[0];
+		
 	}
 
 	if (g.CurByte1 >= g.CmdLen1)
@@ -166,8 +167,7 @@ unsigned char PAD1_poll(unsigned char value) {
 
 			case CMD_SET_MODE_AND_LOCK:
 				padmode[0] = value;
-				/* Required to fix games that don't properly support the Dualshock */
-				padid[0] = value ? 0x73 : 0x41;
+				player_controller[0].id = value ? 0x73 : 0x41;
 				break;
 
 			case CMD_QUERY_ACT:
@@ -188,12 +188,45 @@ unsigned char PAD1_poll(unsigned char value) {
 			case CMD_QUERY_MODE:
 				switch (value) {
 					case 0: // mode 0 - digital mode
-						buf[5] = PSE_PAD_TYPE_STANDARD;
+						pad_controllertype[0] = buf[5] = PSE_PAD_TYPE_STANDARD;
 						break;
 
 					case 1: // mode 1 - analog mode
-						buf[5] = PSE_PAD_TYPE_ANALOGPAD;
+						pad_controllertype[0] = buf[5] = PSE_PAD_TYPE_ANALOGPAD;
 						break;
+				}
+				break;
+		}
+	}
+	
+	if (pad_controllertype[0] == PSE_PAD_TYPE_ANALOGPAD)
+	{
+		switch (CurCmd) 
+		{
+			case CMD_READ_DATA_AND_VIBRATE:
+				for (i = 0; i < 2; i++) {
+					if (Vib[0][i] == g.CurByte1
+						 && VibF[0][i] != value) {
+						VibF[0][i] = value;
+						changed = 1;
+					}
+				}
+				
+				/* Could be used later if Rumble is fixed later on. */
+				/*if (!in_enable_vibration || !changed)
+					break;
+				plat_trigger_vibrate(CurPad, VibF[0][0], VibF[0][1]);*/
+				break;
+			case CMD_VIBRATION_TOGGLE:
+				for (i = 0; i < 2; i++) {
+					if (Vib[0][i] == g.CurByte1)
+						buf[g.CurByte1] = 0;
+				}
+				if (value < 2) {
+					Vib[0][value] = g.CurByte1;
+					if((player_controller[0].id & 0x0f) < (g.CurByte1 - 1) / 2) {
+						player_controller[0].id = (player_controller[0].id & 0xf0) + (g.CurByte1 - 1) / 2;
+					}
 				}
 				break;
 		}
