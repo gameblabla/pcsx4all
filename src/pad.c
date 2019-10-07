@@ -90,7 +90,7 @@ unsigned char PAD1_poll(unsigned char value) {
 
 		n = pad_read(0);
 		// Don't enable Analog/Vibration for a standard pad
-		if (padid == 0x41) {
+		if (buf[0] == 0x41) {
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
 		} else {
 			CurCmd = value;
