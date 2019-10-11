@@ -635,6 +635,9 @@ void pad_update(void)
           SDL_PushEvent(&event);
           break;
 #endif
+		case SDLK_HOME:
+			menu_check = 2;
+		break;
         case SDLK_v:
         {
           Config.ShowFps=!Config.ShowFps;
