@@ -94,8 +94,8 @@ unsigned char PAD1_poll(unsigned char value) {
 
 		g.CmdLen1 = 8;
 		
-		// Don't enable Analog/Vibration for a standard pad
-		if (player_controller[0].id == 0x41)
+		// Don't enable Analog/Vibration for a Digital or DualAnalog controller
+		if (player_controller[0].id == 0x41 || player_controller[0].id == 0x53)
 		{
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
 		}
@@ -141,6 +141,13 @@ unsigned char PAD1_poll(unsigned char value) {
 			 * and Dualshock features won't work.
 			 * */
 			if (pad_controllertype[0] == 0) g.CmdLen1 = 4;
+			
+			/* If Controller is Dual Analog then set it to 8 */
+			if (player_controller[0].id == 0x53)
+			{
+				g.CmdLen1 = 8;
+				pad_controllertype[0] = 1;
+			}
 			
 			if (g.CmdLen1 > 4)
 			{

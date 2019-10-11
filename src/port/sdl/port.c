@@ -585,6 +585,7 @@ void joy_init(void)
 
 void pad_update(void)
 {
+	int k = 0;
 	int axisval;
 	SDL_Event event;
 	Uint8 *keys = SDL_GetKeyState(NULL);
@@ -603,6 +604,19 @@ void pad_update(void)
 		case 2:
 			player_controller[0].id=0x73;
 		break;
+	}
+	
+	while (keymap[k].key)
+	{
+		if (keys[keymap[k].key])
+		{
+			pad1_buttons &= ~(1 << keymap[k].bit);
+		}
+		else
+		{
+			pad1_buttons |= (1 << keymap[k].bit);
+		}
+		k++;
 	}
 
 	while (SDL_PollEvent(&event))
@@ -631,76 +645,99 @@ void pad_update(void)
       }
     break;
 
-    case SDL_JOYAXISMOTION:
-      switch (event.jaxis.axis)
-      {
-        case 0: /* X axis */
-          axisval = event.jaxis.value;
-          if(Config.AnalogArrow == 1) {
-            analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
-            if (axisval > joy_commit_range)
-            {
-              analog1 |= ANALOG_RIGHT;
-            }
-            else if (axisval < -joy_commit_range)
-            {
-              analog1 |= ANALOG_LEFT;
-            }
-          } else {
-            player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
-          }
+		case SDL_JOYAXISMOTION:
+		switch (event.jaxis.axis)
+		{
+		case 0: /* X axis */
+			axisval = event.jaxis.value;
+			if (Config.AnalogArrow == 1) 
+			{
+				analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
+				if (axisval > joy_commit_range)
+				{
+					analog1 |= ANALOG_RIGHT;
+				}
+				else if (axisval < -joy_commit_range)
+				{
+					analog1 |= ANALOG_LEFT;
+				}
+			}
+			else
+			{
+				player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
+			}
         break;
-        case 1: /* Y axis*/
-        axisval = event.jaxis.value;
-          if(Config.AnalogArrow == 1) {
-            analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
-            if (axisval > joy_commit_range)
-            {
-				analog1 |= ANALOG_DOWN;
-            }
-            else if (axisval < -joy_commit_range)
-            {
-				analog1 |= ANALOG_UP;
-            }
-          } else {
-            player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
-          }
+        case 1: /* Y axis */
+			axisval = event.jaxis.value;
+			if (Config.AnalogArrow == 1) 
+			{
+				analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
+				if (axisval > joy_commit_range)
+				{
+					analog1 |= ANALOG_DOWN;
+				}
+				else if (axisval < -joy_commit_range)
+				{
+					analog1 |= ANALOG_UP;
+				}
+			} 
+			else 
+			{
+				player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
+			}
         break;
         case 2: /* X axis */
-			axisval = event.jaxis.value;
+		axisval = event.jaxis.value;
+		if (Config.AnalogArrow == 1) 
+		{
+			if (axisval > joy_commit_range)
+			{
+				pad1_buttons &= ~(1 << DKEY_CIRCLE);
+			}
+			else if (axisval < -joy_commit_range)
+			{
+				pad1_buttons &= ~(1 << DKEY_SQUARE);
+			}
+		} 
+		else 
+		{
 			player_controller[0].joy_right_ax0 = (axisval + 32768) / 256;
+		}
 		break;
-        case 3: /* Y axis*/
-          axisval = event.jaxis.value;
-           player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
+        case 3: /* Y axis */
+		axisval = event.jaxis.value;
+		if (Config.AnalogArrow == 1) 
+		{
+			if (axisval > joy_commit_range)
+            {
+				pad1_buttons &= ~(1 << DKEY_CROSS);
+            }
+            else if (axisval < -joy_commit_range)
+            {
+				pad1_buttons &= ~(1 << DKEY_TRIANGLE);
+            }
+		} 
+		else
+		{
+			player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
+		}
         break;
-      }
-      break;
-      case SDL_JOYBUTTONDOWN:
-        if(event.jbutton.which == 0) {
-          pad1_buttons |= (1 << DKEY_L3);
-        } else if(event.jbutton.which == 1) {
-          pad1_buttons |= (1 << DKEY_R3);
+		}
+		break;
+		case SDL_JOYBUTTONDOWN:
+        if(event.jbutton.which == 0) 
+        {
+			pad1_buttons |= (1 << DKEY_L3);
+        }
+        else if(event.jbutton.which == 1)
+        {
+			pad1_buttons |= (1 << DKEY_R3);
         }
         break;
       default:
         break;
     }
   }
-
-	int k = 0;
-	while (keymap[k].key)
-	{
-		if (keys[keymap[k].key])
-		{
-			pad1_buttons &= ~(1 << keymap[k].bit);
-		}
-		else
-		{
-			pad1_buttons |= (1 << keymap[k].bit);
-		}
-		k++;
-	}
 
 	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO

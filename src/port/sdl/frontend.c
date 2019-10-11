@@ -1326,6 +1326,29 @@ static int bios_set()
   return 0;
 }
 
+static char *SlowBoot_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", Config.SlowBoot ? "off" : "on");
+	return buf;
+}
+
+static void SlowBoot_hint()
+{
+	port_printf(7 * 8, 10 * 8, "Skip BIOS logos at startup");
+}
+
+static int SlowBoot_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (Config.SlowBoot < 1) Config.SlowBoot = 1;
+	} else if (keys & KEY_LEFT) {
+		if (Config.SlowBoot > 0) Config.SlowBoot = 0;
+	}
+
+	return 0;
+}
+
 static int RCntFix_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
@@ -1478,6 +1501,7 @@ static MENUITEM gui_SettingsItems[] =
 #endif
   {(char *)"HLE emulated BIOS    ", NULL, &bios_alter, &bios_show, NULL},
   {(char *)"Set BIOS file        ", &bios_set, NULL, NULL, NULL},
+  {(char *)"Skip BIOS logos      ", NULL, &SlowBoot_alter, &SlowBoot_show, &SlowBoot_hint},
   {(char *)"RCntFix              ", NULL, &RCntFix_alter, &RCntFix_show, &RCntFix_hint},
   {(char *)"VSyncWA              ", NULL, &VSyncWA_alter, &VSyncWA_show, &VSyncWA_hint},
   {(char *)"Analog Arrow Keys    ", NULL, &Analog1_alter, &Analog1_show, &Analog1_hint},
