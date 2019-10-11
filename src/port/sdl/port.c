@@ -495,7 +495,6 @@ void config_save()
     fprintf(f, "Bios %s\n", Config.Bios);
   }
 
-  fsync(f);
   fclose(f);
 }
 
