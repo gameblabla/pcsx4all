@@ -303,6 +303,11 @@ void config_load()
       sscanf(arg, "%d", &value);
       Config.Analog_Mode = value;
     }
+    else if (!strcmp(line, "SlowBoot"))
+    {
+      sscanf(arg, "%d", &value);
+      Config.SlowBoot = value;
+    }
 #ifdef SPU_PCSXREARMED
     else if (!strcmp(line, "SpuUseInterpolation"))
     {
@@ -447,12 +452,13 @@ void config_save()
           "FrameLimit %d\n"
           "FrameSkip %d\n"
           "AnalogArrow %d\n"
-          "Analog_Mode %d\n",
+          "Analog_Mode %d\n"
+          "SlowBoot %d\n",
           CONFIG_VERSION, Config.Xa, Config.Mdec, Config.PsxAuto,
           Config.Cdda, Config.HLE, Config.RCntFix, Config.VSyncWA,
           Config.Cpu, Config.PsxType, Config.SpuIrq, Config.SyncAudio,
           Config.SpuUpdateFreq, Config.ForcedXAUpdates, Config.ShowFps, Config.FrameLimit,
-          Config.FrameSkip, Config.AnalogArrow, Config.Analog_Mode);
+          Config.FrameSkip, Config.AnalogArrow, Config.Analog_Mode, Config.SlowBoot);
 
 #ifdef SPU_PCSXREARMED
   fprintf(f, "SpuUseInterpolation %d\n", spu_config.iUseInterpolation);
@@ -539,8 +545,8 @@ static struct
   { SDLK_BACKSPACE,	DKEY_R1 },
   { SDLK_PAGEUP,		DKEY_L2 },
   { SDLK_PAGEDOWN,			DKEY_R2 },
-  { SDLK_SLASH,		DKEY_L3 },
-  { SDLK_PERIOD,			DKEY_R3 },
+  { SDLK_KP_DIVIDE,		DKEY_L3 },
+  { SDLK_KP_PERIOD,			DKEY_R3 },
   { SDLK_ESCAPE,		DKEY_SELECT },
 
   { SDLK_RETURN,		DKEY_START },
