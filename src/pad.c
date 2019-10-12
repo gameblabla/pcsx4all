@@ -26,10 +26,17 @@
 #include "psxmem.h"
 #include "r3000a.h"
 
+#ifdef RUMBLE
+#include <shake.h>
+extern Shake_Device *device;
+extern Shake_Effect effect;
+uint32_t in_enable_vibration = 1;
+extern int id_shake;
+#endif
+
 uint8_t CurPad = 0, CurCmd = 0;
-uint8_t configmode[2] = {0, 0}, padmode[2] = {0, 0}, pad_controllertype[2] = {0, 0};
-uint8_t Vib[2][2];
-uint8_t VibF[2][2];
+uint8_t pad_detect_pad[2] = {0, 0};
+uint8_t Rumble_Change = 0;
 
 typedef struct tagGlobalData
 {
@@ -81,10 +88,33 @@ static uint8_t unk47[8] = {0xFF, 0x5A, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00};
 static uint8_t unk4c[8] =  {0xFF, 0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static uint8_t unk4d[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
+#ifdef RUMBLE
+void plat_trigger_vibrate(int pad, int low, int high)
+{
+	if (high > 0 || low > 0)
+	{
+		if (Rumble_Change == 0)
+		{
+			Shake_Play(device, id_shake);
+			Rumble_Change = 1;
+		}
+	}
+	else
+	{
+		if (Rumble_Change == 1)
+		{
+			Shake_Stop(device, id_shake);
+			id_shake = 0;
+			Rumble_Change = 0;
+		}
+	}
+}
+#endif
+
 unsigned char PAD1_poll(unsigned char value) {
 	static uint8_t buf[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80};
-	uint8_t changed = 0;
 	uint8_t i;
+	uint8_t analogpad = 0;
 
 	if (g.CurByte1 == 0) {
 		uint16_t n;
@@ -95,15 +125,12 @@ unsigned char PAD1_poll(unsigned char value) {
 		g.CmdLen1 = 8;
 		
 		// Don't enable Analog/Vibration for a Digital or DualAnalog controller
-		if (player_controller[0].id == 0x41 || player_controller[0].id == 0x53)
+		CurCmd = value;
+		if (player_controller[0].pad_mode == 0 || player_controller[0].id == 0x53)
 		{
 			CurCmd = CMD_READ_DATA_AND_VIBRATE;
 		}
-		else 
-		{
-			CurCmd = value;
-		}
-		
+
 		switch (CurCmd) 
 		{
 			case CMD_SET_MODE_AND_LOCK:
@@ -111,7 +138,7 @@ unsigned char PAD1_poll(unsigned char value) {
 				return 0xF3;
 			case CMD_QUERY_MODEL_AND_MODE:
 				memcpy(buf, stdmodel,  8);
-				buf[4] = 0x01;
+				buf[4] = player_controller[0].pad_mode;
 				return 0xF3;
 			case CMD_QUERY_ACT:
 				memcpy(buf, unk46,  8);
@@ -126,13 +153,14 @@ unsigned char PAD1_poll(unsigned char value) {
 				memcpy(buf, unk4d,  8);
 				return 0xF3;
 			case CMD_CONFIG_MODE:
-			if (configmode[0]) {
+			if (player_controller[0].configmode) {
 				memcpy(buf, stdcfg,  8);
 				return 0xF3;
 			}
 			// else FALLTHROUGH
 			case CMD_READ_DATA_AND_VIBRATE:
 			default:
+			
 			buf[2] = n & 0xFF;
 			buf[3] = n >> 8;
 			
@@ -140,23 +168,19 @@ unsigned char PAD1_poll(unsigned char value) {
 			 * This must be done here and not before otherwise, it might not enter the switch loop
 			 * and Dualshock features won't work.
 			 * */
-			if (pad_controllertype[0] == 0) g.CmdLen1 = 4;
-			
-			/* If Controller is Dual Analog then set it to 8 */
-			if (player_controller[0].id == 0x53)
-			{
-				g.CmdLen1 = 8;
-				pad_controllertype[0] = 1;
-			}
-			
-			if (g.CmdLen1 > 4)
+			if (player_controller[0].pad_controllertype == 0) g.CmdLen1 = 4;
+			if (player_controller[0].id == 0x53) analogpad = 1;
+
+			if (player_controller[0].pad_mode == 1 || analogpad == 1)
 			{
 				buf[4] = player_controller[0].joy_right_ax0;
 				buf[5] = player_controller[0].joy_right_ax1;
 				buf[6] = player_controller[0].joy_left_ax0;
 				buf[7] = player_controller[0].joy_left_ax1;
-			}	
-			return pad_controllertype[0] ? player_controller[0].id : 0x41;
+			}
+			
+			if (player_controller[0].id == 0x53) return 0x53;
+			return pad_detect_pad[0] ? player_controller[0].id : 0x41;
 		}
 		
 	}
@@ -169,11 +193,11 @@ unsigned char PAD1_poll(unsigned char value) {
 		switch (CurCmd) 
 		{
 			case CMD_CONFIG_MODE:
-				configmode[0] = value;
+				player_controller[0].configmode = value;
 				break;
 
 			case CMD_SET_MODE_AND_LOCK:
-				padmode[0] = value;
+				player_controller[0].pad_mode = value;
 				player_controller[0].id = value ? 0x73 : 0x41;
 				break;
 
@@ -195,43 +219,41 @@ unsigned char PAD1_poll(unsigned char value) {
 			case CMD_QUERY_MODE:
 				switch (value) {
 					case 0: // mode 0 - digital mode
-						pad_controllertype[0] = buf[5] = PSE_PAD_TYPE_STANDARD;
+						pad_detect_pad[0] = buf[5] = PSE_PAD_TYPE_STANDARD;
 						break;
 
 					case 1: // mode 1 - analog mode
-						pad_controllertype[0] = buf[5] = PSE_PAD_TYPE_ANALOGPAD;
+						pad_detect_pad[0] = buf[5] = PSE_PAD_TYPE_ANALOGPAD;
 						break;
 				}
 				break;
 		}
 	}
 	
-	if (pad_controllertype[0] == PSE_PAD_TYPE_ANALOGPAD)
+	if (player_controller[0].pad_controllertype == 1)
 	{
 		switch (CurCmd) 
 		{
 			case CMD_READ_DATA_AND_VIBRATE:
+				#ifdef RUMBLE
 				for (i = 0; i < 2; i++) {
-					if (Vib[0][i] == g.CurByte1
-						 && VibF[0][i] != value) {
-						VibF[0][i] = value;
-						changed = 1;
+					if (player_controller[0].Vib[i] == g.CurByte1
+						 && player_controller[0].VibF[i] != value) {
+						player_controller[0].VibF[i] = value;
 					}
 				}
-				
-				/* Could be used later if Rumble is fixed later on. */
-				/*if (!in_enable_vibration || !changed)
-					break;
-				plat_trigger_vibrate(CurPad, VibF[0][0], VibF[0][1]);*/
+				plat_trigger_vibrate(CurPad, player_controller[0].VibF[0], player_controller[0].VibF[1]);
+				#endif
 				break;
 			case CMD_VIBRATION_TOGGLE:
 				for (i = 0; i < 2; i++) {
-					if (Vib[0][i] == g.CurByte1)
+					if (player_controller[0].Vib[i] == g.CurByte1)
 						buf[g.CurByte1] = 0;
 				}
 				if (value < 2) {
-					Vib[0][value] = g.CurByte1;
-					if((player_controller[0].id & 0x0f) < (g.CurByte1 - 1) / 2) {
+					player_controller[0].Vib[value] = g.CurByte1;
+					if((player_controller[0].id & 0x0f) < (g.CurByte1 - 1) / 2) 
+					{
 						player_controller[0].id = (player_controller[0].id & 0xf0) + (g.CurByte1 - 1) / 2;
 					}
 				}

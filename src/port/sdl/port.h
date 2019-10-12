@@ -24,6 +24,11 @@ struct ps1_controller
 	uint8_t joy_right_ax1;
 	uint8_t joy_left_ax0;
 	uint8_t joy_left_ax1;
+	uint8_t Vib[2];
+	uint8_t VibF[2];
+	uint8_t pad_mode;
+	uint8_t pad_controllertype;
+	uint8_t configmode;
 };
 
 extern struct ps1_controller player_controller[2];

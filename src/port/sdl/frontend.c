@@ -1451,6 +1451,7 @@ static void Analog_Mode_hint()
 static char *Analog_Mode_show()
 {
   static char buf[16] = "\0";
+  extern void Set_Controller_Mode();
   switch(Config.Analog_Mode)
   {
 	 case 0:
@@ -1463,6 +1464,8 @@ static char *Analog_Mode_show()
 		sprintf(buf, "DualShock");
 	 break;
   }
+  Set_Controller_Mode();
+  
   return buf;
 }
 

@@ -14,6 +14,13 @@
 #include <SDL.h>
 #include <sys/ioctl.h>
 
+#ifdef RUMBLE
+#include <shake.h>
+Shake_Device *device;
+Shake_Effect effect;
+int id_shake;
+#endif
+
 #include "port.h"
 #include "r3000a.h"
 #include "plugins.h"
@@ -76,6 +83,13 @@ static void pcsx4all_exit(void)
 		SDL_UnlockSurface(screen);
 
 	SDL_Quit();
+
+#ifdef RUMBLE
+	Shake_Stop(device, id_shake);
+	Shake_EraseEffect(device, id_shake);
+	Shake_Close(device);
+	Shake_Quit();
+#endif
 
 	if (pcsx4all_initted == 1)
 	{
@@ -574,6 +588,31 @@ enum
 
 struct ps1_controller player_controller[2];
 
+void Set_Controller_Mode()
+{
+	switch(Config.Analog_Mode)
+	{
+		/* Digital. Required for some games. */
+		default:
+			player_controller[0].id = 0x41;
+			player_controller[0].pad_mode = 0;
+			player_controller[0].pad_controllertype = 0;
+		break;
+		/* DualAnalog. Some games might misbehave with Dualshock like Descent so this is for those */
+		case 1:
+			player_controller[0].id = 0x53;
+			player_controller[0].pad_mode = 1;
+			player_controller[0].pad_controllertype = 1;
+		break;
+		/* DualShock, required for Ape Escape. */
+		case 2:
+			player_controller[0].id = 0x73;
+			player_controller[0].pad_mode = 1;
+			player_controller[0].pad_controllertype = 1;
+		break;
+	}	
+}
+
 void joy_init(void)
 {
 	sdl_joy[0] = SDL_JoystickOpen(0);
@@ -586,6 +625,18 @@ void joy_init(void)
 	player_controller[0].joy_left_ax1 = 127;
 	player_controller[0].joy_right_ax0 = 127;
 	player_controller[0].joy_right_ax1 = 127;
+	
+	player_controller[0].Vib[0] = 0;
+	player_controller[0].Vib[1] = 0;
+	player_controller[0].VibF[0] = 0;
+	player_controller[0].VibF[1] = 0;
+	
+	player_controller[0].pad_mode = 0;
+	player_controller[0].pad_controllertype = 0;
+	
+	player_controller[0].configmode = 0;
+	
+	Set_Controller_Mode();
 }
 
 void pad_update(void)
@@ -594,22 +645,6 @@ void pad_update(void)
 	int axisval;
 	SDL_Event event;
 	Uint8 *keys = SDL_GetKeyState(NULL);
-	
-	switch(Config.Analog_Mode)
-	{
-		/* Digital. Required for Ganbare Goemon: Ooedo Daikaiten i believe */
-		default:
-			player_controller[0].id=0x41;
-		break;
-		/* DualAnalog. Some games might misbehave with Dualshock like Descent so this is for those */
-		case 1:
-			player_controller[0].id=0x53;
-		break;
-		/* DualShock, required for Ape Escape. */
-		case 2:
-			player_controller[0].id=0x73;
-		break;
-	}
 	
 	while (keymap[k].key)
 	{
@@ -634,183 +669,125 @@ void pad_update(void)
 			case SDL_KEYDOWN:
 			switch (event.key.keysym.sym)
 			{
-#ifndef GCW_ZERO
-        case SDLK_ESCAPE:
-          event.type = SDL_QUIT;
-          SDL_PushEvent(&event);
-          break;
-#endif
-		case SDLK_HOME:
-			menu_check = 2;
-		break;
-        case SDLK_v:
-        {
-          Config.ShowFps=!Config.ShowFps;
-        }
-        break;
-        default:
-        break;
-      }
-    break;
-
-		case SDL_JOYAXISMOTION:
-		switch (event.jaxis.axis)
-		{
-		case 0: /* X axis */
+				case SDLK_HOME:
+					menu_check = 1;
+				break;
+				case SDLK_v:
+				{
+					Config.ShowFps=!Config.ShowFps;
+				}
+				break;
+				default:
+				break;
+			}
+			
+			case SDL_KEYUP:
+			switch (event.key.keysym.sym)
+			{
+				case SDLK_HOME:
+					menu_check = 1;
+				break;
+				default:
+				break;
+			}
+			break;
+			break;
+			case SDL_JOYAXISMOTION:
+			switch (event.jaxis.axis)
+			{
+			case 0: /* X axis */
+				axisval = event.jaxis.value;
+				if (Config.AnalogArrow == 1) 
+				{
+					analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
+					if (axisval > joy_commit_range)
+					{
+						analog1 |= ANALOG_RIGHT;
+					}
+					else if (axisval < -joy_commit_range)
+					{
+						analog1 |= ANALOG_LEFT;
+					}
+				}
+				else
+				{
+					player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
+				}
+			break;
+			case 1: /* Y axis */
+				axisval = event.jaxis.value;
+				if (Config.AnalogArrow == 1) 
+				{
+					analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
+					if (axisval > joy_commit_range)
+					{
+						analog1 |= ANALOG_DOWN;
+					}
+					else if (axisval < -joy_commit_range)
+					{
+						analog1 |= ANALOG_UP;
+					}
+				} 
+				else 
+				{
+					player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
+				}
+			break;
+			case 2: /* X axis */
 			axisval = event.jaxis.value;
 			if (Config.AnalogArrow == 1) 
 			{
-				analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
 				if (axisval > joy_commit_range)
 				{
-					analog1 |= ANALOG_RIGHT;
+					pad1_buttons &= ~(1 << DKEY_CIRCLE);
 				}
 				else if (axisval < -joy_commit_range)
 				{
-					analog1 |= ANALOG_LEFT;
-				}
-			}
-			else
-			{
-				player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
-			}
-        break;
-        case 1: /* Y axis */
-			axisval = event.jaxis.value;
-			if (Config.AnalogArrow == 1) 
-			{
-				analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
-				if (axisval > joy_commit_range)
-				{
-					analog1 |= ANALOG_DOWN;
-				}
-				else if (axisval < -joy_commit_range)
-				{
-					analog1 |= ANALOG_UP;
+					pad1_buttons &= ~(1 << DKEY_SQUARE);
 				}
 			} 
 			else 
 			{
-				player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
+				player_controller[0].joy_right_ax0 = (axisval + 32768) / 256;
 			}
-        break;
-        case 2: /* X axis */
-		axisval = event.jaxis.value;
-		if (Config.AnalogArrow == 1) 
-		{
-			if (axisval > joy_commit_range)
+			break;
+			case 3: /* Y axis */
+			axisval = event.jaxis.value;
+			if (Config.AnalogArrow == 1) 
 			{
-				pad1_buttons &= ~(1 << DKEY_CIRCLE);
-			}
-			else if (axisval < -joy_commit_range)
+				if (axisval > joy_commit_range)
+				{
+					pad1_buttons &= ~(1 << DKEY_CROSS);
+				}
+				else if (axisval < -joy_commit_range)
+				{
+					pad1_buttons &= ~(1 << DKEY_TRIANGLE);
+				}
+			} 
+			else
 			{
-				pad1_buttons &= ~(1 << DKEY_SQUARE);
+				player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
 			}
-		} 
-		else 
-		{
-			player_controller[0].joy_right_ax0 = (axisval + 32768) / 256;
-		}
-		break;
-        case 3: /* Y axis */
-		axisval = event.jaxis.value;
-		if (Config.AnalogArrow == 1) 
-		{
-			if (axisval > joy_commit_range)
-            {
-				pad1_buttons &= ~(1 << DKEY_CROSS);
-            }
-            else if (axisval < -joy_commit_range)
-            {
-				pad1_buttons &= ~(1 << DKEY_TRIANGLE);
-            }
-		} 
-		else
-		{
-			player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
-		}
-        break;
-		}
-		break;
-		case SDL_JOYBUTTONDOWN:
-        if(event.jbutton.which == 0) 
-        {
-			pad1_buttons |= (1 << DKEY_L3);
-        }
-        else if(event.jbutton.which == 1)
-        {
-			pad1_buttons |= (1 << DKEY_R3);
-        }
-        break;
-      default:
-        break;
+			break;
+			}
+			break;
+			case SDL_JOYBUTTONDOWN:
+			if(event.jbutton.which == 0) 
+			{
+				pad1_buttons |= (1 << DKEY_L3);
+			}
+			else if(event.jbutton.which == 1)
+			{
+				pad1_buttons |= (1 << DKEY_R3);
+			}
+			break;
+		  default:
+			break;
     }
   }
 
 	/* Special key combos for GCW-Zero */
 #ifdef GCW_ZERO
-	if (keys[SDLK_ESCAPE])
-	{
-		/* We need to make sure to cancel out Select and L1/R2 being pressed when user presses L2/R2 hotkeys */	
-		// L2
-		/*if (keys[SDLK_TAB])
-		{
-			pad1 |= (1 << DKEY_SELECT);
-			pad1 |= (1 << DKEY_L1);
-			pad1 &= ~(1 << DKEY_L2);
-		}
-		else
-		{
-			pad1 |= (1 << DKEY_L2);
-		}
-		
-		// R2
-		if (keys[SDLK_BACKSPACE])
-		{
-			pad1 |= (1 << DKEY_SELECT);
-			pad1 |= (1 << DKEY_R1);
-			pad1 &= ~(1 << DKEY_R2);
-		}
-		else
-		{
-			pad1 |= (1 << DKEY_R2);
-		}*/
-	  
-		if (!keys[SDLK_RETURN])
-		{
-			menu_check = 1; //SELECT only
-		}
-		else if (menu_check == 1)
-		{
-			menu_check = 2; //SELECT + START
-		}
-		else
-		{
-			// START + SELECT
-			if (use_speedup == 0 && ++select_count == 70)
-			{
-				use_speedup = 1;
-			}
-		}
-	}
-	else
-	{
-		menu_check = 0;
-	}
-
-	if (use_speedup)
-	{
-		if (!keys[SDLK_ESCAPE] && !keys[SDLK_RETURN])
-		{
-			select_count = 0;
-		}
-		else if (select_count == 0)
-		{
-			use_speedup = 0;
-		}
-	}
-  
-	//
 	if (Config.AnalogArrow == 1)
 	{
 		pad1_buttons |= (1 << DKEY_SELECT);
@@ -841,7 +818,7 @@ void pad_update(void)
   
   
 	// SELECT+START for menu
-	if (menu_check == 2 && !keys[SDLK_LALT])
+	if (menu_check == 1)
 	{
 		// Sync and close any memcard files opened for writing
 		// TODO: Disallow entering menu until they are synced/closed
@@ -927,6 +904,30 @@ with mingw build. */
   #undef main
 #endif
 
+void Rumble_Init()
+{
+#ifdef RUMBLE
+	Shake_Init();
+
+	if (Shake_NumOfDevices() > 0)
+	{
+		device = Shake_Open(0);
+		Shake_InitEffect(&effect, SHAKE_EFFECT_PERIODIC);
+		effect.u.periodic.waveform		= SHAKE_PERIODIC_SINE;
+		effect.u.periodic.period		= 0.1*0x100;
+		effect.u.periodic.magnitude		= 0x6000;
+		effect.u.periodic.envelope.attackLength	= 0x100;
+		effect.u.periodic.envelope.attackLevel	= 0;
+		effect.u.periodic.envelope.fadeLength	= 0x100;
+		effect.u.periodic.envelope.fadeLevel	= 0;
+		effect.direction			= 0x4000;
+		effect.length				= 0;
+		effect.delay				= 0;
+		id_shake = Shake_UploadEffect(device, &effect);
+	}
+#endif	
+}
+
 int main (int argc, char **argv)
 {
   char filename[256];
@@ -935,6 +936,7 @@ int main (int argc, char **argv)
   filename[0] = '\0'; /* Executable file name */
 
   setup_paths();
+  
 
   // PCSX
   snprintf(Config.Mcd1, sizeof(Config.Mcd1), "%s/%s", memcardsdir, "mcd001.mcr");
@@ -1508,6 +1510,8 @@ int main (int argc, char **argv)
   CheckforCDROMid_applyhacks();
   
   joy_init();
+  
+  Rumble_Init();
 
   if (filename[0] != '\0')
   {
