@@ -376,8 +376,9 @@ static int parsetoc(const char *isofile) {
 	// copy name of the iso and change extension from .bin to .toc
 	strncpy(tocname, isofile, sizeof(tocname));
 	tocname[MAXPATHLEN - 1] = '\0';
-	if (strlen(tocname) >= 4) {
-		strcpy(tocname + strlen(tocname) - 4, ".toc");
+	t = strlen(tocname);
+	if (t >= 4) {
+		strcpy(tocname + t - 4, ".toc");
 	} else {
 		return -1;
 	}
@@ -542,7 +543,7 @@ static int parsecue(const char *isofile) {
 	char			linebuf[256], tmpb[256], dummy[256];
 	unsigned int	incue_max_len;
 	unsigned int	t, file_len, mode, sector_offs;
-	unsigned int	sector_size = 2352;
+	unsigned int	sector_size = CD_FRAMESIZE_RAW;
 
 	numtracks = 0;
 
@@ -613,7 +614,7 @@ static int parsecue(const char *isofile) {
 			sector_size = 0;
 			if (strstr(linebuf, "AUDIO") != NULL) {
 				ti[numtracks].type = CDDA;
-				sector_size = 2352;
+				sector_size = CD_FRAMESIZE_RAW;
 			}
 			else if (sscanf(linebuf, " TRACK %u MODE%u/%u", &t, &mode, &sector_size) == 3)
 				ti[numtracks].type = DATA;
@@ -622,7 +623,7 @@ static int parsecue(const char *isofile) {
 				ti[numtracks].type = numtracks == 1 ? DATA : CDDA;
 			}
 			if (sector_size == 0)
-				sector_size = 2352;
+				sector_size = CD_FRAMESIZE_RAW;
 		}
 		else if (!strcmp(token, "INDEX")) {
 			if (sscanf(linebuf, " INDEX %02d %8s", &t, time) != 2)
@@ -687,7 +688,7 @@ static int parsecue(const char *isofile) {
 				continue;
 			}
 			fseek(ti[numtracks + 1].handle, 0, SEEK_END);
-			file_len = ftell(ti[numtracks + 1].handle) / 2352;
+			file_len = ftell(ti[numtracks + 1].handle) / CD_FRAMESIZE_RAW;
 
 			if (numtracks == 0 && strlen(isofile) >= 4 &&
 				strcmp(isofile + strlen(isofile) - 4, ".cue") == 0)
@@ -746,7 +747,7 @@ static int parseccd(const char *isofile) {
 		else if (!strncmp(linebuf, "INDEX 1=", 8)) {
 			sscanf(linebuf, "INDEX 1=%d", &t);
 			sec2msf(t + 2 * 75, ti[numtracks].start);
-			ti[numtracks].start_offset = t * 2352;
+			ti[numtracks].start_offset = t * CD_FRAMESIZE_RAW;
 
 			// If we've already seen another track, this is its end
 			if (numtracks > 1) {
@@ -762,7 +763,7 @@ static int parseccd(const char *isofile) {
 	// Fill out the last track's end based on size
 	if (numtracks >= 1) {
 		fseek(cdHandle, 0, SEEK_END);
-		t = ftell(cdHandle) / 2352 - msf2sec(ti[numtracks].start) + 2 * 75;
+		t = ftell(cdHandle) / CD_FRAMESIZE_RAW - msf2sec(ti[numtracks].start) + 2 * 75;
 		sec2msf(t, ti[numtracks].length);
 	}
 
@@ -1043,7 +1044,7 @@ static int handlepbp(const char *isofile) {
 
 		ti[i].start_offset = btoi(toc_entry.index0[0]) * 60 * 75 +
 			btoi(toc_entry.index0[1]) * 75 + btoi(toc_entry.index0[2]);
-		ti[i].start_offset *= 2352;
+		ti[i].start_offset *= CD_FRAMESIZE_RAW;
 		ti[i].start[0] = btoi(toc_entry.index1[0]);
 		ti[i].start[1] = btoi(toc_entry.index1[1]);
 		ti[i].start[2] = btoi(toc_entry.index1[2]);
@@ -1053,7 +1054,7 @@ static int handlepbp(const char *isofile) {
 			sec2msf(t, ti[i - 1].length);
 		}
 	}
-	t = cd_length - ti[numtracks].start_offset / 2352;
+	t = cd_length - ti[numtracks].start_offset / CD_FRAMESIZE_RAW;
 	sec2msf(t, ti[numtracks].length);
 
 	// seek to ISO index
@@ -1225,7 +1226,7 @@ static int opensbifile(const char *isoname) {
 	}
 
 	fseek(cdHandle, 0, SEEK_END);
-	s = ftell(cdHandle) / 2352;
+	s = ftell(cdHandle) / CD_FRAMESIZE_RAW;
 
 	return LoadSBI(sbiname, s);
 }
@@ -1294,7 +1295,7 @@ static int cdread_compressed(FILE *f, unsigned int base, void *dest, int sector)
 	int ret, block;
 
 	if (base)
-		sector += base / 2352;
+		sector += base / CD_FRAMESIZE_RAW;
 
 	block = sector >> compr_img->block_shift;
 	compr_img->sector_in_blk = sector & ((1 << compr_img->block_shift) - 1);
@@ -1397,6 +1398,7 @@ long CDR_open(void) {
 	boolean isMode1CDR_ = FALSE;
 	char alt_bin_filename[MAXPATHLEN];
 	const char *bin_filename;
+	off_t file_len;
 
 	if (cdHandle != NULL) {
 		return 0; // it's already open
@@ -1450,11 +1452,31 @@ long CDR_open(void) {
 	if (opensbifile(GetIsoFile()) == 0) {
 		printf("[+sbi]");
 	}
-	fseeko(cdHandle, 0, SEEK_END);
+	file_len = fseeko(cdHandle, 0, SEEK_END);
+
+	if (numtracks < 1) {
+		// set a default track, to satisfy bios read
+		unsigned int t;
+
+		memset(&ti, 0, sizeof(ti));
+		numtracks = 1;
+		ti[numtracks].handle = fopen(GetIsoFile(), "rb");
+		ti[numtracks].type = DATA;
+		memset(ti[numtracks].start, 0, 3);
+
+		t = msf2sec(ti[numtracks].start);
+		ti[numtracks].start_offset = t * CD_FRAMESIZE_RAW;
+		t += 2 * 75;
+		sec2msf(t, ti[numtracks].start);
+
+		// default track length to file length
+		t = (file_len - ti[numtracks].start_offset) / CD_FRAMESIZE_RAW;
+		sec2msf(t, ti[numtracks].length);
+	}
 
 	// maybe user selected metadata file instead of main .bin ..
 	bin_filename = GetIsoFile();
-	if (ftello(cdHandle) < 2352 * 0x10) {
+	if (file_len < CD_FRAMESIZE_RAW * 0x10) {
 		static const char *exts[] = { ".bin", ".BIN", ".img", ".IMG" };
 		FILE *tmpf = NULL;
 		size_t i;
