@@ -217,6 +217,7 @@ done:
  return ns;
 }
 
+#if defined(THREAD_ENABLED) || defined(WANT_THREAD_CODE)
 static int SkipADSR(ADSRInfoEx *adsr, int ns_to)
 {
  int EnvelopeVol = adsr->EnvelopeVol;
@@ -343,6 +344,7 @@ done:
  adsr->EnvelopeVol = EnvelopeVol;
  return ns;
 }
+#endif
 
 #endif
 

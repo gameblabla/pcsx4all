@@ -572,9 +572,8 @@ static uint16_t pad2 = 0xFFFF;
 
 static uint16_t pad1_buttons = 0xFFFF;
 
-static unsigned short analog1 = 0,tmp_axis=0;
+static unsigned short analog1 = 0;
 static int menu_check = 0;
-static int select_count = 0;
 uint8_t use_speedup = 0;
 SDL_Joystick * sdl_joy[2];
 #define joy_commit_range    2048

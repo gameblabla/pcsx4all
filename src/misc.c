@@ -482,8 +482,8 @@ int Load(const char *ExePath) {
 	void *mem;
 	u32 new_pc;
 	
-	strncpy(CdromId, "SLUS99999", 9);
-	strncpy(CdromLabel, "SLUS_999.99", 11);
+	strncpy(CdromId, "SLUS99999", 10);
+	strncpy(CdromLabel, "SLUS_999.99", 12);
 
 	tmpFile = fopen(ExePath, "rb");
 	if (tmpFile == NULL) {

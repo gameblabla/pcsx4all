@@ -968,6 +968,9 @@ static void intExecuteBlock(unsigned target_pc) {
 static void intClear(u32 Addr, u32 Size) {
 }
 
+static void intNotify(int note, void *data) {
+}
+
 static void intShutdown(void) {
 }
 
@@ -992,5 +995,6 @@ R3000Acpu psxInt = {
 	intExecute,
 	intExecuteBlock,
 	intClear,
+	intNotify,
 	intShutdown
 };
