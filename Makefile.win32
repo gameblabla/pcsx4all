@@ -44,7 +44,7 @@ endif
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
 
-LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lz
+LDFLAGS = $(SDL_LIBS) -lz #-lSDL_mixer -lSDL_image
 
 OBJDIRS = \
 	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
@@ -83,6 +83,7 @@ OBJS += obj/spu/$(SPU)/spu.o
 
 OBJS += obj/port/$(PORT)/port.o
 OBJS += obj/port/$(PORT)/frontend.o
+OBJS += obj/port/$(PORT)/cdrom_hacks.o
 
 OBJS += obj/plugin_lib/perfmon.o
 

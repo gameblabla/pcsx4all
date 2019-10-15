@@ -17,7 +17,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   51 Franklin Street, Fifth Floor, Boston, MA 02111-1307 USA.           *
  ***************************************************************************/
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 #ifndef USE_GPULIB

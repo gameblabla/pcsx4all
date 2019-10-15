@@ -11,12 +11,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <SDL.h>
+#ifndef _WIN32
+#include <sys/mman.h>
 #include <sys/ioctl.h>
+#endif
 
 #include "plugins.h"    // For GPUFreeze_t, GPUScreenInfo_t
 #include "gpu.h"

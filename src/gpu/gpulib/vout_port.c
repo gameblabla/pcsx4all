@@ -14,8 +14,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#endif
 
 #include "port.h"
 #include "gpu.h"

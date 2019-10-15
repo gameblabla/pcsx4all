@@ -9,10 +9,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <SDL.h>
+#ifndef _WIN32
+#include <sys/mman.h>
 #include <sys/ioctl.h>
+#endif
 
 #ifdef RUMBLE
 #include <shake.h>

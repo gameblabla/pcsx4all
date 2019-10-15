@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 #include <SDL.h>
 
 #include "port.h"
