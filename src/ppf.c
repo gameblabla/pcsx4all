@@ -206,7 +206,7 @@ void BuildPPFCache() {
 	buffer[10] = CdromId[8];
 	buffer[11] = '\0';
 
-	sprintf(szPPF, "%s/%s", Config.PatchesDir, buffer);
+	snprintf(szPPF, sizeof(szPPF), "%s/%s", Config.PatchesDir, buffer);
 
 	printf("Looking for patch %s\n", szPPF);
 

@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 #include <SDL.h>
 
 #include "port.h"
@@ -2128,6 +2130,8 @@ static void ShowMenu(MENU *menu)
   // general copyrights info
 #if defined(RS97)
   port_printf( 8 * 8, 10, "PCSX4ALL v2.4 for RetroGame");
+#elif defined(RG350)
+  port_printf( 8 * 8, 10, "pcsx4all 2.4 for RG-350");
 #else
   port_printf( 8 * 8, 10, "pcsx4all 2.4 for GCW-Zero");
 #endif
