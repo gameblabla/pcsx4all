@@ -1430,11 +1430,11 @@ int main (int argc, char **argv)
 
   atexit(pcsx4all_exit);
 
-	#ifdef SDL_TRIPLEBUF
-		int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
-	#else
-		int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
-	#endif
+#ifdef SDL_TRIPLEBUF
+  int flags = SDL_HWSURFACE | SDL_TRIPLEBUF;
+#else
+  int flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
+#endif
 	
   screen = SDL_SetVideoMode(320, 240, 16, flags);
   if (!screen)
@@ -1620,21 +1620,25 @@ void port_printf(int x, int y, const char *text)
     0x00,0x00,0x76,0xDC,0x00,0x00,0x00,0x00,0x10,0x28,0x10,0x54,0xAA,0x44,0x00,0x00,
   };
 
-  int interval = 1;
+  int interval = 1, row = 320 * interval;
   unsigned short *screen = (SCREEN + x + y * 320);
+  int len = strlen(text);
 
-  for (int i = 0; i < strlen(text); i++)
+  for (int i = 0; i < len; i++)
   {
+    int pos = 0;
     for (int l = 0; l < 8; l++)
     {
-      screen[l * 320 * interval + 0] = (fontdata8x8[((text[i]) * 8) + l] & 0x80) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 1] = (fontdata8x8[((text[i]) * 8) + l] & 0x40) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 2] = (fontdata8x8[((text[i]) * 8) + l] & 0x20) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 3] = (fontdata8x8[((text[i]) * 8) + l] & 0x10) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 4] = (fontdata8x8[((text[i]) * 8) + l] & 0x08) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 5] = (fontdata8x8[((text[i]) * 8) + l] & 0x04) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 6] = (fontdata8x8[((text[i]) * 8) + l] & 0x02) ? 0xffff:0x0000;
-      screen[l * 320 * interval + 7] = (fontdata8x8[((text[i]) * 8) + l] & 0x01) ? 0xffff:0x0000;
+      unsigned char data = fontdata8x8[((text[i]) * 8) + l];
+      screen[pos    ] = (data & 0x80) ? 0xffff:0x0000;
+      screen[pos + 1] = (data & 0x40) ? 0xffff:0x0000;
+      screen[pos + 2] = (data & 0x20) ? 0xffff:0x0000;
+      screen[pos + 3] = (data & 0x10) ? 0xffff:0x0000;
+      screen[pos + 4] = (data & 0x08) ? 0xffff:0x0000;
+      screen[pos + 5] = (data & 0x04) ? 0xffff:0x0000;
+      screen[pos + 6] = (data & 0x02) ? 0xffff:0x0000;
+      screen[pos + 7] = (data & 0x01) ? 0xffff:0x0000;
+      pos += row;
     }
     screen += 8;
   }
