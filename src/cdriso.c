@@ -438,7 +438,7 @@ static int parsetoc(const char *isofile) {
 	// parse the .toc file
 	while (fgets(linebuf, sizeof(linebuf), fi) != NULL) {
 		// search for tracks
-		strncpy(tmp, linebuf, sizeof(linebuf));
+		strncpy(tmp, linebuf, sizeof(tmp));
 		token = strtok(tmp, " ");
 
 		if (token == NULL) continue;
@@ -601,7 +601,7 @@ static int parsecue(const char *isofile) {
 	sector_offs = 2 * 75;
 
 	while (fgets(linebuf, sizeof(linebuf), fi) != NULL) {
-		strncpy(dummy, linebuf, sizeof(linebuf));
+		strncpy(dummy, linebuf, sizeof(dummy));
 		token = strtok(dummy, " ");
 
 		if (token == NULL) {
