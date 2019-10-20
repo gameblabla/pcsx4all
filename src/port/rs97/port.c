@@ -12,18 +12,6 @@
 #include <unistd.h>
 #include <SDL.h>
 #include <gpu/gpulib/gpu.h>
-#ifndef _WIN32
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-#endif
-
-#ifdef RUMBLE
-#include <shake.h>
-Shake_Device *device;
-Shake_Effect effect;
-int id_shake;
-#endif
-
 #include "port.h"
 #include "r3000a.h"
 #include "plugins.h"
@@ -31,6 +19,10 @@ int id_shake;
 #include "perfmon.h"
 #include "cdrom_hacks.h"
 #include "cheat.h"
+
+#ifdef HW_SCALE
+	#error "RS-97 does not support IPU hardware scaling, please undefine HW_SCALE"
+#endif
 
 /* PATH_MAX inclusion */
 #ifdef __MINGW32__
@@ -97,13 +89,6 @@ static void pcsx4all_exit(void)
 	// Store config to file
 	config_save();
 
-#ifdef RUMBLE
-	Shake_Stop(device, id_shake);
-	Shake_EraseEffect(device, id_shake);
-	Shake_Close(device);
-	Shake_Quit();
-#endif
-
 	if (pcsx4all_initted == 1)
 	{
 		ReleasePlugins();
@@ -161,8 +146,6 @@ static void setup_paths()
 void probe_lastdir()
 {
   DIR *dir;
- /* if (!Config.LastDir)
-    return;*/
 
   dir = opendir(Config.LastDir);
 
@@ -604,8 +587,6 @@ static uint16_t pad1_buttons = 0xFFFF;
 static unsigned short analog1 = 0;
 static int menu_check = 0;
 uint8_t use_speedup = 0;
-SDL_Joystick * sdl_joy[2];
-#define joy_commit_range 8192
 enum
 {
   ANALOG_UP = 1,
@@ -643,11 +624,6 @@ void Set_Controller_Mode()
 
 void joy_init(void)
 {
-	sdl_joy[0] = SDL_JoystickOpen(0);
-	sdl_joy[1] = SDL_JoystickOpen(1);
-	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
-	SDL_JoystickEventState(SDL_ENABLE);
-	
 	player_controller[0].id = 0x41;
 	player_controller[0].joy_left_ax0 = 127;
 	player_controller[0].joy_left_ax1 = 127;
@@ -697,151 +673,105 @@ void pad_update(void)
 			case SDL_KEYDOWN:
 			switch (event.key.keysym.sym)
 			{
-				case SDLK_HOME:
-					menu_check = 1;
-				break;
-				case SDLK_v:
-				{
-					Config.ShowFps=!Config.ShowFps;
-				}
-				break;
-				default:
-				break;
-			}
-			
-			case SDL_KEYUP:
-			switch (event.key.keysym.sym)
-			{
-				case SDLK_HOME:
+				case SDLK_END:
 					menu_check = 1;
 				break;
 				default:
 				break;
 			}
 			break;
+			default:
 			break;
-			case SDL_JOYAXISMOTION:
-			switch (event.jaxis.axis)
-			{
-			case 0: /* X axis */
-				axisval = event.jaxis.value;
-				if (Config.AnalogArrow == 1) 
-				{
-					analog1 &= ~(ANALOG_LEFT | ANALOG_RIGHT);
-					if (axisval > joy_commit_range)
-					{
-						analog1 |= ANALOG_RIGHT;
-					}
-					else if (axisval < -joy_commit_range)
-					{
-						analog1 |= ANALOG_LEFT;
-					}
-				}
-				else
-				{
-					player_controller[0].joy_left_ax0 = (axisval + 32768) / 256;
-				}
-			break;
-			case 1: /* X axis */
-				axisval = event.jaxis.value;
-				if (Config.AnalogArrow == 1) 
-				{
-					analog1 &= ~(ANALOG_UP | ANALOG_DOWN);
-					if (axisval > joy_commit_range)
-					{
-						analog1 |= ANALOG_DOWN;
-					}
-					else if (axisval < -joy_commit_range)
-					{
-						analog1 |= ANALOG_UP;
-					}
-				} 
-				else 
-				{
-					player_controller[0].joy_left_ax1 = (axisval + 32768) / 256;
-				}
-			break;
-			case 2: /* Y axis */
-			axisval = event.jaxis.value;
-			if (Config.AnalogArrow == 1) 
-			{
-				if (axisval > joy_commit_range)
-				{
-					pad1_buttons &= ~(1 << DKEY_CIRCLE);
-				}
-				else if (axisval < -joy_commit_range)
-				{
-					pad1_buttons &= ~(1 << DKEY_SQUARE);
-				}
-			} 
-			else 
-			{
-				player_controller[0].joy_right_ax0 = (axisval + 32768) / 256;
-			}
-			break;
-			case 3: /* Y axis */
-			axisval = event.jaxis.value;
-			if (Config.AnalogArrow == 1) 
-			{
-				if (axisval > joy_commit_range)
-				{
-					pad1_buttons &= ~(1 << DKEY_CROSS);
-				}
-				else if (axisval < -joy_commit_range)
-				{
-					pad1_buttons &= ~(1 << DKEY_TRIANGLE);
-				}
-			} 
-			else
-			{
-				player_controller[0].joy_right_ax1 = (axisval + 32768) / 256;
-			}
-			break;
-			}
-			break;
-			case SDL_JOYBUTTONDOWN:
-			if(event.jbutton.which == 0) 
-			{
-				pad1_buttons |= (1 << DKEY_L3);
-			}
-			else if(event.jbutton.which == 1)
-			{
-				pad1_buttons |= (1 << DKEY_R3);
-			}
-			break;
-		  default:
-			break;
+		}
     }
-  }
-  
-	/* Special key combos for GCW-Zero */
-	if (Config.AnalogArrow == 1)
+    
+	if (keys[SDLK_ESCAPE] && keys[SDLK_TAB])
 	{
 		pad1_buttons |= (1 << DKEY_SELECT);
-		// SELECT+B for psx's SELECT
-		if (keys[SDLK_ESCAPE] && keys[SDLK_LALT])
-		{
-			pad1_buttons &= ~(1 << DKEY_SELECT);
-			pad1_buttons |= (1 << DKEY_CROSS);
-		}
+		pad1_buttons &= ~(1 << DKEY_L2);
+	}
+		
+	if (keys[SDLK_ESCAPE] && keys[SDLK_BACKSPACE])
+	{
+		pad1_buttons |= (1 << DKEY_SELECT);
+		pad1_buttons &= ~(1 << DKEY_R2);
+	}
 
-		if ((pad1_buttons & (1 << DKEY_UP)) && (analog1 & ANALOG_UP))
+	if (Config.AnalogArrow == 1)
+	{
+		if (keys[SDLK_UP])
 		{
-			pad1_buttons &= ~(1 << DKEY_UP);
+			player_controller[0].joy_left_ax1 = 0;
+			pad1_buttons |= (1 << DKEY_UP);
 		}
-		if ((pad1_buttons & (1 << DKEY_DOWN)) && (analog1 & ANALOG_DOWN))
+		else if (keys[SDLK_DOWN])
 		{
-			pad1_buttons &= ~(1 << DKEY_DOWN);
+			player_controller[0].joy_left_ax1 = 255;
+			pad1_buttons |= (1 << DKEY_DOWN);
 		}
-		if ((pad1_buttons & (1 << DKEY_LEFT)) && (analog1 & ANALOG_LEFT))
+		else
 		{
-			pad1_buttons &= ~(1 << DKEY_LEFT);
+			player_controller[0].joy_left_ax1 = 127;
 		}
-		if ((pad1_buttons & (1 << DKEY_RIGHT)) && (analog1 & ANALOG_RIGHT))
+		
+		if (keys[SDLK_LEFT])
 		{
-			pad1_buttons &= ~(1 << DKEY_RIGHT);
+			player_controller[0].joy_left_ax0 = 0;
+			pad1_buttons |= (1 << DKEY_LEFT);
+		}
+		else if (keys[SDLK_RIGHT])
+		{
+			player_controller[0].joy_left_ax0 = 255;
+			pad1_buttons |= (1 << DKEY_RIGHT);
+		}
+		else
+		{
+			player_controller[0].joy_left_ax0 = 127;
 		}
 	}
+  
+	/* Map Right analog stick to face buttons if L button is pressed */
+	if (Config.Analog_Mode > 0)
+	{
+		if (keys[SDLK_TAB])
+		{
+			if (keys[SDLK_LSHIFT])
+			{
+				player_controller[0].joy_right_ax1 = 0;
+				pad1_buttons |= (1 << DKEY_L1);
+			}
+			else if (keys[SDLK_LALT])
+			{
+				player_controller[0].joy_right_ax1 = 255;
+				pad1_buttons |= (1 << DKEY_L1);
+			}
+			else
+			{
+				player_controller[0].joy_right_ax1 = 127;
+			}
+			
+			if (keys[SDLK_SPACE])
+			{
+				player_controller[0].joy_right_ax0 = 0;
+				pad1_buttons |= (1 << DKEY_L1);
+			}
+			else if (keys[SDLK_LCTRL])
+			{
+				player_controller[0].joy_right_ax0 = 255;
+				pad1_buttons |= (1 << DKEY_L1);
+			}
+			else
+			{
+				player_controller[0].joy_right_ax0 = 127;
+			}
+		}
+		else
+		{
+			player_controller[0].joy_right_ax1 = 127;
+			player_controller[0].joy_right_ax0 = 127;
+		}	
+	}
+  
   
 	// SELECT+START for menu
 	if (menu_check == 1)
@@ -885,22 +815,19 @@ uint16_t pad_read(int num)
 void video_flip(void)
 {
 	if(emu_running && Config.ShowFps)
-  {
-    port_printf(5, 5, pl_data.stats_msg);
-  }
+	{
+		port_printf(5, 5, pl_data.stats_msg);
+	}
 
-  if(SDL_MUSTLOCK(screen))
-  {
-    SDL_UnlockSurface(screen);
-  }
+	if(SDL_MUSTLOCK(screen))
+		SDL_UnlockSurface(screen);
 
-  SDL_Flip(screen);
+	SDL_Flip(screen);
 
-  if(SDL_MUSTLOCK(screen))
-  {
-    SDL_LockSurface(screen);
-  }
-  SCREEN = (Uint16 *)screen->pixels;
+	if(SDL_MUSTLOCK(screen))
+		SDL_LockSurface(screen);
+		
+	SCREEN = (Uint16 *)screen->pixels;
 }
 
 /* This is used by gpu_dfxvideo only as it doesn't scale itself */
@@ -928,99 +855,8 @@ void video_clear(void)
 	memset(screen->pixels, 0, screen->pitch*screen->h);
 }
 
-/* This is needed to override redirecting to stderr.txt and stdout.txt
-with mingw build. */
-#ifdef UNDEF_MAIN
-  #undef main
-#endif
-
-void Rumble_Init()
-{
-#ifdef RUMBLE
-	Shake_Init();
-
-	if (Shake_NumOfDevices() > 0)
-	{
-		device = Shake_Open(0);
-		Shake_InitEffect(&effect, SHAKE_EFFECT_PERIODIC);
-		effect.u.periodic.waveform		= SHAKE_PERIODIC_SINE;
-		effect.u.periodic.period		= 0.1*0x100;
-		effect.u.periodic.magnitude		= 0x6000;
-		effect.u.periodic.envelope.attackLength	= 0x100;
-		effect.u.periodic.envelope.attackLevel	= 0;
-		effect.u.periodic.envelope.fadeLength	= 0x100;
-		effect.u.periodic.envelope.fadeLevel	= 0;
-		effect.direction			= 0x4000;
-		effect.length				= 0;
-		effect.delay				= 0;
-		id_shake = Shake_UploadEffect(device, &effect);
-	}
-#endif	
-}
-
 void update_window_size(int w, int h)
 {
-#ifdef HW_SCALE
-
-#ifdef SDL_TRIPLEBUF
-	int flags = SDL_TRIPLEBUF;
-#else
-	int flags = SDL_DOUBLEBUF;
-#endif
-    flags |= SDL_HWSURFACE
-#if defined(SDL_SWIZZLEBGR)
-        | SDL_SWIZZLEBGR
-#endif
-        ;
-        
-	SCREEN_WIDTH = w;
-	SCREEN_HEIGHT = h;
-
-	if (screen)
-	{
-		if (SDL_MUSTLOCK(screen))
-		SDL_UnlockSurface(screen);
-	}
-
-	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(SDL_SWIZZLEBGR)
-			15,
-#else
-			16,
-#endif
-			SDL_HWSURFACE);
-			
-	if (!screen)
-	{
-		printf("SDL_SetVideoMode error\n");
-		exit(0);
-	}
-
-	if (SDL_MUSTLOCK(screen))
-		SDL_LockSurface(screen);
-
-	SCREEN = (Uint16 *)screen->pixels;
-
-#if defined(SDL_SWIZZLEBGR)
-	screen->format->Rshift = 0;
-	screen->format->Gshift = 5;
-	screen->format->Bshift = 10;
-	screen->format->Rmask = 0x1Fu;
-	screen->format->Gmask = 0x1Fu<<5u;
-	screen->format->Bmask = 0x1Fu<<10u;
-	screen->format->Amask = 0;
-	screen->format->Ashift = 0;
-	screen->format_version++;
-#endif
-
-	video_clear();
-	video_flip();
-	video_clear();
-#ifdef SDL_TRIPLEBUF
-	video_flip();
-	video_clear();
-#endif
-#endif
 }
 
 int main (int argc, char **argv)
@@ -1534,9 +1370,6 @@ int main (int argc, char **argv)
   //NOTE: spu_pcsxrearmed will handle audio initialization
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
   
-  printf("Init window\n");
-  
-#ifndef HW_SCALE
 	if (screen)
 	{
 		if (SDL_MUSTLOCK(screen))
@@ -1563,12 +1396,7 @@ int main (int argc, char **argv)
 		SDL_LockSurface(screen);
 
 	SCREEN = (Uint16 *)screen->pixels;
-#else
-  update_window_size(320, 240);
-#endif
 
-  if (!screen) printf("No window\n");
-  
   SDL_WM_SetCaption("pcsx4all - SDL Version", "pcsx4all");
 
   atexit(pcsx4all_exit);
@@ -1639,8 +1467,6 @@ int main (int argc, char **argv)
   CheckforCDROMid_applyhacks();
   
   joy_init();
-  
-  Rumble_Init();
 
   if (filename[0] != '\0')
   {

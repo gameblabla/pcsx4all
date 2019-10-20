@@ -18,8 +18,8 @@ set(SRC_FILES
     gte.c
     spu/${SPU}/spu.c
     port/${PORT}/port.c
-    port/${PORT}/frontend.c
-    port/${PORT}/cdrom_hacks.c
+    port/common/frontend.c
+    port/common/cdrom_hacks.c
     )
 
 if(USE_GPULIB)

@@ -1,5 +1,5 @@
 TARGET = pcsx4all
-PORT   = sdl
+PORT   = rs97
 #A320   = 1
 #GCW0   = 1
 RS97   = 1
@@ -43,6 +43,8 @@ CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -fdata-sections -ffunction
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
 
+CFLAGS +=
+
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
@@ -59,7 +61,7 @@ LDFLAGS += -flto
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
 	  obj/port obj/port/$(PORT) \
-	  obj/plugin_lib
+	  obj/plugin_lib obj/port/common
 
 all: maketree $(TARGET)
 
@@ -99,8 +101,8 @@ endif
 OBJS += obj/gte.o
 OBJS += obj/spu/$(SPU)/spu.o
 
-OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o
-OBJS += obj/port/$(PORT)/frontend.o
+OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/common/frontend.o obj/port/common/cdrom_hacks.o
 
 OBJS += obj/plugin_lib/perfmon.o
 

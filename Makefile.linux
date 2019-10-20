@@ -27,7 +27,7 @@ CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
-	-Isrc/port/$(PORT) \
+	-Isrc/port/$(PORT) -Isrc/port/common \
 	-Isrc/plugin_lib \
 	-DXA_HACK \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
@@ -44,7 +44,7 @@ LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lpthread -lz
 OBJDIRS = \
 	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	obj/port obj/port/$(PORT) \
-	obj/plugin_lib
+	obj/plugin_lib obj/port/common
 
 all: maketree $(TARGET)
 
@@ -76,9 +76,9 @@ endif
 OBJS += obj/gte.o obj/cheat.o
 OBJS += obj/spu/$(SPU)/spu.o
 
-OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o
-OBJS += obj/port/$(PORT)/frontend.o
+OBJS += obj/port/common/cdrom_hacks.o obj/port/common/frontend.o
 
+OBJS += obj/port/$(PORT)/port.o
 OBJS += obj/plugin_lib/perfmon.o
 
 #******************************************

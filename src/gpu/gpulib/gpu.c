@@ -180,7 +180,7 @@ static noinline void get_gpu_info(uint32_t data)
 
 //  Minimum 16-byte VRAM alignment needed by gpu_unai's pixel-skipping
 //  renderer/downscaler it uses in high res modes:
-#ifdef GCW_ZERO
+#if defined(GCW_ZERO)
   // On GCW platform (MIPS), align to 8192 bytes (1 TLB entry) to reduce # of
   // fills. (Will change this value if it ever gets large page support)
   #define VRAM_ALIGN 8192
