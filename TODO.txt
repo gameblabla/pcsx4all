@@ -1,0 +1,2 @@
+- Redo the RS-97, PAP K3S and Arcade Mini ports
+- Arcade Mini port should have some way of rebinding the keys to joystick
