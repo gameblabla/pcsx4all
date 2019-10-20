@@ -595,8 +595,10 @@ static void gpuPolySpanFn(const gpu_unai_t &gpu_unai, u16 *pDst, u32 count)
   //  For textured prims, lighting funcs always return it unset. (bonus!)
   const bool skip_uSrc_mask = (!CF_TEXTMODE) || CF_LIGHT;
 
+#ifndef HW_SCALE
   u32 bMsk;
   if (CF_BLITMASK) bMsk = gpu_unai.blit_mask;
+#endif
 
   if (!CF_TEXTMODE)
   {
@@ -746,10 +748,12 @@ static void gpuPolySpanFn(const gpu_unai_t &gpu_unai, u16 *pDst, u32 count)
 
     do
     {
+	  #ifndef HW_SCALE
       if (CF_BLITMASK)
       {
         if ((bMsk>>((((uintptr_t)pDst)>>1)&7))&1) goto endpolytext;
       }
+      #endif
       if (CF_MASKCHECK || CF_BLEND)
       {
         uDst = *pDst;

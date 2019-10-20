@@ -684,12 +684,11 @@ static void gui_state_save_hint(int slot)
   {
     x = 160-8;
     y = 70;
-    int dst_stride = 320;
-    uint16_t *dst = (uint16_t*)SCREEN + y * dst_stride + x;
+    uint16_t *dst = (uint16_t*)SCREEN + y * SCREEN_WIDTH + x;
     for (int j=0; j < 120; ++j)
     {
       memcpy((void*)dst, (void*)(sshot_img + j*160), 160*2);
-      dst += dst_stride;
+      dst += SCREEN_WIDTH;
     }
   }
   else
@@ -918,12 +917,11 @@ static void gui_state_load_hint(int slot)
   {
     x = 160-8;
     y = 70;
-    const int dst_stride = 320;
-    uint16_t *dst = (uint16_t*)SCREEN + y * dst_stride + x;
+    uint16_t *dst = (uint16_t*)SCREEN + y * SCREEN_WIDTH + x;
     for (int j=0; j < 120; ++j)
     {
       memcpy((void*)dst, (void*)(sshot_img + j*160), 160*2);
-      dst += dst_stride;
+      dst += SCREEN_WIDTH;
     }
   }
   else
@@ -1765,6 +1763,26 @@ static char *fast_lighting_show()
   return buf;
 }
 
+#ifndef HW_SCALE
+static int pixel_skip_alter(u32 keys)
+{
+	if (keys & KEY_RIGHT) {
+		if (gpu_unai_config_ext.pixel_skip == 0)
+			gpu_unai_config_ext.pixel_skip = 1;
+	} else if (keys & KEY_LEFT) {
+		if (gpu_unai_config_ext.pixel_skip == 1)
+			gpu_unai_config_ext.pixel_skip = 0;
+	}
+	return 0;
+}
+static char *pixel_skip_show()
+{
+	static char buf[16] = "\0";
+	sprintf(buf, "%s", gpu_unai_config_ext.pixel_skip == 1 ? "on" : "off");
+	return buf;
+}
+#endif
+
 static int blending_alter(u32 keys)
 {
   if (keys & KEY_RIGHT)
@@ -1823,6 +1841,9 @@ static int gpu_settings_defaults()
   gpu_unai_config_ext.frameskip_count = 0;
 #endif
   gpu_unai_config_ext.ilace_force = 0;
+  #ifndef HW_SCALE
+  gpu_unai_config_ext.pixel_skip = 1;
+  #endif
   gpu_unai_config_ext.clip_368 = 0;
   gpu_unai_config_ext.lighting = 1;
   gpu_unai_config_ext.fast_lighting = 1;
@@ -1849,7 +1870,11 @@ static MENUITEM gui_GPUSettingsItems[] =
   {(char *)"Fast lighting        ", NULL, &fast_lighting_alter, &fast_lighting_show, NULL},
   {(char *)"Blending             ", NULL, &blending_alter, &blending_show, NULL},
   {(char *)"Clip 368 -> 352      ", NULL, &clip_368_alter, &clip_368_show, NULL},
+  #ifndef HW_SCALE
+  {(char *)"Pixel skip           ", NULL, &pixel_skip_alter, &pixel_skip_show, NULL},
+  #endif
 #endif
+
   {(char *)"Restore defaults     ", &gpu_settings_defaults, NULL, NULL, NULL},
   {NULL, NULL, NULL, NULL, NULL},
   {(char *)"Back to main menu    ", &settings_back, NULL, NULL, NULL},

@@ -12,10 +12,11 @@
 #include <sys/types.h>
 #include <assert.h>
 
-
 #ifndef PATH_MAX
 #define PATH_MAX 2048
 #endif
+
+extern char cheatsdir[PATH_MAX];
 
 struct ps1_controller
 {
@@ -59,6 +60,7 @@ void video_clear(void);
 void port_printf(int x, int y, const char *text);
 
 extern unsigned short *SCREEN;
+extern int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 int state_load(int slot);
 int state_save(int slot);

@@ -32,6 +32,8 @@ CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
 	-DXA_HACK \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
+	
+CFLAGS += -DHW_SCALE
 
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
@@ -71,7 +73,7 @@ OBJS += obj/gpu/$(GPU)/gpu.o
 endif
 ######################################################################
 
-OBJS += obj/gte.o
+OBJS += obj/gte.o obj/cheat.o
 OBJS += obj/spu/$(SPU)/spu.o
 
 OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o

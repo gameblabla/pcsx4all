@@ -37,8 +37,6 @@ static u32 run_interval = 200u;
 
 static u32 next_ticks = 0u;
 
-extern char cheatsdir[PATH_MAX];
-
 void cheat_load(void)
 {
 	char cheat_filename[PATH_MAX];

@@ -252,13 +252,14 @@ void CheckforCDROMid_applyhacks()
 	
 #ifdef GPU_UNAI
 	/* Fixes Grandia JP. Need to check if the hack needs to be applied against PAL/US versions too. */
-	extern uint8_t use_clip_368;
+	/* TODO : Check if hack is still needed */
+	/*extern uint8_t use_clip_368;
 	use_clip_368 = gpu_unai_config_ext.clip_368;
 	if (strncmp(CdromId, "SLPS02124", 9) == 0)
 	{
 		use_clip_368 = 1;
 		return;
-	}
+	}*/
 #endif
 	
 	/* Apply hack battle fix for Inuyasha - Sengoku Otogi Kassen */

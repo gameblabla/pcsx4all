@@ -44,6 +44,8 @@ CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-div
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
 
+CFLAGS += -DHW_SCALE
+
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
@@ -96,6 +98,7 @@ endif
 ######################################################################
 
 OBJS += obj/gte.o
+OBJS += obj/cheat.o
 OBJS += obj/spu/$(SPU)/spu.o
 
 OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o

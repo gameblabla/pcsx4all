@@ -25,7 +25,9 @@
 struct gpu_unai_config_t
 {
   uint8_t clip_368:1;
-  //uint8_t pixel_skip:1;     // If 1, allows skipping rendering pixels that
+
+#ifndef SW_SCALE
+  uint8_t pixel_skip:1;     // If 1, allows skipping rendering pixels that
   //  would not be visible when a high horizontal
   //  resolution PS1 video mode is set.
   //  Only applies to devices with low resolutions
@@ -33,6 +35,7 @@ struct gpu_unai_config_t
   //  down-scaling framebuffer blitter is in use.
   //  Can cause gfx artifacts if game reads VRAM
   //  to do framebuffer effects.
+#endif
 
   uint8_t ilace_force:3;    // Option to force skipping rendering of lines,
   //  for very slow platforms. Value will be
