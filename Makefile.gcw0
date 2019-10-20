@@ -39,7 +39,7 @@ CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-div
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
 	-Isrc/port/$(PORT) \
-	-Isrc/plugin_lib \
+	-Isrc/plugin_lib -Isrc/port/common \
 	-DXA_HACK \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
@@ -101,8 +101,8 @@ OBJS += obj/gte.o
 OBJS += obj/cheat.o
 OBJS += obj/spu/$(SPU)/spu.o
 
-OBJS += obj/port/$(PORT)/port.o obj/port/$(PORT)/cdrom_hacks.o
-OBJS += obj/port/$(PORT)/frontend.o
+OBJS += obj/port/$(PORT)/port.o
+OBJS += obj/port/common/frontend.o obj/port/common/cdrom_hacks.o
 
 OBJS += obj/plugin_lib/perfmon.o
 
