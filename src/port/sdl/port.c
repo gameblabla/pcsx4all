@@ -29,6 +29,7 @@ int id_shake;
 #include "plugin_lib.h"
 #include "perfmon.h"
 #include "cdrom_hacks.h"
+#include "cheat.h"
 
 /* PATH_MAX inclusion */
 #ifdef __MINGW32__
@@ -85,6 +86,12 @@ static void pcsx4all_exit(void)
 		SDL_UnlockSurface(screen);
 
 	SDL_Quit();
+	
+	// unload cheats
+	cheat_unload();
+
+	// Store config to file
+	config_save();
 
 #ifdef RUMBLE
 	Shake_Stop(device, id_shake);
@@ -108,6 +115,7 @@ static char memcardsdir[PATH_MAX];
 static char biosdir[PATH_MAX];
 static char patchesdir[PATH_MAX];
 char sstatesdir[PATH_MAX];
+char cheatsdir[PATH_MAX];
 
 #ifdef __WIN32__
 	#define MKDIR(A) mkdir(A)
@@ -135,6 +143,7 @@ static void setup_paths()
 		snprintf(memcardsdir, sizeof(memcardsdir), "%s/memcards", homedir);
 		snprintf(biosdir, sizeof(biosdir), "%s/bios", homedir);
 		snprintf(patchesdir, sizeof(patchesdir), "%s/patches", homedir);
+		snprintf(cheatsdir, sizeof(cheatsdir), "%s/cheats", homedir);
 	}
 	
 	MKDIR(homedir);
@@ -142,6 +151,7 @@ static void setup_paths()
 	MKDIR(memcardsdir);
 	MKDIR(biosdir);
 	MKDIR(patchesdir);
+	MKDIR(cheatsdir);
 }
 
 void probe_lastdir()
@@ -1496,6 +1506,11 @@ int main (int argc, char **argv)
         printf("Failed loading ISO image.\n");
         SetIsoFile(NULL);
       }
+      else
+      {
+			// load cheats
+			cheat_load(); 
+	  }
     }
   }
 

@@ -40,6 +40,7 @@
 #include "psxcounters.h"
 #include "psxevents.h"
 #include "gpu.h"
+#include "cheat.h"
 
 /******************************************************************************/
 
@@ -373,6 +374,8 @@ void psxRcntUpdate()
             // at flexible interval (scheduled event) to avoid audio dropouts.
             if (Config.SpuUpdateFreq == SPU_UPDATE_FREQ_1)
                 SPU_async(cycle, 1);
+			
+			cheat_apply();
         }
 
         // Update lace. (with InuYasha fix)
