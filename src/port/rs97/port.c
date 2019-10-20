@@ -733,7 +733,7 @@ void pad_update(void)
 	{
 		if (keys[SDLK_TAB])
 		{
-			if (keys[SDLK_LSHIFT])
+			if (keys[SDLK_SPACE])
 			{
 				player_controller[0].joy_right_ax1 = 0;
 				pad1_buttons |= (1 << DKEY_L1);
@@ -748,7 +748,7 @@ void pad_update(void)
 				player_controller[0].joy_right_ax1 = 127;
 			}
 			
-			if (keys[SDLK_SPACE])
+			if (keys[SDLK_LSHIFT])
 			{
 				player_controller[0].joy_right_ax0 = 0;
 				pad1_buttons |= (1 << DKEY_L1);

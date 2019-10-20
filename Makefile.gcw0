@@ -5,20 +5,20 @@ PORT   = sdl
 #  USE_GPULIB=0 as param to 'make' when building to disable it.
 USE_GPULIB ?= 1
 
-#GPU   = gpu_dfxvideo
-#GPU   = gpu_drhell
-#GPU   = gpu_null
+# gpu_dfxvideo, gpu_drhell, gpu_null
 GPU   = gpu_unai
-
 SPU   = spu_pcsxrearmed
 
 RECOMPILER = mips
 
+# Allows the older toolchain to be used
+GCC_NEW = 0
+
 RM     = rm -f
 MD     = mkdir
-CC     = /opt/gcw0-toolchain-static/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain-static/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain-static/bin/mipsel-linux-g++
+CC     = /opt/gcw0-toolchain/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -34,7 +34,7 @@ else
 	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 endif
 
-CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -O2 -flto -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -43,6 +43,10 @@ CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-div
 	-DXA_HACK \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
+	
+ifdef GCC_NEW
+CFLAGS += -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -flto
+endif
 
 CFLAGS += -DHW_SCALE
 CFLAGS += -DBGR_PCSX
@@ -55,7 +59,10 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
+LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -s
+ifdef GCC_NEW
+LDFLAGS += -flto
+endif
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
