@@ -859,7 +859,7 @@ void pad_update(void)
 		use_speedup = 0;
 		menu_check = 0;
 		analog1 = 0;
-		pad1_buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_SELECT);
+		pad1_buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_CIRCLE) | (1 << DKEY_SELECT);
 		update_window_size(gpu.screen.hres, gpu.screen.vres);
 		video_clear();
 		video_flip();
@@ -869,8 +869,7 @@ void pad_update(void)
 		video_clear();
 #endif
 		emu_running = 1;
-		pad1 |= (1 << DKEY_START);
-		pad1 |= (1 << DKEY_CROSS);
+		pad1_buttons |= (1 << DKEY_START) | (1 << DKEY_CROSS) | (1 << DKEY_CIRCLE) | (1 << DKEY_SELECT);
 		pl_resume();    // Tell plugin_lib we're reentering emu
 	}
 
@@ -968,7 +967,7 @@ void update_window_size(int w, int h)
 	int flags = SDL_DOUBLEBUF;
 #endif
     flags |= SDL_HWSURFACE
-#if defined(SDL_SWIZZLEBGR)
+#if defined(BGR_PCSX)
         | SDL_SWIZZLEBGR
 #endif
         ;
@@ -983,12 +982,12 @@ void update_window_size(int w, int h)
 	}
 
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(SDL_SWIZZLEBGR)
+#if defined(BGR_PCSX)
 			15,
 #else
 			16,
 #endif
-			SDL_HWSURFACE);
+			flags);
 			
 	if (!screen)
 	{
@@ -1001,7 +1000,7 @@ void update_window_size(int w, int h)
 
 	SCREEN = (Uint16 *)screen->pixels;
 
-#if defined(SDL_SWIZZLEBGR)
+#if defined(BGR_PCSX)
 	screen->format->Rshift = 0;
 	screen->format->Gshift = 5;
 	screen->format->Bshift = 10;
@@ -1534,24 +1533,34 @@ int main (int argc, char **argv)
   //NOTE: spu_pcsxrearmed will handle audio initialization
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_NOPARACHUTE);
   
-  printf("Init window\n");
-  
+
 #ifndef HW_SCALE
 	if (screen)
 	{
 		if (SDL_MUSTLOCK(screen))
 		SDL_UnlockSurface(screen);
 	}
+	
+#ifdef SDL_TRIPLEBUF
+	int flags = SDL_TRIPLEBUF;
+#else
+	int flags = SDL_DOUBLEBUF;
+#endif
+    flags |= SDL_HWSURFACE
+#if defined(BGR_PCSX)
+        | SDL_SWIZZLEBGR
+#endif
+        ;
 
 	SCREEN_WIDTH = 320;
 	SCREEN_HEIGHT = 240;
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(SDL_SWIZZLEBGR)
+#if defined(BGR_PCSX)
 			15,
 #else
 			16,
 #endif
-			SDL_HWSURFACE);
+			flags);
 			
 	if (!screen)
 	{
@@ -1567,8 +1576,7 @@ int main (int argc, char **argv)
   update_window_size(320, 240);
 #endif
 
-  if (!screen) printf("No window\n");
-  
+
   SDL_WM_SetCaption("pcsx4all - SDL Version", "pcsx4all");
 
   atexit(pcsx4all_exit);

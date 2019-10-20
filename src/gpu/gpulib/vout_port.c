@@ -390,7 +390,7 @@ static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isR
 
 #else
 
-#ifdef SDL_SWIZZLEBGR
+#ifdef BGR_PCSX
 #undef RGB24
 #define RGB24(R,G,B)	(((((R)&0xF8)>>3)|(((G)&0xF8)<<2)|(((B)&0xF8)<<7)))
 #endif
@@ -561,7 +561,7 @@ void vout_update(void)
 	}
 
 	src16_offs &= ~1u;
-#ifdef SDL_SWIZZLEBGR
+#ifdef BGR_PCSX
 	if (isRGB24) {
 		for (int y1 = y0+h1; y0<y1; y0++) {
 			GPU_BlitCopy(src16+src16_offs, dst16, isRGB24);

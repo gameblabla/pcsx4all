@@ -45,6 +45,7 @@ CFLAGS = $(C_ARCH) -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-div
 	$(SDL_CFLAGS)
 
 CFLAGS += -DHW_SCALE
+CFLAGS += -DBGR_PCSX
 
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)

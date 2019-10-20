@@ -3,7 +3,7 @@
 mkdir -p ipkg/home/retrofw/emus/pcsx4all
 mkdir -p ipkg/home/retrofw/apps/gmenu2x/sections/emulators
 cp pcsx4all ipkg/home/retrofw/emus/pcsx4all/pcsx4all
-cp pcsx4all.png ipkg/home/retrofw/emus/pcsx4all/pcsx4all.png
+cp src/port/sdl/pcsxr-icon-small.png ipkg/home/retrofw/emus/pcsx4all/pcsx4all.png
 
 cd ipkg
 

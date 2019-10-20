@@ -30,7 +30,7 @@ SDL_LIBS   := $(shell $(SDL_CONFIG) --libs)
 MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
-C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97 -fprofile-generate=/home/retrofw/profile
+C_ARCH = -mips32 -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\" -DRS97
 OPTS = -O2 -mno-fp-exceptions -mframe-header-opt -mno-check-zero-division -fno-signed-zeros -fno-trapping-math -mno-interlink-compressed -fno-caller-saves -flto
 
 CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -fdata-sections -ffunction-sections $(OPTS) -DGCW_ZERO \
@@ -43,8 +43,6 @@ CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -fdata-sections -ffunction
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
 
-CFLAGS +=
-
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
@@ -55,8 +53,7 @@ endif
 
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -nostdinc++ 
 
-LDFLAGS = $(SDL_LIBS) -lrt -lz -Wl,--as-needed -Wl,--gc-sections -s
-LDFLAGS += -flto
+LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lz -Wl,--as-needed -Wl,--gc-sections -flto -s
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
@@ -99,6 +96,7 @@ endif
 ######################################################################
 
 OBJS += obj/gte.o
+OBJS += obj/cheat.o
 OBJS += obj/spu/$(SPU)/spu.o
 
 OBJS += obj/port/$(PORT)/port.o
@@ -206,5 +204,5 @@ $(sort $(OBJDIRS)):
 maketree: $(sort $(OBJDIRS))
 
 clean:
-	$(RM) -r obj/*.o obj/gpu/gpu_unai/*.o obj/gpu/gpulib/*.o obj/port/sdl/*.o obj/recompiler/mips/*.o obj/spu/spu_pcsxrearmed/*.o obj/plugin_lib/*.o
+	$(RM) -r obj
 	$(RM) $(TARGET)
