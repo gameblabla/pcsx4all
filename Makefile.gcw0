@@ -16,9 +16,9 @@ RECOMPILER = mips
 
 RM     = rm -f
 MD     = mkdir
-CC     = /opt/gcw0-toolchain/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain/bin/mipsel-linux-g++
+CC     = /opt/gcw0-toolchain-static/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain-static/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain-static/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -59,7 +59,7 @@ LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-s
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
 	  obj/port obj/port/$(PORT) \
-	  obj/plugin_lib
+	  obj/plugin_lib obj/port/common
 
 all: maketree $(TARGET)
 
