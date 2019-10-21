@@ -16,9 +16,9 @@ GCC_NEW = 0
 
 RM     = rm -f
 MD     = mkdir
-CC     = /opt/gcw0-toolchain/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain/bin/mipsel-linux-g++
+CC     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -28,11 +28,7 @@ SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 MCD1_FILE = \"mcd001.mcr\"
 MCD2_FILE = \"mcd002.mcr\"
 
-ifdef A320
-	C_ARCH = -mips32 -msoft-float -DDYNAREC_SKIP_DCACHE_FLUSH -DTMPFS_MIRRORING -DTMPFS_DIR=\"/tmp\"
-else
-	C_ARCH = -mips32r2 -DSHMEM_MIRRORING
-endif
+C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 
 CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
@@ -62,6 +58,8 @@ endif
 LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -s
 ifdef GCC_NEW
 LDFLAGS += -flto
+else
+LDFLAGS	+= -pthtread -lrt
 endif
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
