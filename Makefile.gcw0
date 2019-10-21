@@ -11,8 +11,8 @@ SPU   = spu_pcsxrearmed
 
 RECOMPILER = mips
 
-# Allows the older toolchain to be used
-GCC_NEW = 0
+# Allows the newer toolchain to be used
+#GCC_NEW = 1
 
 RM     = rm -f
 MD     = mkdir
@@ -30,7 +30,7 @@ MCD2_FILE = \"mcd002.mcr\"
 
 C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 
-CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO \
+CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO -std=gnu99 \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
