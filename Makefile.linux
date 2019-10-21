@@ -23,7 +23,7 @@ SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
 SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 
-CFLAGS = -g3 -O0 -march=native -DGCW_ZERO -std=gnu99 \
+CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -33,7 +33,7 @@ CFLAGS = -g3 -O0 -march=native -DGCW_ZERO -std=gnu99 \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
 	
-CFLAGS += -DHW_SCALE
+CFLAGS += -DHW_SCALE -DUSE_BGR15 -DFORCE_MEMCPY32
 
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
@@ -146,19 +146,19 @@ $(TARGET): $(OBJS)
 
 obj/%.o: src/%.c
 	@echo Compiling $<...
-	$(HIDECMD)$(CC) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CC) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.cpp
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu++03 $(CXXFLAGS) -c $< -o $@
 
 obj/%.o: src/%.s
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.S
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 $(sort $(OBJDIRS)):
 	$(HIDECMD)$(MD) $@

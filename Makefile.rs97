@@ -185,19 +185,19 @@ $(TARGET): $(OBJS)
 
 obj/%.o: src/%.c
 	@echo Compiling $<...
-	$(HIDECMD)$(CC) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CC) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.cpp
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu++03 $(CXXFLAGS) -c $< -o $@
 
 obj/%.o: src/%.s
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.S
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 $(sort $(OBJDIRS)):
 	$(HIDECMD)$(MD) $@

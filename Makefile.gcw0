@@ -30,7 +30,7 @@ MCD2_FILE = \"mcd002.mcr\"
 
 C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 
-CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO -std=gnu99 \
+CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -44,7 +44,7 @@ ifdef GCC_NEW
 CFLAGS += -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -flto
 endif
 
-CFLAGS += -DHW_SCALE -DUSE_BGR15
+CFLAGS += -DUSE_BGR15
 CFLAGS += -DFORCE_MEMCPY32 -DFORCE_FULLSCREEN
 
 # Convert plugin names to uppercase and make them CFLAG defines
@@ -202,19 +202,19 @@ $(TARGET): $(OBJS)
 
 obj/%.o: src/%.c
 	@echo Compiling $<...
-	$(HIDECMD)$(CC) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CC) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.cpp
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu++03 $(CXXFLAGS) -c $< -o $@
 
 obj/%.o: src/%.s
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 obj/%.o: src/%.S
 	@echo Compiling $<...
-	$(HIDECMD)$(CXX) $(CFLAGS) -c $< -o $@
+	$(HIDECMD)$(CXX) -std=gnu99 $(CFLAGS) -c $< -o $@
 
 $(sort $(OBJDIRS)):
 	$(HIDECMD)$(MD) $@

@@ -30,10 +30,10 @@
 
 #ifdef FORCE_MEMCPY32
 /* Thanks Tony for the initial idea */
-static inline void *memcpy32 (void * restrict dest, void * restrict src, size_t len)
+static inline void *memcpy32 (void * restrict dest, const void * restrict src, size_t len)
 {
 	uint32_t * restrict d = (uint32_t * restrict)dest;
-	uint32_t * restrict s = (uint32_t * restrict)src;
+	const uint32_t * restrict s = (const uint32_t * restrict)src;
 	while (len--)
 	{
 		*d++ = *s++;
@@ -44,6 +44,7 @@ static inline void *memcpy32 (void * restrict dest, void * restrict src, size_t 
 
 
 #ifndef HW_SCALE
+
 
 static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
 {
