@@ -112,6 +112,11 @@ static void pcsx4all_exit(void)
 
 	// Store config to file
 	config_save();
+	
+	/* Set aspect Ratio back to default */
+	#if defined(GCW_ZERO)
+	system("echo 1 > /sys/devices/platform/jz-lcd.0/keep_aspect_ratio");
+	#endif
 }
 
 static char homedir[PATH_MAX/2];
@@ -1031,6 +1036,10 @@ int main (int argc, char **argv)
 
   setup_paths();
   
+  /* Find a better to do it */
+  #if defined(GCW_ZERO)
+  system("echo 0 > /sys/devices/platform/jz-lcd.0/keep_aspect_ratio");
+  #endif
 
   // PCSX
   snprintf(Config.Mcd1, sizeof(Config.Mcd1), "%s/%s", memcardsdir, "mcd001.mcr");

@@ -15,6 +15,7 @@ Type=Application
 StartupNotify=true
 Icon=pcsxr-icon-small
 Categories=emulators;
+X-OD-NeedsDownscaling=true
 EOF
 
 # create opk
