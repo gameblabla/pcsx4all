@@ -28,6 +28,21 @@
 #define RGB24(R,G,B)  	((((R)&0xF8)>>3)|(((G)&0xF8)<<2)|(((B)&0xF8)<<7))
 #endif
 
+#ifdef FORCE_MEMCPY32
+/* Thanks Tony for the initial idea */
+static inline void *memcpy32 (void * restrict dest, void * restrict src, size_t len)
+{
+	uint32_t * restrict d = (uint32_t * restrict)dest;
+	uint32_t * restrict s = (uint32_t * restrict)src;
+	while (len--)
+	{
+		*d++ = *s++;
+	}
+	return dest;
+}
+#endif
+
+
 #ifndef HW_SCALE
 
 static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
@@ -52,7 +67,11 @@ static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isR
 			src32 += 8;
 		} while(--uCount);
 #else
+		#ifdef FORCE_MEMCPY32
+		memcpy32(dst16, src, 160);
+		#else
 		memcpy(dst16, src, 640);
+		#endif
 #endif
 	} else
 	{
@@ -390,7 +409,7 @@ static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isR
 
 #else
 
-#ifdef BGR_PCSX
+#ifdef USE_BGR15
 #undef RGB24
 #define RGB24(R,G,B)	(((((R)&0xF8)>>3)|(((G)&0xF8)<<2)|(((B)&0xF8)<<7)))
 #endif
@@ -417,7 +436,11 @@ static inline void GPU_BlitCopy(const void* src, uint16_t* dst16, uint_fast8_t i
 			src32 += 8;
 		} while(--uCount);
 #else
-		memcpy(dst16, src, SCREEN_WIDTH * 2);
+		#ifdef FORCE_MEMCPY32
+		memcpy32(dst16, src, SCREEN_WIDTH >> 1);
+		#else
+		memcpy(dst16, src, SCREEN_WIDTH << 1);
+		#endif
 #endif
 	} else
 	{
@@ -561,7 +584,7 @@ void vout_update(void)
 	}
 
 	src16_offs &= ~1u;
-#ifdef BGR_PCSX
+#ifdef USE_BGR15
 	if (isRGB24) {
 		for (int y1 = y0+h1; y0<y1; y0++) {
 			GPU_BlitCopy(src16+src16_offs, dst16, isRGB24);

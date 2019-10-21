@@ -46,6 +46,7 @@ CFLAGS = $(C_ARCH) -fno-common -mno-abicalls -fno-PIC -fdata-sections -ffunction
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
+CFLAGS += -DFORCE_MEMCPY32
 
 ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)

@@ -1378,7 +1378,7 @@ int main (int argc, char **argv)
 	int flags = SDL_DOUBLEBUF;
 #endif
     flags |= SDL_HWSURFACE
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
         | SDL_SWIZZLEBGR
 #endif
         ;
@@ -1386,7 +1386,7 @@ int main (int argc, char **argv)
 	SCREEN_WIDTH = 320;
 	SCREEN_HEIGHT = 240;
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
 			15,
 #else
 			16,

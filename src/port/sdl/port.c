@@ -114,7 +114,7 @@ static void pcsx4all_exit(void)
 	config_save();
 	
 	/* Set aspect Ratio back to default */
-	#if defined(GCW_ZERO)
+	#if defined(GCW_ZERO) && defined(FORCE_FULLSCREEN)
 	system("echo 1 > /sys/devices/platform/jz-lcd.0/keep_aspect_ratio");
 	#endif
 }
@@ -972,7 +972,7 @@ void update_window_size(int w, int h)
 	int flags = SDL_DOUBLEBUF;
 #endif
     flags |= SDL_HWSURFACE
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
         | SDL_SWIZZLEBGR
 #endif
         ;
@@ -987,7 +987,7 @@ void update_window_size(int w, int h)
 	}
 
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
 			15,
 #else
 			16,
@@ -1005,7 +1005,7 @@ void update_window_size(int w, int h)
 
 	SCREEN = (Uint16 *)screen->pixels;
 
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
 	screen->format->Rshift = 0;
 	screen->format->Gshift = 5;
 	screen->format->Bshift = 10;
@@ -1037,7 +1037,7 @@ int main (int argc, char **argv)
   setup_paths();
   
   /* Find a better to do it */
-  #if defined(GCW_ZERO)
+  #if defined(GCW_ZERO) && defined(FORCE_FULLSCREEN)
   system("echo 0 > /sys/devices/platform/jz-lcd.0/keep_aspect_ratio");
   #endif
 
@@ -1556,7 +1556,7 @@ int main (int argc, char **argv)
 	int flags = SDL_DOUBLEBUF;
 #endif
     flags |= SDL_HWSURFACE
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
         | SDL_SWIZZLEBGR
 #endif
         ;
@@ -1564,7 +1564,7 @@ int main (int argc, char **argv)
 	SCREEN_WIDTH = 320;
 	SCREEN_HEIGHT = 240;
 	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT,
-#if defined(BGR_PCSX)
+#if defined(USE_BGR15)
 			15,
 #else
 			16,

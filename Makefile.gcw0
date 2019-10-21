@@ -44,8 +44,8 @@ ifdef GCC_NEW
 CFLAGS += -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -flto
 endif
 
-CFLAGS += -DHW_SCALE
-CFLAGS += -DBGR_PCSX
+CFLAGS += -DHW_SCALE -DUSE_BGR15
+CFLAGS += -DFORCE_MEMCPY32 -DFORCE_FULLSCREEN
 
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)

@@ -23,7 +23,7 @@ SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
 SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 
-CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
+CFLAGS = -g3 -O0 -march=native -DGCW_ZERO -std=gnu99 \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
@@ -38,8 +38,9 @@ CFLAGS += -DHW_SCALE
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
+CFLAGS += -DFORCE_MEMCPY32
 
-LDFLAGS = $(SDL_LIBS) -lSDL_mixer -lSDL_image -lpthread -lz
+LDFLAGS = $(SDL_LIBS) -lpthread -lz
 
 OBJDIRS = \
 	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
