@@ -97,7 +97,7 @@ static void pcsx4all_exit(void)
 	// Store config to file
 	config_save();
 
-#ifdef RUMBLE
+#if defined(RUMBLE) && !defined(RG350_RUMBLE)
 	Shake_Stop(device, id_shake);
 	Shake_EraseEffect(device, id_shake);
 	Shake_Close(device);
@@ -940,7 +940,7 @@ with mingw build. */
 
 void Rumble_Init()
 {
-#ifdef RUMBLE
+#if defined(RUMBLE) && !defined(RG350_RUMBLE)
 	Shake_Init();
 
 	if (Shake_NumOfDevices() > 0)

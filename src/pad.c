@@ -34,6 +34,12 @@ uint32_t in_enable_vibration = 1;
 extern int id_shake;
 #endif
 
+#ifdef RG350_RUMBLE
+#include <fcntl.h>
+#include <unistd.h>
+int fd = 0;
+#endif
+
 uint8_t CurPad = 0, CurCmd = 0;
 uint8_t pad_detect_pad[2] = {0, 0};
 uint8_t Rumble_Change = 0;
@@ -88,14 +94,18 @@ static uint8_t unk47[8] = {0xFF, 0x5A, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00};
 static uint8_t unk4c[8] =  {0xFF, 0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static uint8_t unk4d[8] = {0xFF, 0x5A, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-#ifdef RUMBLE
+#if defined(RUMBLE) || defined(RG350_RUMBLE)
 void plat_trigger_vibrate(int pad, int low, int high)
 {
 	if (high > 0 || low > 0)
 	{
 		if (Rumble_Change == 0)
 		{
+			#ifdef RG350_RUMBLE
+			fd = open("/dev/input/event1", O_RDWR);
+			#elif defined(RUMBLE)
 			Shake_Play(device, id_shake);
+			#endif
 			Rumble_Change = 1;
 		}
 	}
@@ -103,8 +113,16 @@ void plat_trigger_vibrate(int pad, int low, int high)
 	{
 		if (Rumble_Change == 1)
 		{
+			#ifdef RG350_RUMBLE
+			if (fd)
+			{
+				close(fd);
+				fd = 0;
+			}
+			#elif defined(RUMBLE)
 			Shake_Stop(device, id_shake);
 			id_shake = 0;
+			#endif
 			Rumble_Change = 0;
 		}
 	}
@@ -235,7 +253,7 @@ unsigned char PAD1_poll(unsigned char value) {
 		switch (CurCmd) 
 		{
 			case CMD_READ_DATA_AND_VIBRATE:
-				#ifdef RUMBLE
+				#if defined(RUMBLE) || defined(RG350_RUMBLE)
 				for (i = 0; i < 2; i++) {
 					if (player_controller[0].Vib[i] == g.CurByte1
 						 && player_controller[0].VibF[i] != value) {
