@@ -22,6 +22,8 @@
 Shake_Device *device;
 Shake_Effect effect;
 int id_shake;
+#elif defined(RG350_RUMBLE)
+extern int fd;
 #endif
 
 #include "port.h"
@@ -97,11 +99,17 @@ static void pcsx4all_exit(void)
 	// Store config to file
 	config_save();
 
-#if defined(RUMBLE) && !defined(RG350_RUMBLE)
+#if defined(RUMBLE)
 	Shake_Stop(device, id_shake);
 	Shake_EraseEffect(device, id_shake);
 	Shake_Close(device);
 	Shake_Quit();
+#elif defined(RG350_RUMBLE)
+	if (fd)
+	{
+		close(fd);
+		fd = 0;
+	}
 #endif
 
 	if (pcsx4all_initted == 1)
@@ -855,7 +863,15 @@ void pad_update(void)
 		// TODO: Disallow entering menu until they are synced/closed
 		// automatically, displaying message that write is in progress.
 		sioSyncMcds();
-
+		#ifdef RUMBLE
+		Shake_Stop(device, id_shake);
+		#elif defined(RG350_RUMBLE)
+		if (fd)
+		{
+			close(fd);
+			fd = 0;
+		}
+		#endif
 		emu_running = 0;
 		pl_pause();    // Tell plugin_lib we're pausing emu
 		update_window_size(320, 240);
