@@ -77,6 +77,12 @@ void cheat_load(void)
 		unzCloseCurrentFile(uf);
 		unzClose(uf);
 	}
+	#else
+	else
+	{
+		printf("No cheats found\n");
+		return;
+	}
 	#endif
 	ct = (cheat_t*) calloc(1, sizeof(cheat_t));
 	for(;;) {
