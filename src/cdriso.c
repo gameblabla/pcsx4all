@@ -1452,7 +1452,6 @@ long CDR_open(void) {
 	if (opensbifile(GetIsoFile()) == 0) {
 		printf("[+sbi]");
 	}
-	file_len = fseeko(cdHandle, 0, SEEK_END);
 
 	if (numtracks < 1) {
 		// set a default track, to satisfy bios read
@@ -1470,6 +1469,8 @@ long CDR_open(void) {
 		sec2msf(t, ti[numtracks].start);
 
 		// default track length to file length
+		fseeko(cdHandle, 0, SEEK_END);
+		off_t file_len = ftello(cdHandle);
 		t = (file_len - ti[numtracks].start_offset) / CD_FRAMESIZE_RAW;
 		sec2msf(t, ti[numtracks].length);
 	}

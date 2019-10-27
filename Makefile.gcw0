@@ -12,13 +12,13 @@ SPU   = spu_pcsxrearmed
 RECOMPILER = mips
 
 # Allows the newer toolchain to be used
-#GCC_NEW = 1
+GCC_NEW = 1
 
 RM     = rm -f
 MD     = mkdir
-CC     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+CC     = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -44,7 +44,7 @@ ifdef GCC_NEW
 CFLAGS += -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -flto
 endif
 
-CFLAGS += -DUSE_BGR15
+CFLAGS += -DUSE_BGR15 -DRUMBLE -DCHEAT_UNZIP
 CFLAGS += -DFORCE_MEMCPY32 -DFORCE_FULLSCREEN
 
 # Convert plugin names to uppercase and make them CFLAG defines
@@ -77,7 +77,8 @@ OBJS = \
 	obj/psxinterpreter.o \
 	obj/mdec.o obj/decode_xa.o \
 	obj/cdriso.o obj/cdrom.o obj/ppf.o \
-	obj/sio.o obj/pad.o
+	obj/sio.o obj/pad.o \
+	obj/external_lib/ioapi.o obj/external_lib/unzip.o
 
 ifdef RECOMPILER
 OBJS += \

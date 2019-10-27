@@ -24,7 +24,7 @@ SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LIBS    := $(shell $(SDL_CONFIG) --libs)
 
 CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
-	-Wall -Wunused -Wpointer-arith \
+	-Wall -Wextra -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
 	-Isrc/port/$(PORT) -Isrc/port/common \
@@ -33,14 +33,14 @@ CFLAGS = -g3 -O0 -march=native -DGCW_ZERO \
 	-DINLINE="static __inline__" -Dasm="__asm__ __volatile__" \
 	$(SDL_CFLAGS)
 	
-CFLAGS += -DHW_SCALE -DUSE_BGR15 -DFORCE_MEMCPY32
+CFLAGS += -DHW_SCALE -DFORCE_MEMCPY32 -DRUMBLE -DCHEAT_UNZIP
 
 # Convert plugin names to uppercase and make them CFLAG defines
 CFLAGS += -D$(shell echo $(GPU) | tr a-z A-Z)
 CFLAGS += -D$(shell echo $(SPU) | tr a-z A-Z)
 CFLAGS += -DFORCE_MEMCPY32
 
-LDFLAGS = $(SDL_LIBS) -lpthread -lz
+LDFLAGS = $(SDL_LIBS) -lpthread -lz -lshake
 
 OBJDIRS = \
 	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
@@ -57,7 +57,8 @@ OBJS = \
 	obj/psxinterpreter.o \
 	obj/mdec.o obj/decode_xa.o \
 	obj/cdriso.o obj/cdrom.o obj/ppf.o \
-	obj/sio.o obj/pad.o
+	obj/sio.o obj/pad.o \
+	obj/external_lib/ioapi.o obj/external_lib/unzip.o
 
 ######################################################################
 #  GPULIB from PCSX Rearmed:
