@@ -12,13 +12,13 @@ SPU   = spu_pcsxrearmed
 RECOMPILER = mips
 
 # Allows the newer toolchain to be used
-GCC_NEW = 1
+#GCC_NEW = 1
 
 RM     = rm -f
 MD     = mkdir
-CC     = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain-static/usr/bin/mipsel-linux-g++
+CC     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
+CXX    = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+LD     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
@@ -44,7 +44,7 @@ ifdef GCC_NEW
 CFLAGS += -mno-abicalls -mframe-header-opt -fno-PIC -mno-check-zero-division -flto
 endif
 
-CFLAGS += -DUSE_BGR15 -DRUMBLE -DCHEAT_UNZIP
+CFLAGS += -DUSE_BGR15 -DRUMBLE -DCHEAT_UNZIP -DHW_SCALE
 CFLAGS += -DFORCE_MEMCPY32 -DFORCE_FULLSCREEN
 
 # Convert plugin names to uppercase and make them CFLAG defines
@@ -55,7 +55,7 @@ ifdef RECOMPILER
 CFLAGS += -DPSXREC -D$(RECOMPILER)
 endif
 
-LDFLAGS = -nodefaultlibs -lc -lgcc -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -s
+LDFLAGS = -nodefaultlibs -lc -lgcc -lshake -lSDL -lasound -lz -Wl,--as-needed -Wl,--gc-sections -s
 ifdef GCC_NEW
 LDFLAGS += -flto
 else
@@ -65,7 +65,7 @@ endif
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	  obj/recompiler obj/recompiler/$(RECOMPILER) \
 	  obj/port obj/port/$(PORT) \
-	  obj/plugin_lib obj/port/common
+	  obj/plugin_lib obj/port/common obj/external_lib
 
 all: maketree $(TARGET)
 

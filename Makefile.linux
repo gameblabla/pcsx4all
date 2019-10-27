@@ -45,7 +45,7 @@ LDFLAGS = $(SDL_LIBS) -lpthread -lz -lshake
 OBJDIRS = \
 	obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
 	obj/port obj/port/$(PORT) \
-	obj/plugin_lib obj/port/common
+	obj/plugin_lib obj/port/common obj/external_lib
 
 all: maketree $(TARGET)
 

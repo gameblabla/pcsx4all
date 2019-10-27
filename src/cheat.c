@@ -36,12 +36,8 @@
 #include <limits.h>
 
 static cheat_t* ct = NULL;
-
 static u32 run_interval = 200u;
-
 static u32 next_ticks = 0u;
-
-extern char cheatsdir[PATH_MAX];
 
 void cheat_load(void)
 {
@@ -57,7 +53,7 @@ void cheat_load(void)
 	{
 		fseeko(f, 0, SEEK_END);
 		off_t len = ftello(f);
-		filebuf = new char[len + 1];
+		filebuf = malloc(len + 1);
 		filebuf[len] = 0;
 		fseeko(f, 0, SEEK_SET);
 		fread(filebuf, 1, len, f);
@@ -139,7 +135,7 @@ void cheat_load(void)
 			}
 		}
 	}
-	delete[] filebuf;
+	if (filebuf) free(filebuf);
 	disableall = 0;
 	for (i = 0; i < ct->num_entries; ++i) {
 		u32 code;
