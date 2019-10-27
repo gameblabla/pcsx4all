@@ -20,10 +20,13 @@
 #ifdef RUMBLE
 #include <shake.h>
 Shake_Device *device;
+Shake_Device *device;
 Shake_Effect effect;
+Shake_Effect effect_big;
 int id_shake;
-#elif defined(RG350_RUMBLE)
-extern int fd;
+Shake_Effect effect_small;
+int id_shake_small;
+int id_shake_big;
 #endif
 
 #include "port.h"
@@ -100,16 +103,15 @@ static void pcsx4all_exit(void)
 	config_save();
 
 #if defined(RUMBLE)
-	Shake_Stop(device, id_shake);
+	Shake_Stop(device, id_shake_small);
 	Shake_EraseEffect(device, id_shake);
+	Shake_Stop(device, id_shake_big);
+	Shake_EraseEffect(device, id_shake_small);
+	Shake_EraseEffect(device, id_shake_big);
+	Shake_Close(device);
 	Shake_Close(device);
 	Shake_Quit();
-#elif defined(RG350_RUMBLE)
-	if (fd)
-	{
-		close(fd);
-		fd = 0;
-	}
+	Shake_Quit();
 #endif
 
 	if (pcsx4all_initted == 1)
@@ -864,13 +866,8 @@ void pad_update(void)
 		// automatically, displaying message that write is in progress.
 		sioSyncMcds();
 		#ifdef RUMBLE
-		Shake_Stop(device, id_shake);
-		#elif defined(RG350_RUMBLE)
-		if (fd)
-		{
-			close(fd);
-			fd = 0;
-		}
+		Shake_Stop(device, id_shake_small);
+		Shake_Stop(device, id_shake_big);
 		#endif
 		emu_running = 0;
 		pl_pause();    // Tell plugin_lib we're pausing emu
@@ -956,26 +953,28 @@ with mingw build. */
 
 void Rumble_Init()
 {
-#if defined(RUMBLE) && !defined(RG350_RUMBLE)
+#ifdef RUMBLE
 	Shake_Init();
 
-	if (Shake_NumOfDevices() > 0)
-	{
+	if (Shake_NumOfDevices() > 0) {
 		device = Shake_Open(0);
-		Shake_InitEffect(&effect, SHAKE_EFFECT_PERIODIC);
-		effect.u.periodic.waveform		= SHAKE_PERIODIC_SINE;
-		effect.u.periodic.period		= 0.1*0x100;
-		effect.u.periodic.magnitude		= 0x6000;
-		effect.u.periodic.envelope.attackLength	= 0x100;
-		effect.u.periodic.envelope.attackLevel	= 0;
-		effect.u.periodic.envelope.fadeLength	= 0x100;
-		effect.u.periodic.envelope.fadeLevel	= 0;
-		effect.direction			= 0x4000;
-		effect.length				= 0;
-		effect.delay				= 0;
-		id_shake = Shake_UploadEffect(device, &effect);
+
+		Shake_InitEffect(&effect_small, SHAKE_EFFECT_RUMBLE);
+		effect_small.u.rumble.strongMagnitude = SHAKE_RUMBLE_STRONG_MAGNITUDE_MAX * 0.85f;
+		effect_small.u.rumble.weakMagnitude = SHAKE_RUMBLE_WEAK_MAGNITUDE_MAX;
+		effect_small.length = 17;
+		effect_small.delay = 0;
+
+		Shake_InitEffect(&effect_big, SHAKE_EFFECT_RUMBLE);
+		effect_big.u.rumble.strongMagnitude = SHAKE_RUMBLE_STRONG_MAGNITUDE_MAX;
+		effect_big.u.rumble.weakMagnitude = SHAKE_RUMBLE_WEAK_MAGNITUDE_MAX;
+		effect_big.length = 17;
+		effect_big.delay = 0;
+
+		id_shake_small = Shake_UploadEffect(device, &effect_small);
+		id_shake_big = Shake_UploadEffect(device, &effect_big);
 	}
-#endif	
+#endif
 }
 
 void update_window_size(int w, int h)
