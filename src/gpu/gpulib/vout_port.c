@@ -46,15 +46,15 @@ static inline void *memcpy32 (void * restrict dest, const void * restrict src, s
 #ifndef HW_SCALE
 
 
-static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitWW(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 20;
-		const uint32_t* src32 = (const uint32_t*) src;
-		uint32_t* dst32 = (uint32_t*)(void*) dst16;
+		const uint32_t* restrict src32 = (const uint32_t* restrict) src;
+		uint32_t*restrict  dst32 = (uint32_t* restrict)(void*) dst16;
 		do {
 			dst32[0] = RGB16X2(src32[0]);
 			dst32[1] = RGB16X2(src32[1]);
@@ -77,7 +77,7 @@ static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isR
 	} else
 	{
 		uCount = 20;
-		const uint8_t* src8 = (const uint8_t*)src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src;
 		do{
 			dst16[ 0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[ 3], src8[ 4], src8[ 5] );
@@ -102,14 +102,14 @@ static inline void GPU_BlitWW(const void* src, uint16_t* dst16, uint_fast8_t isR
 	}
 }
 
-static inline void GPU_BlitWWSWWSWS(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitWWSWWSWS(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 64;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			dst16[0] = RGB16(src16[0]);
 			dst16[1] = RGB16(src16[1]);
@@ -121,7 +121,7 @@ static inline void GPU_BlitWWSWWSWS(const void* src, uint16_t* dst16, uint_fast8
 		} while (--uCount);
 #else
 		uCount = 64;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			dst16[0] = src16[0];
 			dst16[1] = src16[1];
@@ -135,7 +135,7 @@ static inline void GPU_BlitWWSWWSWS(const void* src, uint16_t* dst16, uint_fast8
 	} else
 	{
 		uCount = 32;
-		const uint8_t* src8 = (const uint8_t*)src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src;
 		do {
 			dst16[ 0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[ 3], src8[ 4], src8[ 5] );
@@ -155,14 +155,14 @@ static inline void GPU_BlitWWSWWSWS(const void* src, uint16_t* dst16, uint_fast8
 	}
 }
 
-static inline void GPU_BlitWWWWWS(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitWWWWWS(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 32;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
@@ -179,7 +179,7 @@ static inline void GPU_BlitWWWWWS(const void* src, uint16_t* dst16, uint_fast8_t
 		} while (--uCount);
 #else
 		uCount = 64;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			*dst16++ = *src16++;
 			*dst16++ = *src16++;
@@ -192,7 +192,7 @@ static inline void GPU_BlitWWWWWS(const void* src, uint16_t* dst16, uint_fast8_t
 	} else
 	{
 		uCount = 32;
-		const uint8_t* src8 = (const uint8_t*)src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src;
 		do {
 			dst16[0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[1] = RGB24(src8[ 3], src8[ 4], src8[ 5] );
@@ -210,14 +210,14 @@ static inline void GPU_BlitWWWWWS(const void* src, uint16_t* dst16, uint_fast8_t
 	}
 }
 
-static inline void GPU_BlitWWWWWWWWS(const void* src, uint16_t* dst16, uint_fast8_t isRGB24, uint32_t uClip_src)
+static inline void GPU_BlitWWWWWWWWS(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24, uint32_t uClip_src)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 20;
-		const uint16_t* src16 = ((const uint16_t*) src) + uClip_src;
+		const uint16_t* restrict src16 = ((const uint16_t* restrict) src) + uClip_src;
 		do {
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
@@ -241,7 +241,7 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, uint16_t* dst16, uint_fast
 		} while (--uCount);
 #else
 		uCount = 40;
-		const uint16_t* src16 = ((const uint16_t*) src) + uClip_src;
+		const uint16_t* restrict src16 = ((const uint16_t* restrict) src) + uClip_src;
 		do {
 			*dst16++ = *src16++;
 			*dst16++ = *src16++;
@@ -257,7 +257,7 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, uint16_t* dst16, uint_fast
 	} else
 	{
 		uCount = 20;
-		const uint8_t* src8 = (const uint8_t*)src + (uClip_src<<1) + uClip_src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src + (uClip_src<<1) + uClip_src;
 		do {
 			dst16[ 0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[ 3], src8[ 4], src8[ 5] );
@@ -282,14 +282,14 @@ static inline void GPU_BlitWWWWWWWWS(const void* src, uint16_t* dst16, uint_fast
 	}
 }
 
-static inline void GPU_BlitWWDWW(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitWWDWW(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = 32;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[1]);
@@ -306,7 +306,7 @@ static inline void GPU_BlitWWDWW(const void* src, uint16_t* dst16, uint_fast8_t 
 		} while (--uCount);
 #else
 		uCount = 64;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			*dst16++ = *src16++;
 			*dst16++ = *src16;
@@ -318,7 +318,7 @@ static inline void GPU_BlitWWDWW(const void* src, uint16_t* dst16, uint_fast8_t 
 	} else
 	{
 		uCount = 32;
-		const uint8_t* src8 = (const uint8_t*)src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src;
 		do {
 			dst16[ 0] = RGB24(src8[0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[3], src8[ 4], src8[ 5] );
@@ -338,13 +338,13 @@ static inline void GPU_BlitWWDWW(const void* src, uint16_t* dst16, uint_fast8_t 
 }
 
 
-static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitWS(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24) {
 #ifndef USE_BGR15
 		uCount = 20;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			dst16[ 0] = RGB16(src16[0]);
 			dst16[ 1] = RGB16(src16[2]);
@@ -371,7 +371,7 @@ static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isR
 		} while (--uCount);
 #else
 		uCount = 320;
-		const uint16_t* src16 = (const uint16_t*) src;
+		const uint16_t* restrict src16 = (const uint16_t* restrict) src;
 		do {
 			*dst16++ = *src16;
 			src16 += 2;
@@ -380,7 +380,7 @@ static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isR
 	} else
 	{
 		uCount = 20;
-		const uint8_t* src8 = (const uint8_t*) src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict) src;
 		do {
 			dst16[ 0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[ 6], src8[ 7], src8[ 8] );
@@ -415,15 +415,15 @@ static inline void GPU_BlitWS(const void* src, uint16_t* dst16, uint_fast8_t isR
 #define RGB24(R,G,B)	(((((R)&0xF8)>>3)|(((G)&0xF8)<<2)|(((B)&0xF8)<<7)))
 #endif
 
-static inline void GPU_BlitCopy(const void* src, uint16_t* dst16, uint_fast8_t isRGB24)
+static inline void GPU_BlitCopy(const void* restrict src, uint16_t* restrict dst16, uint_fast8_t isRGB24)
 {
 	uint32_t uCount;
 	if (!isRGB24)
 	{
 #ifndef USE_BGR15
 		uCount = SCREEN_WIDTH / 16;
-		const uint32_t* src32 = (const uint32_t*) src;
-		uint32_t* dst32 = (uint32_t*)(void*) dst16;
+		const uint32_t* restrict src32 = (const uint32_t* restrict) src;
+		uint32_t* restrict dst32 = (uint32_t* restrict)(void*) dst16;
 		do {
 			dst32[0] = RGB16X2(src32[0]);
 			dst32[1] = RGB16X2(src32[1]);
@@ -446,7 +446,7 @@ static inline void GPU_BlitCopy(const void* src, uint16_t* dst16, uint_fast8_t i
 	} else
 	{
 		uCount = SCREEN_WIDTH / 16;
-		const uint8_t* src8 = (const uint8_t*)src;
+		const uint8_t* restrict src8 = (const uint8_t* restrict)src;
 		do{
 			dst16[ 0] = RGB24(src8[ 0], src8[ 1], src8[ 2] );
 			dst16[ 1] = RGB24(src8[ 3], src8[ 4], src8[ 5] );
