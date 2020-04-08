@@ -59,7 +59,7 @@ LDFLAGS = -nodefaultlibs -lc -lgcc -lshake -lSDL -lasound -lz -Wl,--as-needed -W
 ifdef GCC_NEW
 LDFLAGS += -flto
 else
-LDFLAGS	+= -pthtread -lrt
+LDFLAGS	+= -lpthread -lrt
 endif
 
 OBJDIRS = obj obj/gpu obj/gpu/$(GPU) obj/spu obj/spu/$(SPU) \
