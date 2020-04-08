@@ -31,6 +31,7 @@ MCD2_FILE = \"mcd002.mcr\"
 C_ARCH = -mips32r2 -DSHMEM_MIRRORING
 
 CFLAGS = $(C_ARCH) -O2 -DGCW_ZERO \
+	-mplt -mno-shared \
 	-Wall -Wunused -Wpointer-arith \
 	-Wno-sign-compare -Wno-cast-align \
 	-Isrc -Isrc/spu/$(SPU) -D$(SPU) -Isrc/gpu/$(GPU) \
