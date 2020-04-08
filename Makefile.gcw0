@@ -14,11 +14,11 @@ RECOMPILER = mips
 # Allows the newer toolchain to be used
 #GCC_NEW = 1
 
-RM     = rm -f
-MD     = mkdir
-CC     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
-CXX    = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
-LD     = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+RM     ?= rm -f
+MD     ?= mkdir
+CC     ?= /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
+CXX    ?= /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+LD     ?= /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
 
 SYSROOT     := $(shell $(CC) --print-sysroot)
 SDL_CONFIG  := $(SYSROOT)/usr/bin/sdl-config
